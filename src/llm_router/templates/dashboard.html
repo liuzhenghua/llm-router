@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="mb-8">
+  <p class="text-xs uppercase tracking-[0.35em] text-sky-600">Dashboard</p>
+  <h1 class="mt-2 text-3xl font-bold">系统概览</h1>
+  <p class="mt-2 text-xs text-slate-500">先看整体状态，再进入各个菜单页面做配置和维护。</p>
+</div>
+
+<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+  <div class="rounded-3xl bg-white p-5 shadow-sm"><div class="text-xs text-slate-500">API Keys</div><div class="mt-3 text-3xl font-bold">{{ api_keys|length }}</div></div>
+  <div class="rounded-3xl bg-white p-5 shadow-sm"><div class="text-xs text-slate-500">Logical Models</div><div class="mt-3 text-3xl font-bold">{{ logical_models|length }}</div></div>
+  <div class="rounded-3xl bg-white p-5 shadow-sm"><div class="text-xs text-slate-500">Providers</div><div class="mt-3 text-3xl font-bold">{{ provider_models|length }}</div></div>
+  <div class="rounded-3xl bg-white p-5 shadow-sm"><div class="text-xs text-slate-500">Total Balance</div><div class="mt-3 text-3xl font-bold">{{ total_balance }}</div></div>
+  <div class="rounded-3xl bg-white p-5 shadow-sm"><div class="text-xs text-slate-500">Today Spend</div><div class="mt-3 text-3xl font-bold">{{ total_daily_spend }}</div></div>
+</div>
+
+<div class="mt-8 grid gap-6 xl:grid-cols-3">
+  <section class="rounded-3xl bg-white p-5 shadow-sm">
+    <div class="mb-4 flex items-center justify-between"><h2 class="text-lg font-semibold">最近请求</h2><a href="/admin/requests" class="text-xs text-sky-600">查看全部</a></div>
+    <div class="space-y-3">
+      {% for item in recent_logs %}
+      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+        <div class="font-medium">{{ item.request_id }}</div>
+        <div class="mt-1 text-xs text-slate-500">{{ item.protocol }} | status={{ item.status_code }} | {{ item.latency_ms or "-" }}ms</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="rounded-3xl bg-white p-5 shadow-sm">
+    <div class="mb-4 flex items-center justify-between"><h2 class="text-lg font-semibold">最近账本</h2><a href="/admin/billing" class="text-xs text-sky-600">查看全部</a></div>
+    <div class="space-y-3">
+      {% for item in ledgers %}
+      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+        <div class="font-medium">{{ item.change_type }} {{ item.amount }}</div>
+        <div class="mt-1 text-xs text-slate-500">api_key_id={{ item.api_key_id }} | {{ item.remark or "-" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="rounded-3xl bg-white p-5 shadow-sm">
+    <div class="mb-4 flex items-center justify-between"><h2 class="text-lg font-semibold">最近日报</h2><a href="/admin/billing" class="text-xs text-sky-600">查看全部</a></div>
+    <div class="space-y-3">
+      {% for item in daily_summaries %}
+      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
+        <div class="font-medium">{{ item.summary_date }}</div>
+        <div class="mt-1 text-xs text-slate-500">api_key_id={{ item.api_key_id }} | requests={{ item.request_count }} | cost={{ item.cost_total }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

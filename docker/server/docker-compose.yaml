@@ -1,0 +1,39 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: llm_router
+      MYSQL_USER: llm_router
+      MYSQL_PASSWORD: llm_router
+    command: ["mysqld", "--default-authentication-plugin=mysql_native_password"]
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  llm-router:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      APP_MODE: server
+      HOST: 0.0.0.0
+      PORT: 8000
+      SESSION_SECRET: server-session-secret
+      APP_ENCRYPTION_KEY: server-encryption-secret
+      ADMIN_USERS_FILE: /app/data/admin_users.json
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: llm_router
+      MYSQL_PASSWORD: llm_router
+      MYSQL_DATABASE: llm_router
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/app:/app/data

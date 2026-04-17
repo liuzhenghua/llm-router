@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="mb-8 flex items-center justify-between">
+  <div>
+    <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Request Detail</p>
+    <h1 class="mt-2 text-2xl font-bold">{{ log.request_id }}</h1>
+    <p class="mt-2 text-xs text-slate-500">protocol={{ log.protocol }} | status={{ log.status_code }} | success={{ log.success }}</p>
+  </div>
+  <a href="/admin/requests" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回请求列表</a>
+</div>
+
+<div class="grid gap-6 lg:grid-cols-2">
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">基础信息</h2>
+    <div class="mt-4 space-y-2 text-sm text-slate-600">
+      <div>api_key_id={{ log.api_key_id or "-" }}</div>
+      <div>logical_model_id={{ log.logical_model_id or "-" }}</div>
+      <div>provider_model_id={{ log.provider_model_id or "-" }}</div>
+      <div>upstream_request_id={{ log.upstream_request_id or "-" }}</div>
+      <div>latency_ms={{ log.latency_ms or "-" }}</div>
+      <div>created_at={{ log.created_at }}</div>
+    </div>
+  </div>
+
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">用量与费用</h2>
+    {% if log.usage_record %}
+    <div class="mt-4 space-y-2 text-sm text-slate-600">
+      <div>prompt_tokens={{ log.usage_record.prompt_tokens }}</div>
+      <div>completion_tokens={{ log.usage_record.completion_tokens }}</div>
+      <div>cache_read_tokens={{ log.usage_record.cache_read_tokens }}</div>
+      <div>cache_write_tokens={{ log.usage_record.cache_write_tokens }}</div>
+      <div>cost_input={{ log.usage_record.cost_input }}</div>
+      <div>cost_output={{ log.usage_record.cost_output }}</div>
+      <div>cost_cache_read={{ log.usage_record.cost_cache_read }}</div>
+      <div>cost_cache_write={{ log.usage_record.cost_cache_write }}</div>
+      <div class="font-semibold text-slate-900">cost_total={{ log.usage_record.cost_total }}</div>
+    </div>
+    {% else %}
+    <p class="mt-4 text-sm text-slate-500">暂无用量记录。</p>
+    {% endif %}
+  </div>
+
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">请求体</h2>
+    <pre class="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.request_body or "未记录请求内容" }}</pre>
+  </div>
+
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">响应体 / 错误</h2>
+    <pre class="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.response_body or log.error_message or "未记录响应内容" }}</pre>
+  </div>
+</div>
+{% endblock %}

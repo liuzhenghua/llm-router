@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="mb-8 flex items-center justify-between">
+  <div><p class="text-xs uppercase tracking-[0.35em] text-sky-600">Logical Models</p><h1 class="mt-2 text-3xl font-bold">逻辑模型</h1></div>
+  <button type="button" onclick="openModal('create-logical-model-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增逻辑模型</button>
+</div>
+<div class="space-y-4">
+  {% for item in logical_models %}
+  <div class="rounded-3xl bg-white p-5 shadow-sm">
+    <div class="flex items-center justify-between gap-4">
+      <div><div class="text-lg font-semibold">{{ item.name }}</div><div class="mt-1 text-xs text-slate-500">{{ item.description or "无描述" }} | active={{ item.is_active }}</div></div>
+      <button type="button" onclick='fillForm("edit-logical-model-form-{{ item.id }}", {{ {"name": item.name, "description": item.description or "", "is_active": item.is_active}|tojson }}); openModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
+    </div>
+  </div>
+  <dialog id="edit-logical-model-modal-{{ item.id }}" class="w-full max-w-2xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+    <div class="rounded-[2rem] bg-white p-8">
+      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑逻辑模型</h3><button type="button" onclick='closeModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+      <form id="edit-logical-model-form-{{ item.id }}" method="post" action="/admin/logical-models/{{ item.id }}" class="grid gap-4">
+        <label><span class="mb-2 block text-sm text-slate-600">模型名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label><span class="mb-2 block text-sm text-slate-600">描述</span><input name="description" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
+        <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white">保存</button>
+      </form>
+    </div>
+  </dialog>
+  {% endfor %}
+</div>
+<dialog id="create-logical-model-modal" class="w-full max-w-2xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">创建逻辑模型</h3><button type="button" onclick='closeModal("create-logical-model-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <form method="post" action="/admin/logical-models" class="grid gap-4">
+      <label><span class="mb-2 block text-sm text-slate-600">模型名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
+      <label><span class="mb-2 block text-sm text-slate-600">描述</span><input name="description" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <button type="submit" class="rounded-2xl bg-sky-600 px-4 py-3 text-white">创建</button>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

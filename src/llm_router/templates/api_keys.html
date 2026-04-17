@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="mb-8 flex items-center justify-between">
+  <div>
+    <p class="text-xs uppercase tracking-[0.35em] text-sky-600">API Keys</p>
+    <h1 class="mt-2 text-3xl font-bold">API Key 管理</h1>
+    <p class="mt-2 text-xs text-slate-500">余额、QPS、访问模型和日志策略都在这里管理。</p>
+  </div>
+  <button type="button" onclick="openModal('create-api-key-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增 API Key</button>
+</div>
+
+{% if raw_api_key %}
+<div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+  新建 API Key 明文，仅展示一次：<code class="font-semibold">{{ raw_api_key }}</code>
+</div>
+{% endif %}
+
+<div class="space-y-4">
+  {% for item in api_keys %}
+  <div class="rounded-3xl bg-white p-5 shadow-sm">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div class="text-lg font-semibold">{{ item.name }}</div>
+        <div class="mt-2 text-xs text-slate-500">status={{ item.status }} | balance={{ item.balance }} | today={{ item.daily_spend_amount }} | qps={{ item.qps_limit }}</div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" onclick='fillForm("edit-api-key-form-{{ item.id }}", {{ {"name": item.name, "status": item.status, "balance": item.balance|string, "daily_budget_limit": item.daily_budget_limit|string if item.daily_budget_limit else "", "qps_limit": item.qps_limit|string, "allowed_models": item.allowed_logical_models_json|join(", "), "request_content_logging_enabled": item.request_content_logging_enabled, "response_content_logging_enabled": item.response_content_logging_enabled}|tojson }}); openModal("edit-api-key-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
+        <button type="button" onclick='openModal("topup-api-key-modal-{{ item.id }}")' class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-700">充值</button>
+        <form method="post" action="/admin/api-keys/{{ item.id }}/delete" onsubmit="return confirm('确认禁用这个 API Key 吗？');">
+          <button class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700">禁用</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <dialog id="edit-api-key-modal-{{ item.id }}" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+    <div class="rounded-[2rem] bg-white p-8">
+      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑 API Key</h3><button type="button" onclick='closeModal("edit-api-key-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+      <form id="edit-api-key-form-{{ item.id }}" method="post" action="/admin/api-keys/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
+        <label class="block"><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="block"><span class="mb-2 block text-sm text-slate-600">状态</span><select name="status" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="active">active</option><option value="disabled">disabled</option></select></label>
+        <label class="block"><span class="mb-2 block text-sm text-slate-600">余额</span><input name="balance" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="block"><span class="mb-2 block text-sm text-slate-600">日限额</span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="block"><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="block md:col-span-2"><span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span><input name="allowed_models" placeholder="多个模型用英文逗号分隔" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="request_content_logging_enabled" value="true">记录请求内容</label>
+        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="response_content_logging_enabled" value="true">记录响应内容</label>
+        <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="topup-api-key-modal-{{ item.id }}" class="w-full max-w-xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+    <div class="rounded-[2rem] bg-white p-8">
+      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">为 {{ item.name }} 充值</h3><button type="button" onclick='closeModal("topup-api-key-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+      <form method="post" action="/admin/api-keys/{{ item.id }}/topup" class="grid gap-4">
+        <label><span class="mb-2 block text-sm text-slate-600">充值金额</span><input name="amount" value="10" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label><span class="mb-2 block text-sm text-slate-600">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-3 text-white">确认充值</button>
+      </form>
+    </div>
+  </dialog>
+  {% endfor %}
+</div>
+
+<dialog id="create-api-key-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">创建 API Key</h3><button type="button" onclick='closeModal("create-api-key-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <form method="post" action="/admin/api-keys" class="grid gap-4 md:grid-cols-2">
+      <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
+      <label><span class="mb-2 block text-sm text-slate-600">初始余额</span><input name="balance" value="0" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">日限额</span><input name="daily_budget_limit" placeholder="留空表示不限制" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" value="5" placeholder="例如 5" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="md:col-span-2"><span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span><input name="allowed_models" placeholder="多个模型用英文逗号分隔" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">创建 API Key</button>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

@@ -1,0 +1,17 @@
+services:
+  llm-router:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      APP_MODE: local
+      HOST: 0.0.0.0
+      PORT: 8000
+      SESSION_SECRET: local-session-secret
+      APP_ENCRYPTION_KEY: local-encryption-secret
+      ADMIN_USERS_FILE: /app/data/admin_users.json
+      DATABASE_URL: sqlite+aiosqlite:////app/data/llm_router.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data

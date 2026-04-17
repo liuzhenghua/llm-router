@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="mb-8 flex items-center justify-between">
+  <div>
+    <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Billing</p>
+    <h1 class="mt-2 text-3xl font-bold">账单与账本</h1>
+  </div>
+  <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
+</div>
+
+<div class="rounded-3xl bg-white p-6 shadow-sm">
+  <form method="get" action="/admin/billing" class="flex flex-wrap items-center gap-3">
+    <select name="api_key_id" class="rounded-xl border border-slate-200 px-4 py-3">
+      <option value="">全部 API Key</option>
+      {% for api_key in api_keys %}
+      <option value="{{ api_key.id }}" {% if selected_api_key_id == api_key.id %}selected{% endif %}>{{ api_key.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="rounded-xl bg-sky-600 px-4 py-3 font-medium text-white">筛选</button>
+  </form>
+</div>
+
+<div class="mt-6 grid gap-6 xl:grid-cols-3">
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">最近账本</h2>
+    <div class="mt-4 space-y-3">
+      {% for item in ledgers %}
+      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <div class="font-medium">{{ item.change_type }} {{ item.amount }}</div>
+        <div class="mt-1 text-slate-500">api_key_id={{ item.api_key_id }} | before={{ item.balance_before }} | after={{ item.balance_after }}</div>
+        <div class="mt-1 text-slate-500">{{ item.remark or "-" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">最近费用记录</h2>
+    <div class="mt-4 space-y-3">
+      {% for item in usage_records %}
+      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <div class="font-medium">request_log_id={{ item.request_log_id }} | cost={{ item.cost_total }}</div>
+        <div class="mt-1 text-slate-500">prompt={{ item.prompt_tokens }} | completion={{ item.completion_tokens }}</div>
+        <div class="mt-1 text-slate-500">request_id={{ item.request_log.request_id if item.request_log else "-" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="rounded-3xl bg-white p-6 shadow-sm">
+    <h2 class="text-xl font-semibold">最近日报</h2>
+    <div class="mt-4 space-y-3">
+      {% for item in summaries %}
+      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <div class="font-medium">api_key_id={{ item.api_key_id }} | {{ item.summary_date }}</div>
+        <div class="mt-1 text-slate-500">requests={{ item.request_count }} | cost={{ item.cost_total }}</div>
+        <div class="mt-1 text-slate-500">prompt={{ item.prompt_tokens }} | completion={{ item.completion_tokens }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
