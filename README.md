@@ -15,10 +15,10 @@
 
 ## 目录
 
-- 架构设计：[llm-router-architecture.md](/Users/liuzhenghua/Projects/llm-router/docs/architecture/llm-router-architecture.md)
+- 架构设计：[llm-router-architecture.md](docs/architecture/llm-router-architecture.md)
 - Compose:
-  - [docker/local/docker-compose.yaml](/Users/liuzhenghua/Projects/llm-router/docker/local/docker-compose.yaml)
-  - [docker/server/docker-compose.yaml](/Users/liuzhenghua/Projects/llm-router/docker/server/docker-compose.yaml)
+  - [docker/local/docker-compose.yaml](docker/local/docker-compose.yaml)
+  - [docker/server/docker-compose.yaml](docker/server/docker-compose.yaml)
 
 ## 项目结构
 
