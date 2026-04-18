@@ -20,6 +20,11 @@ from llm_router.services.post_request import (
     schedule_post_request_tasks,
 )
 from llm_router.services.router import resolve_provider_candidates, resolve_request_context
+from llm_router.services.streaming_handlers import (
+    AnthropicStreamingHandler,
+    BaseStreamingHandler,
+    OpenAIStreamingHandler,
+)
 
 
 HOP_BY_HOP_HEADERS = {
@@ -271,9 +276,14 @@ async def _proxy_stream(
 ) -> StreamingResponse:
     payload = _prepare_payload(context.payload, provider, context.protocol)
     headers = _build_upstream_headers(provider, context, context.protocol)
-    usage = UsageSnapshot()
     started = time.perf_counter()
-    accumulated: list[str] = []
+
+    # 根据协议选择流式处理器
+    if context.protocol == ProviderProtocol.OPENAI:
+        stream_handler: BaseStreamingHandler = OpenAIStreamingHandler()
+    else:
+        stream_handler = AnthropicStreamingHandler()
+
     full_endpoint = provider.endpoint.rstrip("/") + request_path
     client = httpx.AsyncClient(timeout=provider.timeout_seconds)
     stream_cm = client.stream("POST", full_endpoint, json=payload, headers=headers)
@@ -290,24 +300,10 @@ async def _proxy_stream(
         stream_failed = False
         error_message = ""
         try:
-            current_event: str | None = None
             async for line in upstream_response.aiter_lines():
                 raw = f"{line}\n"
-                if line.startswith("event:"):
-                    current_event = line.split(":", 1)[1].strip()
-                elif line.startswith("data:"):
-                    data_part = line.split(":", 1)[1].strip()
-                    if data_part and data_part != "[DONE]":
-                        try:
-                            data = json.loads(data_part)
-                        except json.JSONDecodeError:
-                            data = None
-                        if data is not None:
-                            delta = _extract_stream_delta(context.protocol, current_event, data, usage)
-                            if delta and context.response_logging_enabled:
-                                accumulated.append(delta)
-                elif line == "":
-                    current_event = None
+                # 使用流式处理器处理每一行
+                await stream_handler.process_line(line)
                 yield raw.encode("utf-8")
         except HTTPException:
             stream_failed = True
@@ -319,48 +315,40 @@ async def _proxy_stream(
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
         finally:
             latency_ms = int((time.perf_counter() - started) * 1000)
-            if stream_failed:
-                schedule_post_request_tasks(
-                    _create_finalization_data(
-                        request_id=context.request_id,
-                        upstream_request_id=upstream_request_id,
-                        api_key_id=context.api_key_id,
-                        logical_model_id=context.logical_model_id,
-                        provider_model_id=provider.id,
-                        protocol=context.protocol,
-                        status_code=status.HTTP_502_BAD_GATEWAY,
-                        success=False,
-                        latency_ms=latency_ms,
-                        request_payload=payload,
-                        response_body=None,
-                        error_message=error_message or "Streaming failed",
-                        request_logging_enabled=context.request_logging_enabled,
-                        response_logging_enabled=context.response_logging_enabled,
-                        usage=None,
-                        provider=provider,
-                    )
+            # 使用流式处理器获取合并后的响应和 usage
+            response_body = stream_handler.get_accumulated_response() if not stream_failed else None
+            usage_dict = stream_handler.get_usage()
+
+            # 将 dict 转换为 UsageSnapshot
+            usage_snapshot = None
+            if usage_dict:
+                usage_snapshot = UsageSnapshot(
+                    prompt_tokens=usage_dict.get("prompt_tokens", 0),
+                    completion_tokens=usage_dict.get("completion_tokens", 0),
+                    cache_read_tokens=usage_dict.get("cache_read_input_tokens", 0) if context.protocol == ProviderProtocol.ANTHROPIC else usage_dict.get("cached_tokens", 0),
+                    cache_write_tokens=usage_dict.get("cache_creation_input_tokens", 0),
                 )
-            else:
-                schedule_post_request_tasks(
-                    _create_finalization_data(
-                        request_id=context.request_id,
-                        upstream_request_id=upstream_request_id,
-                        api_key_id=context.api_key_id,
-                        logical_model_id=context.logical_model_id,
-                        provider_model_id=provider.id,
-                        protocol=context.protocol,
-                        status_code=upstream_response.status_code,
-                        success=True,
-                        latency_ms=latency_ms,
-                        request_payload=payload,
-                        response_body="".join(accumulated) if accumulated else None,
-                        error_message=None,
-                        request_logging_enabled=context.request_logging_enabled,
-                        response_logging_enabled=context.response_logging_enabled,
-                        usage=usage,
-                        provider=provider,
-                    )
+
+            schedule_post_request_tasks(
+                _create_finalization_data(
+                    request_id=context.request_id,
+                    upstream_request_id=upstream_request_id,
+                    api_key_id=context.api_key_id,
+                    logical_model_id=context.logical_model_id,
+                    provider_model_id=provider.id,
+                    protocol=context.protocol,
+                    status_code=upstream_response.status_code if not stream_failed else status.HTTP_502_BAD_GATEWAY,
+                    success=not stream_failed,
+                    latency_ms=latency_ms,
+                    request_payload=payload,
+                    response_body=response_body,
+                    error_message=error_message or None,
+                    request_logging_enabled=context.request_logging_enabled,
+                    response_logging_enabled=context.response_logging_enabled,
+                    usage=usage_snapshot,
+                    provider=provider,
                 )
+            )
             await stream_cm.__aexit__(None, None, None)
             await client.aclose()
 
