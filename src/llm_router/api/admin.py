@@ -146,11 +146,39 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
 @protected_router.get("/logical-models")
 async def logical_models_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    logical_models = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
+    logical_models_result = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
+    logical_models = [
+        {
+            "id": model.id,
+            "name": model.name,
+            "description": model.description,
+            "is_active": model.is_active,
+        }
+        for model in logical_models_result
+    ]
+    routes_result = (await session.execute(select(LogicalModelRoute).order_by(LogicalModelRoute.priority.asc()))).scalars().all()
+    routes = [
+        {
+            "id": route.id,
+            "logical_model_id": route.logical_model_id,
+            "provider_model_id": route.provider_model_id,
+            "priority": route.priority,
+            "weight": route.weight,
+            "is_fallback": route.is_fallback,
+            "status": route.status,
+        }
+        for route in routes_result
+    ]
+    provider_models_result = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    provider_models = [{"id": pm.id, "name": pm.name} for pm in provider_models_result]
     return _render_admin(
         request,
         "logical_models.html",
-        {"logical_models": logical_models},
+        {
+            "logical_models": logical_models,
+            "routes": routes,
+            "provider_models": provider_models,
+        },
         nav_active="logical_models",
         title="Logical Models",
     )
@@ -169,25 +197,6 @@ async def providers_page(request: Request, _: None = Depends(require_admin)):
         },
         nav_active="providers",
         title="Providers",
-    )
-
-
-@protected_router.get("/routes")
-async def routes_page(request: Request, _: None = Depends(require_admin)):
-    session = request.state.db
-    routes = (await session.execute(select(LogicalModelRoute).order_by(LogicalModelRoute.priority.asc()))).scalars().all()
-    logical_models = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
-    provider_models = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
-    return _render_admin(
-        request,
-        "routes.html",
-        {
-            "routes": routes,
-            "logical_models": logical_models,
-            "provider_models": provider_models,
-        },
-        nav_active="routes",
-        title="Routes",
     )
 
 
@@ -438,7 +447,7 @@ async def create_route(
         )
     )
     await session.commit()
-    return _redirect_back(request, "/admin/routes")
+    return _redirect_back(request, "/admin/logical-models")
 
 
 @protected_router.post("/routes/{route_id}")
@@ -456,7 +465,7 @@ async def update_route(
     session = request.state.db
     route = await session.get(LogicalModelRoute, route_id)
     if route is None:
-        return _redirect("/admin/routes")
+        return _redirect("/admin/logical-models")
     route.logical_model_id = logical_model_id
     route.provider_model_id = provider_model_id
     route.priority = priority
@@ -464,7 +473,7 @@ async def update_route(
     route.is_fallback = is_fallback
     route.status = status_text
     await session.commit()
-    return _redirect_back(request, "/admin/routes")
+    return _redirect_back(request, "/admin/logical-models")
 
 
 @protected_router.post("/routes/{route_id}/delete")
@@ -474,7 +483,7 @@ async def delete_route(request: Request, route_id: int, _: None = Depends(requir
     if route is not None:
         await session.delete(route)
         await session.commit()
-    return _redirect_back(request, "/admin/routes")
+    return _redirect_back(request, "/admin/logical-models")
 
 
 @protected_router.get("/requests")

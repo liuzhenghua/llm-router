@@ -4,27 +4,28 @@
   <div><p class="text-xs uppercase tracking-[0.35em] text-sky-600">Logical Models</p><h1 class="mt-2 text-3xl font-bold">逻辑模型</h1></div>
   <button type="button" onclick="openModal('create-logical-model-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增逻辑模型</button>
 </div>
-<div class="space-y-4">
-  {% for item in logical_models %}
-  <div class="rounded-3xl bg-white p-5 shadow-sm">
-    <div class="flex items-center justify-between gap-4">
-      <div><div class="text-lg font-semibold">{{ item.name }}</div><div class="mt-1 text-xs text-slate-500">{{ item.description or "无描述" }} | active={{ item.is_active }}</div></div>
-      <button type="button" onclick='fillForm("edit-logical-model-form-{{ item.id }}", {{ {"name": item.name, "description": item.description or "", "is_active": item.is_active}|tojson }}); openModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
-    </div>
-  </div>
-  <dialog id="edit-logical-model-modal-{{ item.id }}" class="w-full max-w-2xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-    <div class="rounded-[2rem] bg-white p-8">
-      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑逻辑模型</h3><button type="button" onclick='closeModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
-      <form id="edit-logical-model-form-{{ item.id }}" method="post" action="/admin/logical-models/{{ item.id }}" class="grid gap-4">
-        <label><span class="mb-2 block text-sm text-slate-600">模型名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">描述</span><input name="description" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
-        <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white">保存</button>
-      </form>
-    </div>
-  </dialog>
-  {% endfor %}
+
+<div class="mb-4">
+  <input type="text" id="logical-models-search" placeholder="搜索模型..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
 </div>
+
+<div id="logical-models-table-container"></div>
+<div id="logical-models-pagination-container" class="mt-4 flex items-center justify-between"></div>
+
+{% for item in logical_models %}
+<dialog id="edit-logical-model-modal-{{ item.id }}" class="w-full max-w-2xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑逻辑模型</h3><button type="button" onclick='closeModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <form id="edit-logical-model-form-{{ item.id }}" method="post" action="/admin/logical-models/{{ item.id }}" class="grid gap-4">
+      <label><span class="mb-2 block text-sm text-slate-600">模型名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">描述</span><input name="description" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
+      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white">保存</button>
+    </form>
+  </div>
+</dialog>
+{% endfor %}
+
 <dialog id="create-logical-model-modal" class="w-full max-w-2xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
   <div class="rounded-[2rem] bg-white p-8">
     <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">创建逻辑模型</h3><button type="button" onclick='closeModal("create-logical-model-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
@@ -35,4 +36,271 @@
     </form>
   </div>
 </dialog>
+<dialog id="routes-modal" class="w-full max-w-5xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">路由规则</h3><button type="button" onclick='closeModal("routes-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <div class="mb-4 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <input type="text" id="routes-search" placeholder="搜索..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+      </div>
+      <button type="button" onclick="openCreateRouteModal()" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增路由</button>
+    </div>
+    <div id="routes-table-container"></div>
+    <div id="routes-pagination-container" class="mt-4 flex items-center justify-between"></div>
+  </div>
+</dialog>
+<dialog id="create-route-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">新增路由</h3><button type="button" onclick='closeModal("create-route-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <form id="create-route-form" method="post" action="/admin/routes" class="grid gap-4 md:grid-cols-2">
+      <input type="hidden" name="logical_model_id">
+      <label><span class="mb-2 block text-sm text-slate-600">Provider</span><select name="provider_model_id" class="w-full rounded-2xl border border-slate-200 px-4 py-3">{% for item in provider_models %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}</select></label>
+      <label><span class="mb-2 block text-sm text-slate-600">优先级</span><input name="priority" value="100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">权重</span><input name="weight" value="1" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 md:col-span-2"><input type="checkbox" name="is_fallback" value="true">后备路由</label>
+      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">创建路由</button>
+    </form>
+  </div>
+</dialog>
+<dialog id="edit-route-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑路由</h3><button type="button" onclick='closeModal("edit-route-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <form id="edit-route-form" method="post" class="grid gap-4 md:grid-cols-2">
+      <input type="hidden" name="logical_model_id">
+      <label><span class="mb-2 block text-sm text-slate-600">Provider</span><select name="provider_model_id" class="w-full rounded-2xl border border-slate-200 px-4 py-3">{% for item in provider_models %}<option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}</select></label>
+      <label><span class="mb-2 block text-sm text-slate-600">优先级</span><input name="priority" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">权重</span><input name="weight" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">状态</span><select name="status" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="active">active</option><option value="disabled">disabled</option></select></label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_fallback" value="true">后备路由</label>
+      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
+    </form>
+  </div>
+</dialog>
+<script>
+let allLogicalModels = {{ logical_models|tojson }};
+let allRoutesForModels = {{ routes|tojson }};
+let currentLogicalModelPage = 1;
+const logicalModelsPerPage = 10;
+
+function renderLogicalModelsTable() {
+  const searchTerm = document.getElementById('logical-models-search').value.toLowerCase();
+  const filteredModels = allLogicalModels.filter(model => {
+    return model.name.toLowerCase().includes(searchTerm) ||
+           (model.description && model.description.toLowerCase().includes(searchTerm));
+  });
+
+  const tableContainer = document.getElementById('logical-models-table-container');
+  const paginationContainer = document.getElementById('logical-models-pagination-container');
+  tableContainer.innerHTML = '';
+  paginationContainer.innerHTML = '';
+
+  if (filteredModels.length === 0) {
+    tableContainer.innerHTML = '<p class="text-center text-slate-500">没有找到相关模型。</p>';
+    return;
+  }
+
+  const totalPages = Math.ceil(filteredModels.length / logicalModelsPerPage);
+  const paginatedModels = filteredModels.slice((currentLogicalModelPage - 1) * logicalModelsPerPage, currentLogicalModelPage * logicalModelsPerPage);
+
+  const table = document.createElement('table');
+  table.className = 'w-full text-sm text-left text-slate-500';
+  table.innerHTML = `
+    <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+      <tr>
+        <th scope="col" class="px-6 py-3">名称</th>
+        <th scope="col" class="px-6 py-3">描述</th>
+        <th scope="col" class="px-6 py-3">状态</th>
+        <th scope="col" class="px-6 py-3">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  paginatedModels.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.className = 'bg-white border-b';
+    tr.innerHTML = `
+      <td class="px-6 py-4 font-medium text-slate-900">${item.name}</td>
+      <td class="px-6 py-4">${item.description || "无描述"}</td>
+      <td class="px-6 py-4">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
+      <td class="px-6 py-4 flex gap-2">
+        <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">路由</button>
+        <button type="button" onclick='fillForm("edit-logical-model-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-logical-model-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tableContainer.appendChild(table);
+
+  // Pagination
+  if (totalPages > 1) {
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '上一页';
+    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    prevButton.disabled = currentLogicalModelPage === 1;
+    prevButton.onclick = () => {
+      currentLogicalModelPage--;
+      renderLogicalModelsTable();
+    };
+    paginationContainer.appendChild(prevButton);
+
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = `第 ${currentLogicalModelPage} / ${totalPages} 页`;
+    pageInfo.className = 'text-xs text-slate-500';
+    paginationContainer.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '下一页';
+    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    nextButton.disabled = currentLogicalModelPage === totalPages;
+    nextButton.onclick = () => {
+      currentLogicalModelPage++;
+      renderLogicalModelsTable();
+    };
+    paginationContainer.appendChild(nextButton);
+  }
+}
+
+document.getElementById('logical-models-search').addEventListener('input', () => {
+  currentLogicalModelPage = 1;
+  renderLogicalModelsTable();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderLogicalModelsTable();
+});
+
+
+let currentLogicalModelId = null;
+let currentRoutes = [];
+let currentRoutePage = 1;
+const routesPerPage = 5;
+
+function openRoutesModalForModel(logicalModelId) {
+  const routesForModel = allRoutesForModels.filter(r => r.logical_model_id === logicalModelId);
+  openRoutesModal(logicalModelId, routesForModel);
+}
+
+function openRoutesModal(logicalModelId, routes) {
+  currentLogicalModelId = logicalModelId;
+  currentRoutes = routes;
+  document.getElementById('routes-search').value = '';
+  currentRoutePage = 1;
+  renderRoutesTable();
+  openModal('routes-modal');
+}
+
+function renderRoutesTable() {
+  const searchTerm = document.getElementById('routes-search').value.toLowerCase();
+  const filteredRoutes = currentRoutes.filter(route => {
+    const providerModel = {{ provider_models|tojson }}.find(p => p.id === route.provider_model_id);
+    return (providerModel && providerModel.name.toLowerCase().includes(searchTerm)) ||
+           String(route.priority).includes(searchTerm) ||
+           String(route.weight).includes(searchTerm) ||
+           route.status.toLowerCase().includes(searchTerm);
+  });
+
+  const tableContainer = document.getElementById('routes-table-container');
+  const paginationContainer = document.getElementById('routes-pagination-container');
+  tableContainer.innerHTML = '';
+  paginationContainer.innerHTML = '';
+
+  if (filteredRoutes.length === 0) {
+    tableContainer.innerHTML = '<p class="text-center text-slate-500">没有找到相关路由。</p>';
+    return;
+  }
+
+  const totalPages = Math.ceil(filteredRoutes.length / routesPerPage);
+  const paginatedRoutes = filteredRoutes.slice((currentRoutePage - 1) * routesPerPage, currentRoutePage * routesPerPage);
+
+  const table = document.createElement('table');
+  table.className = 'w-full text-sm text-left text-slate-500';
+  table.innerHTML = `
+    <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+      <tr>
+        <th scope="col" class="px-6 py-3">Provider</th>
+        <th scope="col" class="px-6 py-3">优先级</th>
+        <th scope="col" class="px-6 py-3">权重</th>
+        <th scope="col" class="px-6 py-3">状态</th>
+        <th scope="col" class="px-6 py-3">后备</th>
+        <th scope="col" class="px-6 py-3">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  paginatedRoutes.forEach(route => {
+    const providerModel = {{ provider_models|tojson }}.find(p => p.id === route.provider_model_id);
+    const tr = document.createElement('tr');
+    tr.className = 'bg-white border-b';
+    tr.innerHTML = `
+      <td class="px-6 py-4">${providerModel ? providerModel.name : 'N/A'}</td>
+      <td class="px-6 py-4">${route.priority}</td>
+      <td class="px-6 py-4">${route.weight}</td>
+      <td class="px-6 py-4">${route.status}</td>
+      <td class="px-6 py-4">${route.is_fallback ? '是' : '否'}</td>
+      <td class="px-6 py-4 flex gap-2">
+        <button type="button" onclick='openEditRouteModal(${JSON.stringify(route)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
+        <form method="post" action="/admin/routes/${route.id}/delete" onsubmit="return confirm('确认删除这个路由吗？');">
+          <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
+        </form>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tableContainer.appendChild(table);
+
+  // Pagination
+  if (totalPages > 1) {
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '上一页';
+    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    prevButton.disabled = currentRoutePage === 1;
+    prevButton.onclick = () => {
+      currentRoutePage--;
+      renderRoutesTable();
+    };
+    paginationContainer.appendChild(prevButton);
+
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = `第 ${currentRoutePage} / ${totalPages} 页`;
+    pageInfo.className = 'text-xs text-slate-500';
+    paginationContainer.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '下一页';
+    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    nextButton.disabled = currentRoutePage === totalPages;
+    nextButton.onclick = () => {
+      currentRoutePage++;
+      renderRoutesTable();
+    };
+    paginationContainer.appendChild(nextButton);
+  }
+}
+
+function openCreateRouteModal() {
+  const form = document.getElementById('create-route-form');
+  form.reset();
+  form.querySelector('[name="logical_model_id"]').value = currentLogicalModelId;
+  openModal('create-route-modal');
+}
+
+function openEditRouteModal(route) {
+  const form = document.getElementById('edit-route-form');
+  form.action = `/admin/routes/${route.id}`;
+  fillForm('edit-route-form', {
+    ...route,
+    logical_model_id: currentLogicalModelId
+  });
+  openModal('edit-route-modal');
+}
+
+document.getElementById('routes-search').addEventListener('input', () => {
+  currentRoutePage = 1;
+  renderRoutesTable();
+});
+</script>
 {% endblock %}
