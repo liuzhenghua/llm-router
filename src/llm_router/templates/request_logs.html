@@ -52,7 +52,7 @@ function renderTable() {
         <th scope="col" class="px-6 py-3">Latency</th>
         <th scope="col" class="px-6 py-3">API Key ID</th>
         <th scope="col" class="px-6 py-3">Provider Model ID</th>
-        <th scope="col" class="px-6 py-3">Usage</th>
+        <th scope="col" class="px-6 py-3 min-w-[120px]">Usage</th>
         <th scope="col" class="px-6 py-3"></th>
       </tr>
     </thead>
@@ -65,7 +65,8 @@ function renderTable() {
     tr.className = 'bg-white border-b';
     let usageHtml = '-';
     if (log.usage_record) {
-      usageHtml = `P: ${log.usage_record.prompt_tokens}, C: ${log.usage_record.completion_tokens}, Cost: ${log.usage_record.cost_total}`;
+      const cost = log.usage_record.cost_total ? parseFloat(log.usage_record.cost_total).toFixed(6) : 'N/A';
+      usageHtml = `P: ${log.usage_record.prompt_tokens}, C: ${log.usage_record.completion_tokens}<br>${cost}`;
     }
     tr.innerHTML = `
       <td class="px-6 py-2.5 font-medium text-slate-900">${log.request_id}</td>
@@ -74,9 +75,9 @@ function renderTable() {
       <td class="px-6 py-2.5">${log.latency_ms || "-"}ms</td>
       <td class="px-6 py-2.5">${log.api_key_id || "-"}</td>
       <td class="px-6 py-2.5">${log.provider_model_id || "-"}</td>
-      <td class="px-6 py-2.5">${usageHtml}</td>
+      <td class="px-6 py-2.5 min-w-[120px] text-xs">${usageHtml}</td>
       <td class="px-6 py-2.5">
-        <a href="/admin/requests/${log.id}" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
+        <a href="/admin/requests/${log.id}" class="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
       </td>
     `;
     tbody.appendChild(tr);
