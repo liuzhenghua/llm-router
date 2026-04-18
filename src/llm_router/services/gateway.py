@@ -288,7 +288,6 @@ async def _proxy_stream(
     client = httpx.AsyncClient(timeout=provider.timeout_seconds)
     stream_cm = client.stream("POST", full_endpoint, json=payload, headers=headers)
     upstream_response = await stream_cm.__aenter__()
-    upstream_request_id = upstream_response.headers.get("x-request-id") or upstream_response.headers.get("request-id")
 
     if upstream_response.status_code >= 400:
         detail = (await upstream_response.aread()).decode("utf-8")
@@ -322,7 +321,7 @@ async def _proxy_stream(
             schedule_post_request_tasks(
                 _create_finalization_data(
                     request_id=context.request_id,
-                    upstream_request_id=upstream_request_id,
+                    upstream_request_id=stream_handler.get_upstream_request_id(),
                     api_key_id=context.api_key_id,
                     logical_model_id=context.logical_model_id,
                     provider_model_id=provider.id,

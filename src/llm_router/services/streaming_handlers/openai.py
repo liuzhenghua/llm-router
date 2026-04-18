@@ -100,3 +100,6 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             cache_read_tokens=details.get("cached_tokens", 0),
             cache_write_tokens=0,
         )
+
+    def get_upstream_request_id(self) -> str | None:
+        return self._id

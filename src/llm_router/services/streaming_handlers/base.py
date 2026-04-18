@@ -28,3 +28,7 @@ class BaseStreamingHandler(ABC):
     @abstractmethod
     def get_usage(self) -> UsageSnapshot | None:
         """获取 usage 快照"""
+
+    @abstractmethod
+    def get_upstream_request_id(self) -> str | None:
+        """获取 upstream_request_id"""
