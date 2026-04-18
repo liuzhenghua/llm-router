@@ -52,6 +52,8 @@
         <button type="button" onclick="openTopupModal(this)" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-700 hover:bg-emerald-100">充值</button>
         {% if item.status == 'active' %}
         <button type="button" onclick="disableApiKey(this)" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 hover:bg-rose-100">禁用</button>
+        {% else %}
+        <button type="button" onclick="enableApiKey(this)" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-700 hover:bg-emerald-100">启用</button>
         {% endif %}
       </div>
     </div>
@@ -417,6 +419,37 @@ function disableApiKey(btn) {
         showToast(name + ' 已禁用');
       } else {
         showToast('操作失败', 'error');
+      }
+    })
+    .catch(function() {
+      showToast('网络错误，请重试', 'error');
+    });
+}
+
+// ---- Enable API Key ----
+function enableApiKey(btn) {
+  var card = btn.closest('.api-key-card');
+  var name = card.dataset.name;
+  if (!confirm('确认启用 ' + name + ' 吗？')) return;
+  var id = card.dataset.id;
+  fetch('/admin/api-keys/' + id + '/enable', { method: 'POST' })
+    .then(function(res) { return res.json(); })
+    .then(function(result) {
+      if (result.ok) {
+        card.dataset.status = 'active';
+        var statusBadge = card.querySelector('.rounded-full');
+        statusBadge.className = 'inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700';
+        statusBadge.textContent = 'active';
+        btn.remove();
+        var disableBtn = document.createElement('button');
+        disableBtn.type = 'button';
+        disableBtn.setAttribute('onclick', 'disableApiKey(this)');
+        disableBtn.className = 'rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 hover:bg-rose-100';
+        disableBtn.textContent = '禁用';
+        card.querySelector('.flex.flex-wrap.gap-2').appendChild(disableBtn);
+        showToast(name + ' 已启用');
+      } else {
+        showToast(result.error || '操作失败', 'error');
       }
     })
     .catch(function() {

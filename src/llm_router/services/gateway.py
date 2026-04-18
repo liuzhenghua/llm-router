@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm_router.domain.enums import ProviderProtocol
@@ -88,6 +89,13 @@ async def _create_request_log(
     error_message: str | None = None,
     upstream_request_id: str | None = None,
 ) -> RequestLog:
+    # Check if request_log already exists (handles duplicate x-request-id from retries)
+    stmt = select(RequestLog).where(RequestLog.request_id == context.request_id)
+    result = await session.execute(stmt)
+    existing = result.scalar_one_or_none()
+    if existing:
+        return existing
+
     request_log = RequestLog(
         request_id=context.request_id,
         api_key_id=context.api_key_id,
@@ -172,14 +180,16 @@ async def _proxy_non_stream(
     api_key: ApiKey,
     context: RequestContext,
     provider: RoutedProvider,
+    request_path: str,
 ) -> JSONResponse:
     payload = _prepare_payload(context.payload, provider, context.protocol)
     headers = _build_upstream_headers(provider, context, context.protocol)
     usage = UsageSnapshot()
     started = time.perf_counter()
+    full_endpoint = provider.endpoint.rstrip("/") + request_path
     try:
         async with httpx.AsyncClient(timeout=provider.timeout_seconds) as client:
-            response = await client.post(provider.endpoint, json=payload, headers=headers)
+            response = await client.post(full_endpoint, json=payload, headers=headers)
         if response.status_code >= 400:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         body = response.json()
@@ -252,14 +262,16 @@ async def _proxy_stream(
     api_key: ApiKey,
     context: RequestContext,
     provider: RoutedProvider,
+    request_path: str,
 ) -> StreamingResponse:
     payload = _prepare_payload(context.payload, provider, context.protocol)
     headers = _build_upstream_headers(provider, context, context.protocol)
     usage = UsageSnapshot()
     started = time.perf_counter()
     accumulated: list[str] = []
+    full_endpoint = provider.endpoint.rstrip("/") + request_path
     client = httpx.AsyncClient(timeout=provider.timeout_seconds)
-    stream_cm = client.stream("POST", provider.endpoint, json=payload, headers=headers)
+    stream_cm = client.stream("POST", full_endpoint, json=payload, headers=headers)
     upstream_response = await stream_cm.__aenter__()
     upstream_request_id = upstream_response.headers.get("x-request-id") or upstream_response.headers.get("request-id")
 
@@ -347,6 +359,7 @@ async def handle_proxy_request(
     payload: dict[str, Any],
     raw_api_key: str,
     headers: dict[str, str],
+    request_path: str,
 ) -> JSONResponse | StreamingResponse:
     logical_model_name = payload.get("model")
     if not logical_model_name:
@@ -371,8 +384,8 @@ async def handle_proxy_request(
     for provider in providers:
         try:
             if context.stream:
-                return await _proxy_stream(session, api_key=api_key, context=context, provider=provider)
-            return await _proxy_non_stream(session, api_key=api_key, context=context, provider=provider)
+                return await _proxy_stream(session, api_key=api_key, context=context, provider=provider, request_path=request_path)
+            return await _proxy_non_stream(session, api_key=api_key, context=context, provider=provider, request_path=request_path)
         except HTTPException as exc:
             last_error = exc
             if exc.status_code < 500:

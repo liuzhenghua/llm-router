@@ -45,10 +45,12 @@ async def chat_completions(
     session: AsyncSession = request.state.db
     payload = await request.json()
     raw_api_key = _extract_bearer_token(authorization)
+    route_path = request.scope.get("route").path if request.scope.get("route") else request.url.path
     return await handle_proxy_request(
         session,
         protocol=ProviderProtocol.OPENAI,
         payload=payload,
         raw_api_key=raw_api_key,
         headers=dict(request.headers),
+        request_path="/chat/completions",
     )

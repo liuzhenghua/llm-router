@@ -289,6 +289,16 @@ async def delete_api_key(request: Request, api_key_id: int, _: None = Depends(re
     return _redirect_back(request, "/admin/api-keys")
 
 
+@protected_router.post("/api-keys/{api_key_id}/enable")
+async def enable_api_key(request: Request, api_key_id: int, _: None = Depends(require_admin)):
+    session = request.state.db
+    api_key = await session.get(ApiKey, api_key_id)
+    if api_key is not None:
+        api_key.status = "active"
+        await session.commit()
+    return JSONResponse({"ok": True, "id": api_key_id})
+
+
 @protected_router.post("/logical-models")
 async def create_logical_model(
     request: Request,
