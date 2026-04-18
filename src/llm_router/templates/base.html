@@ -33,7 +33,7 @@
         <button type="submit" class="w-full rounded-2xl border border-slate-700 px-4 py-2.5 text-xs font-medium text-slate-200 transition hover:bg-slate-900">退出登录</button>
       </form>
     </aside>
-    <main class="px-5 py-6 lg:px-8 lg:py-7">
+    <main class="px-5 py-6 text-sm lg:px-8 lg:py-7">
   {% else %}
   <div class="mx-auto max-w-7xl px-6 py-8">
   {% endif %}
@@ -44,6 +44,8 @@
   {% else %}
   </div>
   {% endif %}
+  <!-- Toast container -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-3"></div>
   <script>
     function openModal(id) {
       const dialog = document.getElementById(id);
@@ -61,10 +63,35 @@
         if (!field) return;
         if (field.type === "checkbox") {
           field.checked = value === true || value === "true" || value === "1" || value === 1;
+          if (field.onchange) field.onchange();
         } else {
           field.value = value ?? "";
         }
       });
+    }
+    function toggleCacheFields(checkbox) {
+      const cacheInputs = checkbox.closest('form').querySelector('#cache-inputs');
+      if (cacheInputs) {
+        cacheInputs.classList.toggle('hidden', !checkbox.checked);
+      }
+    }
+    function showToast(message, type) {
+      type = type || 'success';
+      var container = document.getElementById('toast-container');
+      var colors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-700 text-white'
+      };
+      var el = document.createElement('div');
+      el.className = 'rounded-2xl px-5 py-3 text-sm font-medium shadow-lg transition-all duration-300 ' + (colors[type] || colors.info);
+      el.textContent = message;
+      container.appendChild(el);
+      setTimeout(function() {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        setTimeout(function() { el.remove(); }, 300);
+      }, 2500);
     }
   </script>
 </body>

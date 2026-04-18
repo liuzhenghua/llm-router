@@ -17,7 +17,7 @@
         <div class="mt-1 text-xs text-slate-500">{{ item.protocol }} | {{ item.endpoint }} | active={{ item.is_active }}</div>
       </div>
       <div class="flex gap-2">
-        <button type="button" onclick='fillForm("edit-provider-form-{{ item.id }}", {{ {"name": item.name, "provider_type": item.provider_type, "protocol": item.protocol, "endpoint": item.endpoint, "upstream_model_name": item.upstream_model_name, "input_token_price": item.input_token_price|string, "output_token_price": item.output_token_price|string, "cache_read_token_price": item.cache_read_token_price|string, "cache_write_token_price": item.cache_write_token_price|string, "timeout_seconds": item.timeout_seconds|string, "supports_prompt_cache": item.supports_prompt_cache, "is_active": item.is_active}|tojson }}); openModal("edit-provider-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
+        <button type="button" onclick='fillForm("edit-provider-form-{{ item.id }}", {{ {"name": item.name, "protocol": item.protocol, "endpoint": item.endpoint, "upstream_model_name": item.upstream_model_name, "input_token_price": item.input_token_price|string, "output_token_price": item.output_token_price|string, "cache_read_token_price": item.cache_read_token_price|string, "cache_write_token_price": item.cache_write_token_price|string, "timeout_seconds": item.timeout_seconds|string, "supports_prompt_cache": item.supports_prompt_cache, "is_active": item.is_active}|tojson }}); openModal("edit-provider-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
         <form method="post" action="/admin/provider-models/{{ item.id }}/delete" onsubmit="return confirm('确认禁用这个 Provider 吗？');">
           <button class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700">禁用</button>
         </form>
@@ -29,18 +29,21 @@
       <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑 Provider</h3><button type="button" onclick='closeModal("edit-provider-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
       <form id="edit-provider-form-{{ item.id }}" method="post" action="/admin/provider-models/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
         <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">Provider 类型</span><select name="provider_type" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
         <label><span class="mb-2 block text-sm text-slate-600">协议</span><select name="protocol" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
         <label><span class="mb-2 block text-sm text-slate-600">Endpoint</span><input name="endpoint" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
         <label><span class="mb-2 block text-sm text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
         <label><span class="mb-2 block text-sm text-slate-600">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
         <label><span class="mb-2 block text-sm text-slate-600">输入单价 / 1M</span><input name="input_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
         <label><span class="mb-2 block text-sm text-slate-600">输出单价 / 1M</span><input name="output_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" id="edit-supports-prompt-cache-{{ item.id }}" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300">支持 Prompt Cache</label>
+        <div id="cache-inputs" class="hidden md:col-span-2">
+          <div class="ml-6 grid gap-4 md:grid-cols-2">
+            <label><span class="mb-2 block text-sm text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+            <label><span class="mb-2 block text-sm text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+          </div>
+        </div>
         <label><span class="mb-2 block text-sm text-slate-600">超时秒数</span><input name="timeout_seconds" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
         <div class="flex gap-3">
-          <label class="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="supports_prompt_cache" value="true">支持 Prompt Cache</label>
           <label class="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
         </div>
         <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
@@ -55,17 +58,19 @@
     <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">新增 Provider</h3><button type="button" onclick='closeModal("create-provider-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
     <form method="post" action="/admin/provider-models" class="grid gap-4 md:grid-cols-2">
       <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
-      <label><span class="mb-2 block text-sm text-slate-600">Provider 类型</span><select name="provider_type" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
       <label><span class="mb-2 block text-sm text-slate-600">协议</span><select name="protocol" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
       <label><span class="mb-2 block text-sm text-slate-600">Endpoint</span><input name="endpoint" placeholder="https://..." class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
       <label><span class="mb-2 block text-sm text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
       <label><span class="mb-2 block text-sm text-slate-600">API Key</span><input name="api_key_secret" class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
       <label><span class="mb-2 block text-sm text-slate-600">输入单价 / 1M</span><input name="input_token_price" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
       <label><span class="mb-2 block text-sm text-slate-600">输出单价 / 1M</span><input name="output_token_price" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">超时秒数</span><input name="timeout_seconds" value="120" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="supports_prompt_cache" value="true">支持 Prompt Cache</label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" id="supports_prompt_cache" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300">支持 Prompt Cache</label>
+      <div id="cache-inputs" class="hidden md:col-span-2">
+        <div class="ml-6 grid gap-4 md:grid-cols-2">
+          <label><span class="mb-2 block text-sm text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+          <label><span class="mb-2 block text-sm text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        </div>
+      </div>
       <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">创建 Provider</button>
     </form>
   </div>

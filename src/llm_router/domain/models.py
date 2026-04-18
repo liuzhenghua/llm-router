@@ -71,7 +71,6 @@ class ProviderModel(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
-    provider_type: Mapped[str] = mapped_column(String(32))
     endpoint: Mapped[str] = mapped_column(String(255))
     encrypted_api_key: Mapped[str] = mapped_column(Text)
     protocol: Mapped[str] = mapped_column(String(32), index=True)

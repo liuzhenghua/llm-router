@@ -4,7 +4,7 @@ from decimal import Decimal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import desc, or_, select
 from sqlalchemy.orm import selectinload
 
@@ -133,10 +133,11 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
 async def api_keys_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
     api_keys = (await session.execute(select(ApiKey).order_by(ApiKey.id.desc()))).scalars().all()
+    logical_models = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
     return _render_admin(
         request,
         "api_keys.html",
-        {"api_keys": api_keys, "raw_api_key": request.session.pop("new_api_key", None)},
+        {"api_keys": api_keys, "logical_models": logical_models, "raw_api_key": request.session.pop("new_api_key", None)},
         nav_active="api_keys",
         title="API Keys",
     )
@@ -226,7 +227,6 @@ async def update_api_key(
     api_key_id: int,
     name: str = Form(...),
     status_text: str = Form(..., alias="status"),
-    balance: Decimal = Form(...),
     daily_budget_limit: str = Form(default=""),
     qps_limit: int = Form(default=5),
     allowed_models: str = Form(default=""),
@@ -237,17 +237,16 @@ async def update_api_key(
     session = request.state.db
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
-        return _redirect("/admin/api-keys")
+        return JSONResponse({"ok": False, "error": "API Key 不存在"}, status_code=404)
     api_key.name = name
     api_key.status = status_text
-    api_key.balance = balance
     api_key.daily_budget_limit = _to_decimal(daily_budget_limit)
     api_key.qps_limit = qps_limit
     api_key.allowed_logical_models_json = [item.strip() for item in allowed_models.split(",") if item.strip()]
     api_key.request_content_logging_enabled = request_content_logging_enabled
     api_key.response_content_logging_enabled = response_content_logging_enabled
     await session.commit()
-    return _redirect_back(request, "/admin/api-keys")
+    return JSONResponse({"ok": True, "id": api_key_id})
 
 
 @protected_router.post("/api-keys/{api_key_id}/topup")
@@ -327,7 +326,6 @@ async def update_logical_model(
 async def create_provider_model(
     request: Request,
     name: str = Form(...),
-    provider_type: str = Form(...),
     protocol: str = Form(...),
     endpoint: str = Form(...),
     upstream_model_name: str = Form(...),
@@ -344,7 +342,6 @@ async def create_provider_model(
     session.add(
         ProviderModel(
             name=name,
-            provider_type=provider_type,
             protocol=protocol,
             endpoint=endpoint,
             upstream_model_name=upstream_model_name,
@@ -366,7 +363,6 @@ async def update_provider_model(
     request: Request,
     provider_model_id: int,
     name: str = Form(...),
-    provider_type: str = Form(...),
     protocol: str = Form(...),
     endpoint: str = Form(...),
     upstream_model_name: str = Form(...),
@@ -385,7 +381,6 @@ async def update_provider_model(
     if provider_model is None:
         return _redirect("/admin/providers")
     provider_model.name = name
-    provider_model.provider_type = provider_type
     provider_model.protocol = protocol
     provider_model.endpoint = endpoint
     provider_model.upstream_model_name = upstream_model_name

@@ -17,63 +17,387 @@
 
 <div class="space-y-4">
   {% for item in api_keys %}
-  <div class="rounded-3xl bg-white p-5 shadow-sm">
+  <div class="api-key-card rounded-3xl bg-white p-5 shadow-sm" data-id="{{ item.id }}" data-name="{{ item.name }}" data-status="{{ item.status }}" data-balance="{{ item.balance }}" data-daily-budget-limit="{{ item.daily_budget_limit or '' }}" data-qps-limit="{{ item.qps_limit }}" data-allowed-models="{{ item.allowed_logical_models_json|join(',') }}" data-request-logging="{{ item.request_content_logging_enabled }}" data-response-logging="{{ item.response_content_logging_enabled }}" data-daily-spend="{{ item.daily_spend_amount }}">
     <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <div class="text-lg font-semibold">{{ item.name }}</div>
-        <div class="mt-2 text-xs text-slate-500">status={{ item.status }} | balance={{ item.balance }} | today={{ item.daily_spend_amount }} | qps={{ item.qps_limit }}</div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-lg font-semibold">{{ item.name }}</span>
+          {% if item.status == 'active' %}
+          <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>
+          {% else %}
+          <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>
+          {% endif %}
+        </div>
+        <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+          <span>余额 <b class="text-slate-700">{{ item.balance }}</b></span>
+          <span>今日消费 <b class="text-slate-700">{{ item.daily_spend_amount }}</b></span>
+          <span>QPS <b class="text-slate-700">{{ item.qps_limit }}</b></span>
+          {% if item.daily_budget_limit %}
+          <span>日限额 <b class="text-slate-700">{{ item.daily_budget_limit }}</b></span>
+          {% endif %}
+        </div>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button type="button" onclick='fillForm("edit-api-key-form-{{ item.id }}", {{ {"name": item.name, "status": item.status, "balance": item.balance|string, "daily_budget_limit": item.daily_budget_limit|string if item.daily_budget_limit else "", "qps_limit": item.qps_limit|string, "allowed_models": item.allowed_logical_models_json|join(", "), "request_content_logging_enabled": item.request_content_logging_enabled, "response_content_logging_enabled": item.response_content_logging_enabled}|tojson }}); openModal("edit-api-key-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
-        <button type="button" onclick='openModal("topup-api-key-modal-{{ item.id }}")' class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-700">充值</button>
-        <form method="post" action="/admin/api-keys/{{ item.id }}/delete" onsubmit="return confirm('确认禁用这个 API Key 吗？');">
-          <button class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700">禁用</button>
-        </form>
+        <button type="button" onclick="openEditModal(this)" class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-700 hover:bg-slate-100">编辑</button>
+        <button type="button" onclick="openTopupModal(this)" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-700 hover:bg-emerald-100">充值</button>
+        {% if item.status == 'active' %}
+        <button type="button" onclick="disableApiKey(this)" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 hover:bg-rose-100">禁用</button>
+        {% endif %}
       </div>
     </div>
   </div>
-
-  <dialog id="edit-api-key-modal-{{ item.id }}" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-    <div class="rounded-[2rem] bg-white p-8">
-      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑 API Key</h3><button type="button" onclick='closeModal("edit-api-key-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
-      <form id="edit-api-key-form-{{ item.id }}" method="post" action="/admin/api-keys/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
-        <label class="block"><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="block"><span class="mb-2 block text-sm text-slate-600">状态</span><select name="status" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="active">active</option><option value="disabled">disabled</option></select></label>
-        <label class="block"><span class="mb-2 block text-sm text-slate-600">余额</span><input name="balance" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="block"><span class="mb-2 block text-sm text-slate-600">日限额</span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="block"><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="block md:col-span-2"><span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span><input name="allowed_models" placeholder="多个模型用英文逗号分隔" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="request_content_logging_enabled" value="true">记录请求内容</label>
-        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="response_content_logging_enabled" value="true">记录响应内容</label>
-        <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
-      </form>
-    </div>
-  </dialog>
-
-  <dialog id="topup-api-key-modal-{{ item.id }}" class="w-full max-w-xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-    <div class="rounded-[2rem] bg-white p-8">
-      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">为 {{ item.name }} 充值</h3><button type="button" onclick='closeModal("topup-api-key-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
-      <form method="post" action="/admin/api-keys/{{ item.id }}/topup" class="grid gap-4">
-        <label><span class="mb-2 block text-sm text-slate-600">充值金额</span><input name="amount" value="10" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-3 text-white">确认充值</button>
-      </form>
-    </div>
-  </dialog>
   {% endfor %}
 </div>
 
+<!-- Shared Edit Modal -->
+<dialog id="edit-api-key-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between">
+      <h3 class="text-2xl font-semibold">编辑 API Key</h3>
+      <button type="button" onclick="closeModal('edit-api-key-modal')" class="rounded-full px-3 py-1 text-slate-500 hover:text-slate-700">关闭</button>
+    </div>
+    <form id="edit-api-key-form" class="grid gap-4 md:grid-cols-2">
+      <input type="hidden" name="id" id="edit-id" disabled>
+      <label class="block"><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" required class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="block"><span class="mb-2 block text-sm text-slate-600">状态</span><select name="status" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="active">active</option><option value="disabled">disabled</option></select></label>
+      <label class="block"><span class="mb-2 block text-sm text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="block"><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="block md:col-span-2">
+        <span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span>
+        <div class="model-selector" id="model-selector-edit">
+          <div class="selected-tags flex flex-wrap gap-2 mb-2 min-h-[32px]"></div>
+          <div class="dropdown-wrapper relative">
+            <input type="text" class="model-search w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="搜索模型...">
+            <div class="dropdown hidden absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
+              <div class="sticky top-0 flex gap-2 border-b border-slate-100 bg-white px-3 py-2">
+                <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800">全选</button>
+                <button type="button" class="clear-all text-xs text-slate-500 hover:text-slate-700">清空</button>
+              </div>
+              <div class="dropdown-items"></div>
+            </div>
+          </div>
+          <input type="hidden" name="allowed_models" class="hidden-input" value="">
+        </div>
+      </label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="request_content_logging_enabled" value="true">记录请求内容</label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="response_content_logging_enabled" value="true">记录响应内容</label>
+      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
+    </form>
+  </div>
+</dialog>
+
+<!-- Shared Topup Modal -->
+<dialog id="topup-api-key-modal" class="w-full max-w-xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between">
+      <h3 class="text-2xl font-semibold">充值</h3>
+      <button type="button" onclick="closeModal('topup-api-key-modal')" class="rounded-full px-3 py-1 text-slate-500 hover:text-slate-700">关闭</button>
+    </div>
+    <form id="topup-api-key-form" class="grid gap-4">
+      <input type="hidden" name="id" id="topup-id" disabled>
+      <label><span class="mb-2 block text-sm text-slate-600">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-3 text-white hover:bg-emerald-700">确认充值</button>
+    </form>
+  </div>
+</dialog>
+
+<!-- Create Modal -->
 <dialog id="create-api-key-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
   <div class="rounded-[2rem] bg-white p-8">
-    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">创建 API Key</h3><button type="button" onclick='closeModal("create-api-key-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
-    <form method="post" action="/admin/api-keys" class="grid gap-4 md:grid-cols-2">
-      <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3" required></label>
-      <label><span class="mb-2 block text-sm text-slate-600">初始余额</span><input name="balance" value="0" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">日限额</span><input name="daily_budget_limit" placeholder="留空表示不限制" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" value="5" placeholder="例如 5" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label class="md:col-span-2"><span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span><input name="allowed_models" placeholder="多个模型用英文逗号分隔" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+    <div class="mb-6 flex items-center justify-between">
+      <h3 class="text-2xl font-semibold">创建 API Key</h3>
+      <button type="button" onclick="closeModal('create-api-key-modal')" class="rounded-full px-3 py-1 text-slate-500 hover:text-slate-700">关闭</button>
+    </div>
+    <form method="post" action="/admin/api-keys" class="grid gap-4 md:grid-cols-2" id="create-api-key-form">
+      <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" required class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">初始余额</span><input name="balance" type="number" step="0.01" min="0" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" value="5" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="block md:col-span-2">
+        <span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span>
+        <div class="model-selector" id="model-selector-create">
+          <div class="selected-tags flex flex-wrap gap-2 mb-2 min-h-[32px]"></div>
+          <div class="dropdown-wrapper relative">
+            <input type="text" class="model-search w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="搜索模型...">
+            <div class="dropdown hidden absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
+              <div class="sticky top-0 flex gap-2 border-b border-slate-100 bg-white px-3 py-2">
+                <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800">全选</button>
+                <button type="button" class="clear-all text-xs text-slate-500 hover:text-slate-700">清空</button>
+              </div>
+              <div class="dropdown-items"></div>
+            </div>
+          </div>
+          <input type="hidden" name="allowed_models" class="hidden-input" value="">
+        </div>
+      </label>
       <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">创建 API Key</button>
     </form>
   </div>
 </dialog>
+
+<script>
+var logicalModels = [
+  {% for model in logical_models %}
+    {id: {{ model.id }}, name: "{{ model.name }}"},
+  {% endfor %}
+];
+
+// ===== Model Selector v2（稳定版）=====
+function createModelSelector(selector, initialSelected) {
+  if (selector._inited) return;
+
+  const state = {
+    selected: [...initialSelected],
+    all: logicalModels.map(m => m.name)
+  };
+
+  const els = {
+    dropdown: selector.querySelector('.dropdown'),
+    items: selector.querySelector('.dropdown-items'),
+    search: selector.querySelector('.model-search'),
+    tags: selector.querySelector('.selected-tags'),
+    hidden: selector.querySelector('.hidden-input'),
+    selectAll: selector.querySelector('.select-all'),
+    clearAll: selector.querySelector('.clear-all')
+  };
+
+  selector._state = state;
+  selector._els = els;
+
+  function renderTags() {
+    els.tags.innerHTML = '';
+    state.selected.forEach(name => {
+      const tag = document.createElement('span');
+      tag.className = 'inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-sm';
+      tag.innerHTML = name + '<button type="button" class="ml-1 text-slate-500 hover:text-rose-500">&times;</button>';
+      tag.querySelector('button').onclick = (e) => {
+        e.stopPropagation();
+        state.selected = state.selected.filter(n => n !== name);
+        sync();
+      };
+      els.tags.appendChild(tag);
+    });
+  }
+
+  function renderDropdown() {
+    const keyword = els.search.value.toLowerCase();
+    els.items.innerHTML = '';
+    const list = state.all.filter(name => name.toLowerCase().includes(keyword));
+    if (!list.length) {
+      els.items.innerHTML = '<div class="px-4 py-2 text-slate-400">无匹配模型</div>';
+      return;
+    }
+    list.forEach(name => {
+      const selected = state.selected.includes(name);
+      const item = document.createElement('div');
+      item.className = 'cursor-pointer px-4 py-2 flex justify-between hover:bg-slate-50' + (selected ? ' bg-slate-100' : '');
+      item.innerHTML = '<span>' + name + '</span>' + (selected ? '<span class="text-sky-600">✓</span>' : '');
+      item.onclick = (e) => {
+        e.stopPropagation();
+        if (selected) {
+          state.selected = state.selected.filter(n => n !== name);
+        } else {
+          state.selected.push(name);
+        }
+        sync();
+      };
+      els.items.appendChild(item);
+    });
+  }
+
+  function sync() {
+    els.hidden.value = state.selected.join(',');
+    renderTags();
+    renderDropdown();
+  }
+
+  // 将sync函数暴露到selector上，供外部调用
+  selector._sync = sync;
+
+  els.search.onfocus = () => {
+    els.dropdown.classList.remove('hidden');
+    renderDropdown();
+  };
+  els.search.oninput = renderDropdown;
+
+  document.addEventListener('click', (e) => {
+    if (!selector.contains(e.target)) {
+      els.dropdown.classList.add('hidden');
+    }
+  });
+
+  els.selectAll.onclick = (e) => {
+    e.stopPropagation();
+    const keyword = els.search.value.toLowerCase();
+    const visible = state.all.filter(name => name.toLowerCase().includes(keyword));
+    state.selected = Array.from(new Set([...state.selected, ...visible]));
+    sync();
+  };
+
+  els.clearAll.onclick = (e) => {
+    e.stopPropagation();
+    state.selected = [];
+    sync();
+  };
+
+  sync();
+  selector._inited = true;
+}
+
+// ===== Edit Modal（稳定版）=====
+function openEditModal(btn) {
+  const card = btn.closest('.api-key-card');
+  const selector = document.getElementById('model-selector-edit');
+
+  document.getElementById('edit-id').value = card.dataset.id;
+  document.getElementById('edit-api-key-form').querySelector('[name="name"]').value = card.dataset.name;
+  document.getElementById('edit-api-key-form').querySelector('[name="status"]').value = card.dataset.status;
+  document.getElementById('edit-api-key-form').querySelector('[name="daily_budget_limit"]').value = card.dataset.dailyBudgetLimit || '';
+  document.getElementById('edit-api-key-form').querySelector('[name="qps_limit"]').value = card.dataset.qpsLimit;
+  document.getElementById('edit-api-key-form').querySelector('[name="request_content_logging_enabled"]').checked = card.dataset.requestLogging === 'True';
+  document.getElementById('edit-api-key-form').querySelector('[name="response_content_logging_enabled"]').checked = card.dataset.responseLogging === 'True';
+
+  const models = card.dataset.allowedModels ? card.dataset.allowedModels.split(',').filter(Boolean) : [];
+
+  if (!selector._inited) {
+    createModelSelector(selector, models);
+  } else {
+    selector._state.selected = [...models];
+    selector._els.search.value = '';
+    selector._sync();
+  }
+
+  openModal('edit-api-key-modal');
+}
+
+// ---- Edit Modal Submit ----
+document.getElementById('edit-api-key-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var form = this;
+  var id = document.getElementById('edit-id').value;
+  var data = new FormData(form);
+
+  fetch('/admin/api-keys/' + id, { method: 'POST', body: data })
+    .then(function(res) { return res.json(); })
+    .then(function(result) {
+      if (result.ok) {
+        var card = document.querySelector('.api-key-card[data-id="' + id + '"]');
+        if (card) {
+          card.dataset.name = data.get('name');
+          card.dataset.status = data.get('status');
+          card.dataset.dailyBudgetLimit = data.get('daily_budget_limit');
+          card.dataset.qpsLimit = data.get('qps_limit');
+          card.dataset.allowedModels = data.get('allowed_models');
+          card.dataset.requestLogging = data.get('request_content_logging_enabled');
+          card.dataset.responseLogging = data.get('response_content_logging_enabled');
+          var nameEl = card.querySelector('.text-lg');
+          nameEl.textContent = data.get('name');
+          var statusBadge = card.querySelector('.rounded-full');
+          var status = data.get('status');
+          if (status === 'active') {
+            statusBadge.className = 'inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700';
+            statusBadge.textContent = 'active';
+          } else {
+            statusBadge.className = 'inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700';
+            statusBadge.textContent = 'disabled';
+          }
+          var infoDiv = card.querySelector('.flex.flex-wrap.gap-x-4');
+          var qps = data.get('qps_limit');
+          var dailyLimit = data.get('daily_budget_limit');
+          var balance = card.dataset.balance;
+          var dailySpend = card.dataset.dailySpend;
+          var infoHtml = '<span>余额 <b class="text-slate-700">' + balance + '</b></span>' +
+            '<span>今日消费 <b class="text-slate-700">' + dailySpend + '</b></span>' +
+            '<span>QPS <b class="text-slate-700">' + qps + '</b></span>';
+          if (dailyLimit) {
+            infoHtml += '<span>日限额 <b class="text-slate-700">' + dailyLimit + '</b></span>';
+          }
+          infoDiv.innerHTML = infoHtml;
+          var disableBtn = card.querySelector('button[onclick*="disableApiKey"]');
+          if (status === 'active') {
+            if (!disableBtn) {
+              var btnContainer = card.querySelector('.flex.flex-wrap.gap-2');
+              var newBtn = document.createElement('button');
+              newBtn.type = 'button';
+              newBtn.setAttribute('onclick', 'disableApiKey(this)');
+              newBtn.className = 'rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700 hover:bg-rose-100';
+              newBtn.textContent = '禁用';
+              btnContainer.appendChild(newBtn);
+            }
+          } else {
+            if (disableBtn) disableBtn.remove();
+          }
+        }
+        closeModal('edit-api-key-modal');
+        showToast('保存成功');
+      } else {
+        showToast(result.error || '保存失败', 'error');
+      }
+    })
+    .catch(function() {
+      showToast('网络错误，请重试', 'error');
+    });
+});
+
+// ---- Topup Modal ----
+function openTopupModal(btn) {
+  var card = btn.closest('.api-key-card');
+  document.getElementById('topup-id').value = card.dataset.id;
+  document.getElementById('topup-api-key-modal').querySelector('h3').textContent = '为 ' + card.dataset.name + ' 充值';
+  document.getElementById('topup-api-key-form').querySelector('[name="amount"]').value = '10';
+  document.getElementById('topup-api-key-form').querySelector('[name="remark"]').value = '';
+  openModal('topup-api-key-modal');
+}
+
+document.getElementById('topup-api-key-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var form = this;
+  var id = document.getElementById('topup-id').value;
+  var data = new FormData(form);
+  fetch('/admin/api-keys/' + id + '/topup', { method: 'POST', body: data })
+    .then(function(res) {
+      if (res.ok || res.redirected) {
+        window.location.reload();
+      } else {
+        showToast('充值失败', 'error');
+      }
+    })
+    .catch(function() {
+      showToast('网络错误，请重试', 'error');
+    });
+});
+
+// ---- Disable API Key ----
+function disableApiKey(btn) {
+  var card = btn.closest('.api-key-card');
+  var name = card.dataset.name;
+  if (!confirm('确认禁用 ' + name + ' 吗？')) return;
+  var id = card.dataset.id;
+  fetch('/admin/api-keys/' + id + '/delete', { method: 'POST' })
+    .then(function(res) {
+      if (res.ok || res.redirected) {
+        card.dataset.status = 'disabled';
+        var statusBadge = card.querySelector('.rounded-full');
+        statusBadge.className = 'inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700';
+        statusBadge.textContent = 'disabled';
+        btn.remove();
+        showToast(name + ' 已禁用');
+      } else {
+        showToast('操作失败', 'error');
+      }
+    })
+    .catch(function() {
+      showToast('网络错误，请重试', 'error');
+    });
+}
+
+// ---- Init create modal selector ----
+document.addEventListener('DOMContentLoaded', function() {
+  var createSelector = document.getElementById('model-selector-create');
+  if (createSelector) {
+    createModelSelector(createSelector, []);
+  }
+});
+</script>
 {% endblock %}
