@@ -54,3 +54,135 @@ class BillingResult:
     cost_output: Decimal
     cost_cache_read: Decimal
     cost_cache_write: Decimal
+
+
+# ==================== 缓存数据结构 ====================
+
+
+@dataclass(slots=True)
+class CachedApiKey:
+    """ApiKey 缓存数据（不含敏感 key_hash）"""
+    id: int
+    name: str
+    status: str  # "active", "disabled", "deleted"
+    balance: Decimal
+    daily_budget_limit: Decimal | None
+    daily_spend_amount: Decimal
+    daily_spend_date: str | None  # ISO date string, e.g. "2025-01-15"
+    qps_limit: int
+    allowed_logical_models_json: list[str]  # JSON array stored as list
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "status": self.status,
+            "balance": str(self.balance),
+            "daily_budget_limit": str(self.daily_budget_limit) if self.daily_budget_limit is not None else None,
+            "daily_spend_amount": str(self.daily_spend_amount),
+            "daily_spend_date": self.daily_spend_date,
+            "qps_limit": self.qps_limit,
+            "allowed_logical_models_json": self.allowed_logical_models_json,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> CachedApiKey:
+        return cls(
+            id=d["id"],
+            name=d["name"],
+            status=d["status"],
+            balance=Decimal(d["balance"]),
+            daily_budget_limit=Decimal(d["daily_budget_limit"]) if d.get("daily_budget_limit") else None,
+            daily_spend_amount=Decimal(d["daily_spend_amount"]),
+            daily_spend_date=d.get("daily_spend_date"),
+            qps_limit=d["qps_limit"],
+            allowed_logical_models_json=d.get("allowed_logical_models_json") or [],
+        )
+
+
+@dataclass(slots=True)
+class CachedRoute:
+    """路由缓存数据"""
+    route_id: int
+    logical_model_id: int
+    provider_model_id: int
+    priority: int
+    weight: int
+    is_fallback: bool
+    status: str  # "active", "disabled"
+
+    def to_dict(self) -> dict:
+        return {
+            "route_id": self.route_id,
+            "logical_model_id": self.logical_model_id,
+            "provider_model_id": self.provider_model_id,
+            "priority": self.priority,
+            "weight": self.weight,
+            "is_fallback": self.is_fallback,
+            "status": self.status,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> CachedRoute:
+        return cls(
+            route_id=d["route_id"],
+            logical_model_id=d["logical_model_id"],
+            provider_model_id=d["provider_model_id"],
+            priority=d["priority"],
+            weight=d["weight"],
+            is_fallback=d.get("is_fallback", False),
+            status=d["status"],
+        )
+
+
+@dataclass(slots=True)
+class CachedProvider:
+    """Provider 缓存数据（encrypted_api_key 缓存后解密使用）"""
+    id: int
+    name: str
+    endpoint: str
+    encrypted_api_key: str  # 缓存加密后的，调用时解密
+    protocol: str
+    upstream_model_name: str
+    input_token_price: Decimal
+    output_token_price: Decimal
+    cache_read_token_price: Decimal
+    cache_write_token_price: Decimal
+    supports_prompt_cache: bool
+    timeout_seconds: int
+    is_active: bool
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "endpoint": self.endpoint,
+            "encrypted_api_key": self.encrypted_api_key,
+            "protocol": self.protocol,
+            "upstream_model_name": self.upstream_model_name,
+            "input_token_price": str(self.input_token_price),
+            "output_token_price": str(self.output_token_price),
+            "cache_read_token_price": str(self.cache_read_token_price),
+            "cache_write_token_price": str(self.cache_write_token_price),
+            "supports_prompt_cache": self.supports_prompt_cache,
+            "timeout_seconds": self.timeout_seconds,
+            "is_active": self.is_active,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> CachedProvider:
+        return cls(
+            id=d["id"],
+            name=d["name"],
+            endpoint=d["endpoint"],
+            encrypted_api_key=d["encrypted_api_key"],
+            protocol=d["protocol"],
+            upstream_model_name=d["upstream_model_name"],
+            input_token_price=Decimal(d["input_token_price"]),
+            output_token_price=Decimal(d["output_token_price"]),
+            cache_read_token_price=Decimal(d["cache_read_token_price"]),
+            cache_write_token_price=Decimal(d["cache_write_token_price"]),
+            supports_prompt_cache=d.get("supports_prompt_cache", False),
+            timeout_seconds=d.get("timeout_seconds", 60),
+            is_active=d["is_active"],
+        )

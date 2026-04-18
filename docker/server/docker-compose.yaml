@@ -14,6 +14,15 @@ services:
       - ./data/mysql:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    command: redis-server --appendonly yes
+
   llm-router:
     build:
       context: ../..
@@ -21,6 +30,7 @@ services:
     restart: unless-stopped
     depends_on:
       - mysql
+      - redis
     environment:
       APP_MODE: server
       HOST: 0.0.0.0
@@ -33,6 +43,8 @@ services:
       MYSQL_USER: llm_router
       MYSQL_PASSWORD: llm_router
       MYSQL_DATABASE: llm_router
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
       - "8000:8000"
     volumes:

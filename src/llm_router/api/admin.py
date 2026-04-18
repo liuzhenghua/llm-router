@@ -21,6 +21,7 @@ from llm_router.domain.models import (
     RequestLog,
     UsageRecord,
 )
+from llm_router.services.cache.dual_cache import get_dual_cache
 
 
 public_router = APIRouter(tags=["admin"])
@@ -62,6 +63,27 @@ def _to_decimal(value: str) -> Decimal | None:
     if not stripped:
         return None
     return Decimal(stripped)
+
+
+async def _invalidate_apikey_cache(api_key: ApiKey) -> None:
+    """失效 ApiKey 的缓存"""
+    dual_cache = get_dual_cache()
+    if dual_cache:
+        await dual_cache.invalidate_apikey(api_key.key_hash, api_key.id)
+
+
+async def _invalidate_provider_cache(provider_id: int) -> None:
+    """失效 Provider 的缓存"""
+    dual_cache = get_dual_cache()
+    if dual_cache:
+        await dual_cache.invalidate_provider(provider_id)
+
+
+async def _invalidate_route_cache(logical_model_id: int) -> None:
+    """失效路由缓存"""
+    dual_cache = get_dual_cache()
+    if dual_cache:
+        await dual_cache.invalidate_routes(logical_model_id)
 
 
 async def require_admin(request: Request) -> None:
@@ -300,6 +322,7 @@ async def update_api_key(
     api_key.request_content_logging_enabled = request_content_logging_enabled
     api_key.response_content_logging_enabled = response_content_logging_enabled
     await session.commit()
+    await _invalidate_apikey_cache(api_key)
     return JSONResponse({"ok": True, "id": api_key_id})
 
 
@@ -330,6 +353,7 @@ async def topup_api_key(
         )
     )
     await session.commit()
+    await _invalidate_apikey_cache(api_key)
     return _redirect_back(request, "/admin/api-keys")
 
 
@@ -340,6 +364,7 @@ async def delete_api_key(request: Request, api_key_id: int, _: None = Depends(re
     if api_key is not None:
         api_key.status = "disabled"
         await session.commit()
+        await _invalidate_apikey_cache(api_key)
     return _redirect_back(request, "/admin/api-keys")
 
 
@@ -350,6 +375,7 @@ async def enable_api_key(request: Request, api_key_id: int, _: None = Depends(re
     if api_key is not None:
         api_key.status = "active"
         await session.commit()
+        await _invalidate_apikey_cache(api_key)
     return JSONResponse({"ok": True, "id": api_key_id})
 
 
@@ -458,6 +484,7 @@ async def update_provider_model(
     provider_model.timeout_seconds = timeout_seconds
     provider_model.is_active = is_active
     await session.commit()
+    await _invalidate_provider_cache(provider_model_id)
     return _redirect_back(request, "/admin/providers")
 
 
@@ -468,6 +495,7 @@ async def delete_provider_model(request: Request, provider_model_id: int, _: Non
     if provider_model is not None:
         provider_model.is_active = False
         await session.commit()
+        await _invalidate_provider_cache(provider_model_id)
     return _redirect_back(request, "/admin/providers")
 
 
@@ -492,6 +520,7 @@ async def create_route(
         )
     )
     await session.commit()
+    await _invalidate_route_cache(logical_model_id)
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -511,6 +540,7 @@ async def update_route(
     route = await session.get(LogicalModelRoute, route_id)
     if route is None:
         return _redirect("/admin/logical-models")
+    old_logical_model_id = route.logical_model_id
     route.logical_model_id = logical_model_id
     route.provider_model_id = provider_model_id
     route.priority = priority
@@ -518,6 +548,10 @@ async def update_route(
     route.is_fallback = is_fallback
     route.status = status_text
     await session.commit()
+    # 失效新旧路由缓存
+    await _invalidate_route_cache(old_logical_model_id)
+    if logical_model_id != old_logical_model_id:
+        await _invalidate_route_cache(logical_model_id)
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -526,8 +560,10 @@ async def delete_route(request: Request, route_id: int, _: None = Depends(requir
     session = request.state.db
     route = await session.get(LogicalModelRoute, route_id)
     if route is not None:
+        logical_model_id = route.logical_model_id
         await session.delete(route)
         await session.commit()
+        await _invalidate_route_cache(logical_model_id)
     return _redirect_back(request, "/admin/logical-models")
 
 

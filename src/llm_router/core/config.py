@@ -45,6 +45,21 @@ class Settings(BaseSettings):
     mysql_password: str = "llm_router"
     mysql_database: str = "llm_router"
 
+    # Redis 缓存配置（server 模式使用）
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_password: str | None = None
+
+    # 缓存 TTL 配置（秒）
+    cache_ttl: int = 60
+    cache_api_key_ttl: int = 60
+    cache_route_ttl: int = 60
+    cache_provider_ttl: int = 60
+
+    # 增量队列刷新间隔（秒）
+    spend_queue_flush_interval: int = 30
+
     @computed_field
     @property
     def effective_database_url(self) -> str:

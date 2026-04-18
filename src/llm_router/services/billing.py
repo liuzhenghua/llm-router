@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from llm_router.domain.enums import ChangeType
 from llm_router.domain.models import ApiKey, BalanceLedger, DailyUsageSummary, RequestLog, UsageRecord
 from llm_router.domain.schemas import BillingResult, RoutedProvider, UsageSnapshot
+from llm_router.services.cache.spend_queue import SpendDelta, get_spend_queue
 
 
 ZERO = Decimal("0")
@@ -53,6 +54,13 @@ async def record_billing(
     provider: RoutedProvider,
     usage: UsageSnapshot,
 ) -> BillingResult:
+    """
+    记录计费
+
+    注意：balance 和 daily_spend_amount 的更新通过增量队列异步写入 DB，
+    以支持多 Pod 并发写入时不会互相覆盖。其他记录（UsageRecord, BalanceLedger,
+    DailyUsageSummary）仍然立即写入。
+    """
     today = date.today()
     if api_key.daily_spend_date != today:
         api_key.daily_spend_date = today
@@ -64,10 +72,24 @@ async def record_billing(
     if api_key.balance - costs.total_cost < ZERO:
         raise ValueError("Insufficient balance")
 
+    # === 增量队列：推送 balance 和 daily_spend_amount 的更新 ===
+    spend_queue = get_spend_queue()
+    delta_amount = -costs.total_cost  # 负数表示扣款
+
+    if spend_queue:
+        delta = SpendDelta(
+            api_key_id=api_key.id,
+            delta_amount=delta_amount,
+            request_id=request_log.request_id,
+        )
+        await spend_queue.push(delta)
+    else:
+        # Fallback: 直接更新（仅用于无队列的简单场景）
+        api_key.balance = Decimal(api_key.balance) + delta_amount
+        api_key.daily_spend_amount = Decimal(api_key.daily_spend_amount) + costs.total_cost
+
+    # === 立即写入：UsageRecord, BalanceLedger, DailyUsageSummary ===
     balance_before = Decimal(api_key.balance)
-    api_key.balance = balance_before - costs.total_cost
-    api_key.daily_spend_amount = Decimal(api_key.daily_spend_amount) + costs.total_cost
-    api_key.daily_spend_date = today
 
     summary_stmt = select(DailyUsageSummary).where(
         DailyUsageSummary.api_key_id == api_key.id,
@@ -113,7 +135,7 @@ async def record_billing(
             change_type=ChangeType.CHARGE.value,
             amount=-costs.total_cost,
             balance_before=balance_before,
-            balance_after=api_key.balance,
+            balance_after=balance_before + delta_amount,  # 使用预估的 after 值
             reference_type="request_log",
             reference_id=str(request_log.id),
             remark=f"Charged for {request_log.request_id}",
