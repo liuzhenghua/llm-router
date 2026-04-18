@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-8 flex items-center justify-between">
-  <div><p class="text-xs uppercase tracking-[0.35em] text-sky-600">Logical Models</p><h1 class="mt-2 text-3xl font-bold">逻辑模型</h1></div>
+<div class="mb-4 flex items-center justify-between">
+  <div><p class="text-xs uppercase tracking-[0.35em] text-sky-600">Logical Models</p><h1 class="mt-1 text-2xl font-bold">逻辑模型</h1></div>
   <button type="button" onclick="openModal('create-logical-model-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增逻辑模型</button>
 </div>
 
-<div class="mb-4">
+<div class="mb-2">
   <input type="text" id="logical-models-search" placeholder="搜索模型..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
 </div>
 
-<div id="logical-models-table-container"></div>
-<div id="logical-models-pagination-container" class="mt-4 flex items-center justify-between"></div>
+<div id="logical-models-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
+<div id="logical-models-pagination-container" class="mt-2 flex items-center justify-between"></div>
 
 {% for item in logical_models %}
 <dialog id="edit-logical-model-modal-{{ item.id }}" class="w-full max-w-2xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
@@ -45,8 +45,8 @@
       </div>
       <button type="button" onclick="openCreateRouteModal()" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增路由</button>
     </div>
-    <div id="routes-table-container"></div>
-    <div id="routes-pagination-container" class="mt-4 flex items-center justify-between"></div>
+    <div id="routes-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
+    <div id="routes-pagination-container" class="mt-2 flex items-center justify-between"></div>
   </div>
 </dialog>
 <dialog id="create-route-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
@@ -95,7 +95,7 @@ function renderLogicalModelsTable() {
   paginationContainer.innerHTML = '';
 
   if (filteredModels.length === 0) {
-    tableContainer.innerHTML = '<p class="text-center text-slate-500">没有找到相关模型。</p>';
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关模型。</p>';
     return;
   }
 
@@ -121,10 +121,10 @@ function renderLogicalModelsTable() {
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
-      <td class="px-6 py-4 font-medium text-slate-900">${item.name}</td>
-      <td class="px-6 py-4">${item.description || "无描述"}</td>
-      <td class="px-6 py-4">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
-      <td class="px-6 py-4 flex gap-2">
+      <td class="px-6 py-2.5 font-medium text-slate-900">${item.name}</td>
+      <td class="px-6 py-2.5">${item.description || "无描述"}</td>
+      <td class="px-6 py-2.5">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
+      <td class="px-6 py-2.5 flex gap-2">
         <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">路由</button>
         <button type="button" onclick='fillForm("edit-logical-model-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-logical-model-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
       </td>
@@ -207,7 +207,7 @@ function renderRoutesTable() {
   paginationContainer.innerHTML = '';
 
   if (filteredRoutes.length === 0) {
-    tableContainer.innerHTML = '<p class="text-center text-slate-500">没有找到相关路由。</p>';
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关路由。</p>';
     return;
   }
 
@@ -236,12 +236,12 @@ function renderRoutesTable() {
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
-      <td class="px-6 py-4">${providerModel ? providerModel.name : 'N/A'}</td>
-      <td class="px-6 py-4">${route.priority}</td>
-      <td class="px-6 py-4">${route.weight}</td>
-      <td class="px-6 py-4">${route.status}</td>
-      <td class="px-6 py-4">${route.is_fallback ? '是' : '否'}</td>
-      <td class="px-6 py-4 flex gap-2">
+      <td class="px-6 py-2.5">${providerModel ? providerModel.name : 'N/A'}</td>
+      <td class="px-6 py-2.5">${route.priority}</td>
+      <td class="px-6 py-2.5">${route.weight}</td>
+      <td class="px-6 py-2.5">${route.status}</td>
+      <td class="px-6 py-2.5">${route.is_fallback ? '是' : '否'}</td>
+      <td class="px-6 py-2.5 flex gap-2">
         <button type="button" onclick='openEditRouteModal(${JSON.stringify(route)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <form method="post" action="/admin/routes/${route.id}/delete" onsubmit="return confirm('确认删除这个路由吗？');">
           <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
