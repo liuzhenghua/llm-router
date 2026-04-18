@@ -8,13 +8,17 @@ from typing import Any
 import httpx
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse, StreamingResponse
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm_router.domain.enums import ProviderProtocol
-from llm_router.domain.models import ApiKey, RequestLog
+from llm_router.domain.models import ApiKey
 from llm_router.domain.schemas import RequestContext, RoutedProvider, UsageSnapshot
-from llm_router.services.billing import record_billing
+from llm_router.services.post_request import (
+    ProviderPricesData,
+    RequestFinalizationData,
+    UsageSnapshotData,
+    schedule_post_request_tasks,
+)
 from llm_router.services.router import resolve_provider_candidates, resolve_request_context
 
 
@@ -76,102 +80,73 @@ def _prepare_payload(payload: dict[str, Any], provider: RoutedProvider, protocol
     return patched
 
 
-async def _create_request_log(
-    session: AsyncSession,
+def _create_finalization_data(
     *,
-    context: RequestContext,
+    request_id: str,
+    upstream_request_id: str | None,
+    api_key_id: int,
+    logical_model_id: int,
+    provider_model_id: int,
+    protocol: ProviderProtocol,
+    status_code: int,
+    success: bool,
+    latency_ms: int,
+    request_payload: dict[str, Any] | None,
+    response_body: str | None,
+    error_message: str | None,
+    request_logging_enabled: bool,
+    response_logging_enabled: bool,
+    usage: UsageSnapshot | None,
     provider: RoutedProvider,
-    status_code: int | None = None,
-    success: bool = False,
-    latency_ms: int | None = None,
-    request_body: str | None = None,
-    response_body: str | None = None,
-    error_message: str | None = None,
-    upstream_request_id: str | None = None,
-) -> RequestLog:
-    # Check if request_log already exists (handles duplicate x-request-id from retries)
-    stmt = select(RequestLog).where(RequestLog.request_id == context.request_id)
-    result = await session.execute(stmt)
-    existing = result.scalar_one_or_none()
-    if existing:
-        return existing
+) -> RequestFinalizationData:
+    """创建后置任务数据对象"""
+    # 序列化请求体（如果启用）
+    request_body = None
+    if request_logging_enabled and request_payload:
+        try:
+            request_body = json.dumps(request_payload, ensure_ascii=False)
+        except Exception:
+            pass
 
-    request_log = RequestLog(
-        request_id=context.request_id,
-        api_key_id=context.api_key_id,
-        logical_model_id=context.logical_model_id,
-        provider_model_id=provider.id,
-        protocol=context.protocol.value,
+    # 序列化响应体（如果启用）
+    response_body_serialized = response_body if response_logging_enabled else None
+
+    # 转换 usage 为纯数据对象
+    usage_data = None
+    if usage:
+        usage_data = UsageSnapshotData(
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            cache_read_tokens=usage.cache_read_tokens,
+            cache_write_tokens=usage.cache_write_tokens,
+        )
+
+    # 转换 provider 价格
+    prices_data = ProviderPricesData(
+        input_token_price=provider.input_token_price,
+        output_token_price=provider.output_token_price,
+        cache_read_token_price=provider.cache_read_token_price,
+        cache_write_token_price=provider.cache_write_token_price,
+    )
+
+    return RequestFinalizationData(
+        request_id=request_id,
         upstream_request_id=upstream_request_id,
+        api_key_id=api_key_id,
+        logical_model_id=logical_model_id,
+        provider_model_id=provider.id,
+        protocol=protocol.value,
         status_code=status_code,
         success=success,
         latency_ms=latency_ms,
         request_body=request_body,
-        response_body=response_body,
+        response_body=response_body_serialized,
         error_message=error_message,
+        usage=usage_data,
+        provider_prices=prices_data,
     )
-    session.add(request_log)
-    await session.flush()
-    return request_log
 
 
-async def _finalize_success(
-    session: AsyncSession,
-    *,
-    api_key: ApiKey,
-    context: RequestContext,
-    provider: RoutedProvider,
-    usage: UsageSnapshot,
-    status_code: int,
-    latency_ms: int,
-    request_payload: dict[str, Any],
-    response_body: str | None,
-    upstream_request_id: str | None,
-) -> None:
-    request_log = await _create_request_log(
-        session,
-        context=context,
-        provider=provider,
-        status_code=status_code,
-        success=True,
-        latency_ms=latency_ms,
-        request_body=json.dumps(request_payload, ensure_ascii=False) if context.request_logging_enabled else None,
-        response_body=response_body if context.response_logging_enabled else None,
-        upstream_request_id=upstream_request_id,
-    )
-    await record_billing(
-        session,
-        api_key=api_key,
-        request_log=request_log,
-        provider=provider,
-        usage=usage,
-    )
-    await session.commit()
-
-
-async def _finalize_failure(
-    session: AsyncSession,
-    *,
-    context: RequestContext,
-    provider: RoutedProvider,
-    status_code: int,
-    latency_ms: int,
-    request_payload: dict[str, Any],
-    error_message: str,
-    upstream_request_id: str | None = None,
-) -> None:
-    await _create_request_log(
-        session,
-        context=context,
-        provider=provider,
-        status_code=status_code,
-        success=False,
-        latency_ms=latency_ms,
-        request_body=json.dumps(request_payload, ensure_ascii=False) if context.request_logging_enabled else None,
-        error_message=error_message,
-        upstream_request_id=upstream_request_id,
-    )
-    await session.commit()
 
 
 async def _proxy_non_stream(
@@ -198,41 +173,71 @@ async def _proxy_non_stream(
         else:
             _extract_anthropic_usage(body, usage)
         latency_ms = int((time.perf_counter() - started) * 1000)
-        await _finalize_success(
-            session,
-            api_key=api_key,
-            context=context,
-            provider=provider,
-            usage=usage,
-            status_code=response.status_code,
-            latency_ms=latency_ms,
-            request_payload=payload,
-            response_body=json.dumps(body, ensure_ascii=False),
-            upstream_request_id=response.headers.get("x-request-id") or response.headers.get("request-id"),
+        schedule_post_request_tasks(
+            _create_finalization_data(
+                request_id=context.request_id,
+                upstream_request_id=response.headers.get("x-request-id") or response.headers.get("request-id"),
+                api_key_id=context.api_key_id,
+                logical_model_id=context.logical_model_id,
+                provider_model_id=provider.id,
+                protocol=context.protocol,
+                status_code=response.status_code,
+                success=True,
+                latency_ms=latency_ms,
+                request_payload=payload,
+                response_body=json.dumps(body, ensure_ascii=False),
+                error_message=None,
+                request_logging_enabled=context.request_logging_enabled,
+                response_logging_enabled=context.response_logging_enabled,
+                usage=usage,
+                provider=provider,
+            )
         )
         return JSONResponse(content=body, status_code=response.status_code, headers=_filter_headers(response.headers))
     except HTTPException as exc:
         latency_ms = int((time.perf_counter() - started) * 1000)
-        await _finalize_failure(
-            session,
-            context=context,
-            provider=provider,
-            status_code=exc.status_code,
-            latency_ms=latency_ms,
-            request_payload=payload,
-            error_message=str(exc.detail),
+        schedule_post_request_tasks(
+            _create_finalization_data(
+                request_id=context.request_id,
+                upstream_request_id=None,
+                api_key_id=context.api_key_id,
+                logical_model_id=context.logical_model_id,
+                provider_model_id=provider.id,
+                protocol=context.protocol,
+                status_code=exc.status_code,
+                success=False,
+                latency_ms=latency_ms,
+                request_payload=payload,
+                response_body=None,
+                error_message=str(exc.detail),
+                request_logging_enabled=context.request_logging_enabled,
+                response_logging_enabled=context.response_logging_enabled,
+                usage=None,
+                provider=provider,
+            )
         )
         raise
     except Exception as exc:
         latency_ms = int((time.perf_counter() - started) * 1000)
-        await _finalize_failure(
-            session,
-            context=context,
-            provider=provider,
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            latency_ms=latency_ms,
-            request_payload=payload,
-            error_message=str(exc),
+        schedule_post_request_tasks(
+            _create_finalization_data(
+                request_id=context.request_id,
+                upstream_request_id=None,
+                api_key_id=context.api_key_id,
+                logical_model_id=context.logical_model_id,
+                provider_model_id=provider.id,
+                protocol=context.protocol,
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                success=False,
+                latency_ms=latency_ms,
+                request_payload=payload,
+                response_body=None,
+                error_message=str(exc),
+                request_logging_enabled=context.request_logging_enabled,
+                response_logging_enabled=context.response_logging_enabled,
+                usage=None,
+                provider=provider,
+            )
         )
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
@@ -314,36 +319,50 @@ async def _proxy_stream(
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
         finally:
             latency_ms = int((time.perf_counter() - started) * 1000)
-            try:
-                if stream_failed:
-                    await _finalize_failure(
-                        session,
-                        context=context,
-                        provider=provider,
+            if stream_failed:
+                schedule_post_request_tasks(
+                    _create_finalization_data(
+                        request_id=context.request_id,
+                        upstream_request_id=upstream_request_id,
+                        api_key_id=context.api_key_id,
+                        logical_model_id=context.logical_model_id,
+                        provider_model_id=provider.id,
+                        protocol=context.protocol,
                         status_code=status.HTTP_502_BAD_GATEWAY,
+                        success=False,
                         latency_ms=latency_ms,
                         request_payload=payload,
+                        response_body=None,
                         error_message=error_message or "Streaming failed",
-                        upstream_request_id=upstream_request_id,
-                    )
-                else:
-                    await _finalize_success(
-                        session,
-                        api_key=api_key,
-                        context=context,
+                        request_logging_enabled=context.request_logging_enabled,
+                        response_logging_enabled=context.response_logging_enabled,
+                        usage=None,
                         provider=provider,
-                        usage=usage,
+                    )
+                )
+            else:
+                schedule_post_request_tasks(
+                    _create_finalization_data(
+                        request_id=context.request_id,
+                        upstream_request_id=upstream_request_id,
+                        api_key_id=context.api_key_id,
+                        logical_model_id=context.logical_model_id,
+                        provider_model_id=provider.id,
+                        protocol=context.protocol,
                         status_code=upstream_response.status_code,
+                        success=True,
                         latency_ms=latency_ms,
                         request_payload=payload,
                         response_body="".join(accumulated) if accumulated else None,
-                        upstream_request_id=upstream_request_id,
+                        error_message=None,
+                        request_logging_enabled=context.request_logging_enabled,
+                        response_logging_enabled=context.response_logging_enabled,
+                        usage=usage,
+                        provider=provider,
                     )
-            except Exception:
-                await session.rollback()
-            finally:
-                await stream_cm.__aexit__(None, None, None)
-                await client.aclose()
+                )
+            await stream_cm.__aexit__(None, None, None)
+            await client.aclose()
 
     return StreamingResponse(
         event_iterator(),
