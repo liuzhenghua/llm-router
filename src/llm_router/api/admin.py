@@ -132,8 +132,24 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
 @protected_router.get("/api-keys")
 async def api_keys_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    api_keys = (await session.execute(select(ApiKey).order_by(ApiKey.id.desc()))).scalars().all()
-    logical_models = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
+    api_keys_result = (await session.execute(select(ApiKey).order_by(ApiKey.id.desc()))).scalars().all()
+    api_keys = [
+        {
+            "id": key.id,
+            "name": key.name,
+            "status": key.status,
+            "balance": str(key.balance),
+            "daily_spend_amount": str(key.daily_spend_amount),
+            "qps_limit": key.qps_limit,
+            "daily_budget_limit": str(key.daily_budget_limit) if key.daily_budget_limit is not None else None,
+            "allowed_logical_models_json": key.allowed_logical_models_json,
+            "request_content_logging_enabled": key.request_content_logging_enabled,
+            "response_content_logging_enabled": key.response_content_logging_enabled,
+        }
+        for key in api_keys_result
+    ]
+    logical_models_result = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
+    logical_models = [{"id": m.id, "name": m.name} for m in logical_models_result]
     return _render_admin(
         request,
         "api_keys.html",
@@ -187,7 +203,24 @@ async def logical_models_page(request: Request, _: None = Depends(require_admin)
 @protected_router.get("/providers")
 async def providers_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    provider_models = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    provider_models_result = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    provider_models = [
+        {
+            "id": pm.id,
+            "name": pm.name,
+            "protocol": pm.protocol,
+            "endpoint": pm.endpoint,
+            "upstream_model_name": pm.upstream_model_name,
+            "input_token_price": str(pm.input_token_price),
+            "output_token_price": str(pm.output_token_price),
+            "cache_read_token_price": str(pm.cache_read_token_price),
+            "cache_write_token_price": str(pm.cache_write_token_price),
+            "timeout_seconds": pm.timeout_seconds,
+            "supports_prompt_cache": pm.supports_prompt_cache,
+            "is_active": pm.is_active,
+        }
+        for pm in provider_models_result
+    ]
     return _render_admin(
         request,
         "providers.html",
@@ -507,7 +540,25 @@ async def request_logs_page(
         stmt = stmt.where(RequestLog.protocol == protocol)
     if status_filter in {"success", "failed"}:
         stmt = stmt.where(RequestLog.success.is_(status_filter == "success"))
-    logs = (await session.execute(stmt)).scalars().all()
+    logs_result = (await session.execute(stmt)).scalars().all()
+    logs = [
+        {
+            "id": log.id,
+            "request_id": log.request_id,
+            "protocol": log.protocol,
+            "status_code": log.status_code,
+            "success": log.success,
+            "latency_ms": log.latency_ms,
+            "api_key_id": log.api_key_id,
+            "provider_model_id": log.provider_model_id,
+            "usage_record": {
+                "prompt_tokens": log.usage_record.prompt_tokens,
+                "completion_tokens": log.usage_record.completion_tokens,
+                "cost_total": str(log.usage_record.cost_total),
+            } if log.usage_record else None,
+        }
+        for log in logs_result
+    ]
     return _render_admin(
         request,
         "request_logs.html",
@@ -544,7 +595,9 @@ async def billing_page(
     _: None = Depends(require_admin),
 ):
     session = request.state.db
-    api_keys = (await session.execute(select(ApiKey).order_by(ApiKey.name.asc()))).scalars().all()
+    api_keys_result = (await session.execute(select(ApiKey).order_by(ApiKey.name.asc()))).scalars().all()
+    api_keys = [{"id": key.id, "name": key.name} for key in api_keys_result]
+    
     ledger_stmt = select(BalanceLedger).order_by(desc(BalanceLedger.id)).limit(100)
     usage_stmt = (
         select(UsageRecord)
@@ -557,14 +610,53 @@ async def billing_page(
         ledger_stmt = ledger_stmt.where(BalanceLedger.api_key_id == api_key_id)
         summary_stmt = summary_stmt.where(DailyUsageSummary.api_key_id == api_key_id)
         usage_stmt = usage_stmt.join(RequestLog, UsageRecord.request_log_id == RequestLog.id).where(RequestLog.api_key_id == api_key_id)
+
+    ledgers_result = (await session.execute(ledger_stmt)).scalars().all()
+    ledgers = [
+        {
+            "change_type": item.change_type,
+            "amount": str(item.amount),
+            "api_key_id": item.api_key_id,
+            "balance_before": str(item.balance_before),
+            "balance_after": str(item.balance_after),
+            "remark": item.remark,
+        }
+        for item in ledgers_result
+    ]
+
+    usage_records_result = (await session.execute(usage_stmt)).scalars().all()
+    usage_records = [
+        {
+            "request_log_id": item.request_log_id,
+            "cost_total": str(item.cost_total),
+            "prompt_tokens": item.prompt_tokens,
+            "completion_tokens": item.completion_tokens,
+            "request_log": {"request_id": item.request_log.request_id} if item.request_log else None,
+        }
+        for item in usage_records_result
+    ]
+
+    summaries_result = (await session.execute(summary_stmt)).scalars().all()
+    summaries = [
+        {
+            "api_key_id": item.api_key_id,
+            "summary_date": item.summary_date.isoformat(),
+            "request_count": item.request_count,
+            "cost_total": str(item.cost_total),
+            "prompt_tokens": item.prompt_tokens,
+            "completion_tokens": item.completion_tokens,
+        }
+        for item in summaries_result
+    ]
+
     return _render_admin(
         request,
         "billing.html",
         {
             "api_keys": api_keys,
-            "ledgers": (await session.execute(ledger_stmt)).scalars().all(),
-            "usage_records": (await session.execute(usage_stmt)).scalars().all(),
-            "summaries": (await session.execute(summary_stmt)).scalars().all(),
+            "ledgers": ledgers,
+            "usage_records": usage_records,
+            "summaries": summaries,
             "selected_api_key_id": api_key_id,
         },
         nav_active="billing",

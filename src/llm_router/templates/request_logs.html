@@ -1,47 +1,124 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-8 flex items-center justify-between">
+<div class="mb-4 flex items-center justify-between">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Requests</p>
-    <h1 class="mt-2 text-3xl font-bold">请求日志</h1>
+    <h1 class="mt-1 text-2xl font-bold">请求日志</h1>
   </div>
   <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
 </div>
 
-<div class="rounded-3xl bg-white p-6 shadow-sm">
-  <form method="get" action="/admin/requests" class="grid gap-3 md:grid-cols-4">
-    <input name="request_id" value="{{ filters.request_id }}" placeholder="request or upstream id" class="rounded-xl border border-slate-200 px-4 py-3">
-    <select name="protocol" class="rounded-xl border border-slate-200 px-4 py-3">
-      <option value="">all protocol</option>
-      <option value="openai" {% if filters.protocol == "openai" %}selected{% endif %}>openai</option>
-      <option value="anthropic" {% if filters.protocol == "anthropic" %}selected{% endif %}>anthropic</option>
-    </select>
-    <select name="status_filter" class="rounded-xl border border-slate-200 px-4 py-3">
-      <option value="">all status</option>
-      <option value="success" {% if filters.status_filter == "success" %}selected{% endif %}>success</option>
-      <option value="failed" {% if filters.status_filter == "failed" %}selected{% endif %}>failed</option>
-    </select>
-    <button class="rounded-xl bg-sky-600 px-4 py-3 font-medium text-white">筛选</button>
-  </form>
+<div class="mb-2">
+  <input type="text" id="logs-search" placeholder="搜索日志..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
 </div>
 
-<div class="mt-6 space-y-4">
-  {% for log in logs %}
-  <a href="/admin/requests/{{ log.id }}" class="block rounded-3xl bg-white p-6 shadow-sm transition hover:shadow-md">
-    <div class="flex items-center justify-between gap-4">
-      <div>
-        <div class="text-lg font-semibold text-slate-900">{{ log.request_id }}</div>
-        <div class="mt-1 text-sm text-slate-500">protocol={{ log.protocol }} | status={{ log.status_code }} | success={{ log.success }} | latency={{ log.latency_ms or "-" }}ms</div>
-      </div>
-      <div class="text-right text-sm text-slate-500">
-        <div>api_key_id={{ log.api_key_id or "-" }}</div>
-        <div>provider_model_id={{ log.provider_model_id or "-" }}</div>
-      </div>
-    </div>
-    {% if log.usage_record %}
-    <div class="mt-3 text-sm text-slate-600">prompt={{ log.usage_record.prompt_tokens }} | completion={{ log.usage_record.completion_tokens }} | total_cost={{ log.usage_record.cost_total }}</div>
-    {% endif %}
-  </a>
-  {% endfor %}
-</div>
+<div id="logs-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
+<div id="logs-pagination-container" class="mt-2 flex items-center justify-between"></div>
+
+<script>
+let allLogs = {{ logs|tojson }};
+let currentPage = 1;
+const rowsPerPage = 15;
+
+function renderTable() {
+  const searchTerm = document.getElementById('logs-search').value.toLowerCase();
+  const filteredLogs = allLogs.filter(log => {
+    return log.request_id.toLowerCase().includes(searchTerm) ||
+           (log.upstream_request_id && log.upstream_request_id.toLowerCase().includes(searchTerm)) ||
+           log.protocol.toLowerCase().includes(searchTerm);
+  });
+
+  const tableContainer = document.getElementById('logs-table-container');
+  const paginationContainer = document.getElementById('logs-pagination-container');
+  tableContainer.innerHTML = '';
+  paginationContainer.innerHTML = '';
+
+  if (filteredLogs.length === 0) {
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关日志。</p>';
+    return;
+  }
+
+  const totalPages = Math.ceil(filteredLogs.length / rowsPerPage);
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const table = document.createElement('table');
+  table.className = 'w-full text-sm text-left text-slate-500';
+  table.innerHTML = `
+    <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+      <tr>
+        <th scope="col" class="px-6 py-3">Request ID</th>
+        <th scope="col" class="px-6 py-3">Protocol</th>
+        <th scope="col" class="px-6 py-3">Status</th>
+        <th scope="col" class="px-6 py-3">Latency</th>
+        <th scope="col" class="px-6 py-3">API Key ID</th>
+        <th scope="col" class="px-6 py-3">Provider Model ID</th>
+        <th scope="col" class="px-6 py-3">Usage</th>
+        <th scope="col" class="px-6 py-3"></th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  paginatedLogs.forEach(log => {
+    const tr = document.createElement('tr');
+    tr.className = 'bg-white border-b';
+    let usageHtml = '-';
+    if (log.usage_record) {
+      usageHtml = `P: ${log.usage_record.prompt_tokens}, C: ${log.usage_record.completion_tokens}, Cost: ${log.usage_record.cost_total}`;
+    }
+    tr.innerHTML = `
+      <td class="px-6 py-2.5 font-medium text-slate-900">${log.request_id}</td>
+      <td class="px-6 py-2.5">${log.protocol}</td>
+      <td class="px-6 py-2.5">${log.success ? '<span class="text-emerald-600">Success</span>' : '<span class="text-rose-600">Failed</span>'} (${log.status_code})</td>
+      <td class="px-6 py-2.5">${log.latency_ms || "-"}ms</td>
+      <td class="px-6 py-2.5">${log.api_key_id || "-"}</td>
+      <td class="px-6 py-2.5">${log.provider_model_id || "-"}</td>
+      <td class="px-6 py-2.5">${usageHtml}</td>
+      <td class="px-6 py-2.5">
+        <a href="/admin/requests/${log.id}" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tableContainer.appendChild(table);
+
+  // Pagination
+  if (totalPages > 1) {
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '上一页';
+    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    prevButton.disabled = currentPage === 1;
+    prevButton.onclick = () => {
+      currentPage--;
+      renderTable();
+    };
+    paginationContainer.appendChild(prevButton);
+
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+    pageInfo.className = 'text-xs text-slate-500';
+    paginationContainer.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '下一页';
+    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.onclick = () => {
+      currentPage++;
+      renderTable();
+    };
+    paginationContainer.appendChild(nextButton);
+  }
+}
+
+document.getElementById('logs-search').addEventListener('input', () => {
+  currentPage = 1;
+  renderTable();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderTable();
+});
+</script>
 {% endblock %}

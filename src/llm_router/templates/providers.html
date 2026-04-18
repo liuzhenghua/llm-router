@@ -1,57 +1,48 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-8 flex items-center justify-between">
+<div class="mb-4 flex items-center justify-between">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-sky-600">Providers</p>
-    <h1 class="mt-2 text-3xl font-bold">下游 Provider</h1>
-    <p class="mt-2 text-xs text-slate-500">{{ encryptor_note }}</p>
+    <h1 class="mt-1 text-2xl font-bold">下游 Provider</h1>
   </div>
   <button type="button" onclick="openModal('create-provider-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增 Provider</button>
 </div>
-<div class="space-y-4">
-  {% for item in provider_models %}
-  <div class="rounded-3xl bg-white p-5 shadow-sm">
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <div class="text-lg font-semibold">{{ item.name }}</div>
-        <div class="mt-1 text-xs text-slate-500">{{ item.protocol }} | {{ item.endpoint }} | active={{ item.is_active }}</div>
-      </div>
-      <div class="flex gap-2">
-        <button type="button" onclick='fillForm("edit-provider-form-{{ item.id }}", {{ {"name": item.name, "protocol": item.protocol, "endpoint": item.endpoint, "upstream_model_name": item.upstream_model_name, "input_token_price": item.input_token_price|string, "output_token_price": item.output_token_price|string, "cache_read_token_price": item.cache_read_token_price|string, "cache_write_token_price": item.cache_write_token_price|string, "timeout_seconds": item.timeout_seconds|string, "supports_prompt_cache": item.supports_prompt_cache, "is_active": item.is_active}|tojson }}); openModal("edit-provider-modal-{{ item.id }}")' class="rounded-2xl border border-slate-200 px-4 py-2 text-xs">编辑</button>
-        <form method="post" action="/admin/provider-models/{{ item.id }}/delete" onsubmit="return confirm('确认禁用这个 Provider 吗？');">
-          <button class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700">禁用</button>
-        </form>
-      </div>
-    </div>
-  </div>
-  <dialog id="edit-provider-modal-{{ item.id }}" class="w-full max-w-4xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-    <div class="rounded-[2rem] bg-white p-8">
-      <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑 Provider</h3><button type="button" onclick='closeModal("edit-provider-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
-      <form id="edit-provider-form-{{ item.id }}" method="post" action="/admin/provider-models/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
-        <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">协议</span><select name="protocol" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
-        <label><span class="mb-2 block text-sm text-slate-600">Endpoint</span><input name="endpoint" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">输入单价 / 1M</span><input name="input_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label><span class="mb-2 block text-sm text-slate-600">输出单价 / 1M</span><input name="output_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" id="edit-supports-prompt-cache-{{ item.id }}" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300">支持 Prompt Cache</label>
-        <div id="cache-inputs" class="hidden md:col-span-2">
-          <div class="ml-6 grid gap-4 md:grid-cols-2">
-            <label><span class="mb-2 block text-sm text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-            <label><span class="mb-2 block text-sm text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-          </div>
-        </div>
-        <label><span class="mb-2 block text-sm text-slate-600">超时秒数</span><input name="timeout_seconds" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-        <div class="flex gap-3">
-          <label class="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
-        </div>
-        <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
-      </form>
-    </div>
-  </dialog>
-  {% endfor %}
+
+<div class="mb-2">
+  <input type="text" id="providers-search" placeholder="搜索 Providers..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
 </div>
+
+<div id="providers-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
+<div id="providers-pagination-container" class="mt-2 flex items-center justify-between"></div>
+
+{% for item in provider_models %}
+<dialog id="edit-provider-modal-{{ item.id }}" class="w-full max-w-4xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
+  <div class="rounded-[2rem] bg-white p-8">
+    <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">编辑 Provider</h3><button type="button" onclick='closeModal("edit-provider-modal-{{ item.id }}")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
+    <form id="edit-provider-form-{{ item.id }}" method="post" action="/admin/provider-models/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
+      <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">协议</span><select name="protocol" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
+      <label><span class="mb-2 block text-sm text-slate-600">Endpoint</span><input name="endpoint" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">输入单价 / 1M</span><input name="input_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-2 block text-sm text-slate-600">输出单价 / 1M</span><input name="output_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" id="edit-supports-prompt-cache-{{ item.id }}" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300">支持 Prompt Cache</label>
+      <div id="cache-inputs" class="hidden md:col-span-2">
+        <div class="ml-6 grid gap-4 md:grid-cols-2">
+          <label><span class="mb-2 block text-sm text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+          <label><span class="mb-2 block text-sm text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+        </div>
+      </div>
+      <label><span class="mb-2 block text-sm text-slate-600">超时秒数</span><input name="timeout_seconds" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <div class="flex gap-3">
+        <label class="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
+      </div>
+      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
+    </form>
+  </div>
+</dialog>
+{% endfor %}
 
 <dialog id="create-provider-modal" class="w-full max-w-4xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
   <div class="rounded-[2rem] bg-white p-8">
@@ -75,4 +66,104 @@
     </form>
   </div>
 </dialog>
+
+<script>
+let allProviders = {{ provider_models|tojson }};
+let currentPage = 1;
+const rowsPerPage = 10;
+
+function renderTable() {
+  const searchTerm = document.getElementById('providers-search').value.toLowerCase();
+  const filteredProviders = allProviders.filter(provider => {
+    return provider.name.toLowerCase().includes(searchTerm) ||
+           provider.protocol.toLowerCase().includes(searchTerm) ||
+           provider.endpoint.toLowerCase().includes(searchTerm);
+  });
+
+  const tableContainer = document.getElementById('providers-table-container');
+  const paginationContainer = document.getElementById('providers-pagination-container');
+  tableContainer.innerHTML = '';
+  paginationContainer.innerHTML = '';
+
+  if (filteredProviders.length === 0) {
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关 Provider。</p>';
+    return;
+  }
+
+  const totalPages = Math.ceil(filteredProviders.length / rowsPerPage);
+  const paginatedProviders = filteredProviders.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const table = document.createElement('table');
+  table.className = 'w-full text-sm text-left text-slate-500';
+  table.innerHTML = `
+    <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+      <tr>
+        <th scope="col" class="px-6 py-3">名称</th>
+        <th scope="col" class="px-6 py-3">协议</th>
+        <th scope="col" class="px-6 py-3">Endpoint</th>
+        <th scope="col" class="px-6 py-3">状态</th>
+        <th scope="col" class="px-6 py-3">操作</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  paginatedProviders.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.className = 'bg-white border-b';
+    tr.innerHTML = `
+      <td class="px-6 py-2.5 font-medium text-slate-900">${item.name}</td>
+      <td class="px-6 py-2.5">${item.protocol}</td>
+      <td class="px-6 py-2.5">${item.endpoint}</td>
+      <td class="px-6 py-2.5">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
+      <td class="px-6 py-2.5 flex gap-2">
+        <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
+        <form method="post" action="/admin/provider-models/${item.id}/delete" onsubmit="return confirm('确认禁用这个 Provider 吗？');">
+          <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>
+        </form>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  tableContainer.appendChild(table);
+
+  // Pagination
+  if (totalPages > 1) {
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '上一页';
+    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    prevButton.disabled = currentPage === 1;
+    prevButton.onclick = () => {
+      currentPage--;
+      renderTable();
+    };
+    paginationContainer.appendChild(prevButton);
+
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+    pageInfo.className = 'text-xs text-slate-500';
+    paginationContainer.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '下一页';
+    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.onclick = () => {
+      currentPage++;
+      renderTable();
+    };
+    paginationContainer.appendChild(nextButton);
+  }
+}
+
+document.getElementById('providers-search').addEventListener('input', () => {
+  currentPage = 1;
+  renderTable();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderTable();
+});
+</script>
 {% endblock %}

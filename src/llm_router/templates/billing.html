@@ -1,63 +1,178 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-8 flex items-center justify-between">
+<div class="mb-4 flex items-center justify-between">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Billing</p>
-    <h1 class="mt-2 text-3xl font-bold">账单与账本</h1>
+    <h1 class="mt-1 text-2xl font-bold">账单与账本</h1>
   </div>
   <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
 </div>
 
-<div class="rounded-3xl bg-white p-6 shadow-sm">
+<div class="mb-4 rounded-2xl bg-white p-4 shadow-sm">
   <form method="get" action="/admin/billing" class="flex flex-wrap items-center gap-3">
-    <select name="api_key_id" class="rounded-xl border border-slate-200 px-4 py-3">
+    <select name="api_key_id" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
       <option value="">全部 API Key</option>
       {% for api_key in api_keys %}
       <option value="{{ api_key.id }}" {% if selected_api_key_id == api_key.id %}selected{% endif %}>{{ api_key.name }}</option>
       {% endfor %}
     </select>
-    <button class="rounded-xl bg-sky-600 px-4 py-3 font-medium text-white">筛选</button>
+    <button class="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white">筛选</button>
   </form>
 </div>
 
-<div class="mt-6 grid gap-6 xl:grid-cols-3">
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">最近账本</h2>
-    <div class="mt-4 space-y-3">
-      {% for item in ledgers %}
-      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <div class="font-medium">{{ item.change_type }} {{ item.amount }}</div>
-        <div class="mt-1 text-slate-500">api_key_id={{ item.api_key_id }} | before={{ item.balance_before }} | after={{ item.balance_after }}</div>
-        <div class="mt-1 text-slate-500">{{ item.remark or "-" }}</div>
-      </div>
-      {% endfor %}
+<div class="grid gap-6 xl:grid-cols-1">
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <h2 class="text-lg font-semibold">最近账本</h2>
+    <div class="mb-2 mt-2">
+      <input type="text" id="ledgers-search" placeholder="搜索账本..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
     </div>
+    <div id="ledgers-table-container" class="overflow-x-auto"></div>
+    <div id="ledgers-pagination-container" class="mt-2 flex items-center justify-between"></div>
   </div>
 
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">最近费用记录</h2>
-    <div class="mt-4 space-y-3">
-      {% for item in usage_records %}
-      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <div class="font-medium">request_log_id={{ item.request_log_id }} | cost={{ item.cost_total }}</div>
-        <div class="mt-1 text-slate-500">prompt={{ item.prompt_tokens }} | completion={{ item.completion_tokens }}</div>
-        <div class="mt-1 text-slate-500">request_id={{ item.request_log.request_id if item.request_log else "-" }}</div>
-      </div>
-      {% endfor %}
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <h2 class="text-lg font-semibold">最近费用记录</h2>
+    <div class="mb-2 mt-2">
+      <input type="text" id="usage-search" placeholder="搜索费用记录..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
     </div>
+    <div id="usage-table-container" class="overflow-x-auto"></div>
+    <div id="usage-pagination-container" class="mt-2 flex items-center justify-between"></div>
   </div>
 
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">最近日报</h2>
-    <div class="mt-4 space-y-3">
-      {% for item in summaries %}
-      <div class="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <div class="font-medium">api_key_id={{ item.api_key_id }} | {{ item.summary_date }}</div>
-        <div class="mt-1 text-slate-500">requests={{ item.request_count }} | cost={{ item.cost_total }}</div>
-        <div class="mt-1 text-slate-500">prompt={{ item.prompt_tokens }} | completion={{ item.completion_tokens }}</div>
-      </div>
-      {% endfor %}
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <h2 class="text-lg font-semibold">最近日报</h2>
+    <div class="mb-2 mt-2">
+      <input type="text" id="summaries-search" placeholder="搜索日报..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
     </div>
+    <div id="summaries-table-container" class="overflow-x-auto"></div>
+    <div id="summaries-pagination-container" class="mt-2 flex items-center justify-between"></div>
   </div>
 </div>
+
+<script>
+function createPaginatedTable(config) {
+  let allData = config.data;
+  let currentPage = 1;
+  const rowsPerPage = config.rowsPerPage || 10;
+
+  function render() {
+    const searchTerm = document.getElementById(config.searchId).value.toLowerCase();
+    const filteredData = allData.filter(item => config.filterFn(item, searchTerm));
+
+    const tableContainer = document.getElementById(config.tableContainerId);
+    const paginationContainer = document.getElementById(config.paginationContainerId);
+    tableContainer.innerHTML = '';
+    paginationContainer.innerHTML = '';
+
+    if (filteredData.length === 0) {
+      tableContainer.innerHTML = `<p class="text-center text-slate-500 p-4">${config.noDataText}</p>`;
+      return;
+    }
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const paginatedData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    const table = document.createElement('table');
+    table.className = 'w-full text-sm text-left text-slate-500';
+    table.innerHTML = `
+      <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+        <tr>
+          ${config.headers.map(h => `<th scope="col" class="px-6 py-3">${h}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${paginatedData.map(item => `<tr class="bg-white border-b">${config.rowFn(item)}</tr>`).join('')}
+      </tbody>
+    `;
+    tableContainer.appendChild(table);
+
+    if (totalPages > 1) {
+      const prevButton = document.createElement('button');
+      prevButton.textContent = '上一页';
+      prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+      prevButton.disabled = currentPage === 1;
+      prevButton.onclick = () => {
+        currentPage--;
+        render();
+      };
+      paginationContainer.appendChild(prevButton);
+
+      const pageInfo = document.createElement('span');
+      pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+      pageInfo.className = 'text-xs text-slate-500';
+      paginationContainer.appendChild(pageInfo);
+
+      const nextButton = document.createElement('button');
+      nextButton.textContent = '下一页';
+      nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.onclick = () => {
+        currentPage++;
+        render();
+      };
+      paginationContainer.appendChild(nextButton);
+    }
+  }
+
+  document.getElementById(config.searchId).addEventListener('input', () => {
+    currentPage = 1;
+    render();
+  });
+
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  createPaginatedTable({
+    data: {{ ledgers|tojson }},
+    searchId: 'ledgers-search',
+    tableContainerId: 'ledgers-table-container',
+    paginationContainerId: 'ledgers-pagination-container',
+    noDataText: '没有找到相关账本。',
+    headers: ['类型', '金额', 'API Key ID', '变动前', '变动后', '备注'],
+    filterFn: (item, term) => item.change_type.toLowerCase().includes(term) || (item.remark && item.remark.toLowerCase().includes(term)),
+    rowFn: item => `
+      <td class="px-6 py-2.5">${item.change_type}</td>
+      <td class="px-6 py-2.5">${item.amount}</td>
+      <td class="px-6 py-2.5">${item.api_key_id}</td>
+      <td class="px-6 py-2.5">${item.balance_before}</td>
+      <td class="px-6 py-2.5">${item.balance_after}</td>
+      <td class="px-6 py-2.5">${item.remark || '-'}</td>
+    `
+  });
+
+  createPaginatedTable({
+    data: {{ usage_records|tojson }},
+    searchId: 'usage-search',
+    tableContainerId: 'usage-table-container',
+    paginationContainerId: 'usage-pagination-container',
+    noDataText: '没有找到相关费用记录。',
+    headers: ['Request Log ID', 'Cost', 'Tokens (P/C)', 'Request ID'],
+    filterFn: (item, term) => String(item.request_log_id).includes(term) || (item.request_log && item.request_log.request_id.toLowerCase().includes(term)),
+    rowFn: item => `
+      <td class="px-6 py-2.5">${item.request_log_id}</td>
+      <td class="px-6 py-2.5">${item.cost_total}</td>
+      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens}</td>
+      <td class="px-6 py-2.5">${item.request_log ? item.request_log.request_id : '-'}</td>
+    `
+  });
+
+  createPaginatedTable({
+    data: {{ summaries|tojson }},
+    searchId: 'summaries-search',
+    tableContainerId: 'summaries-table-container',
+    paginationContainerId: 'summaries-pagination-container',
+    noDataText: '没有找到相关日报。',
+    headers: ['API Key ID', '日期', '请求数', '总费用', 'Tokens (P/C)'],
+    filterFn: (item, term) => String(item.api_key_id).includes(term) || item.summary_date.includes(term),
+    rowFn: item => `
+      <td class="px-6 py-2.5">${item.api_key_id}</td>
+      <td class="px-6 py-2.5">${item.summary_date}</td>
+      <td class="px-6 py-2.5">${item.request_count}</td>
+      <td class="px-6 py-2.5">${item.cost_total}</td>
+      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens}</td>
+    `
+  });
+});
+</script>
 {% endblock %}
