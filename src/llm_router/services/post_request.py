@@ -66,12 +66,22 @@ async def _create_request_log_task(
     session: AsyncSession,
     data: RequestFinalizationData,
 ) -> RequestLog | None:
-    """异步创建请求日志"""
-    # 检查是否已存在（处理重复请求）
+    """异步创建或更新请求日志"""
+    # 检查是否已存在（处理重试场景）
     stmt = select(RequestLog).where(RequestLog.request_id == data.request_id)
     result = await session.execute(stmt)
     existing = result.scalar_one_or_none()
     if existing:
+        # 重试场景：更新已有日志
+        existing.status_code = data.status_code
+        existing.success = data.success
+        existing.latency_ms = data.latency_ms
+        existing.response_body = data.response_body
+        existing.error_message = data.error_message
+        # upstream_request_id 可能在重试成功时才获取到
+        if data.upstream_request_id:
+            existing.upstream_request_id = data.upstream_request_id
+        await session.flush()
         return existing
 
     request_log = RequestLog(
