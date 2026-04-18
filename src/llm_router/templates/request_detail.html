@@ -30,11 +30,11 @@
       <div>completion_tokens={{ log.usage_record.completion_tokens }}</div>
       <div>cache_read_tokens={{ log.usage_record.cache_read_tokens }}</div>
       <div>cache_write_tokens={{ log.usage_record.cache_write_tokens }}</div>
-      <div>cost_input={{ log.usage_record.cost_input }}</div>
-      <div>cost_output={{ log.usage_record.cost_output }}</div>
-      <div>cost_cache_read={{ log.usage_record.cost_cache_read }}</div>
-      <div>cost_cache_write={{ log.usage_record.cost_cache_write }}</div>
-      <div class="font-semibold text-slate-900">cost_total={{ log.usage_record.cost_total }}</div>
+      <div>cost_input={{ log.usage_record.cost_input|format_decimal }}</div>
+      <div>cost_output={{ log.usage_record.cost_output|format_decimal }}</div>
+      <div>cost_cache_read={{ log.usage_record.cost_cache_read|format_decimal }}</div>
+      <div>cost_cache_write={{ log.usage_record.cost_cache_write|format_decimal }}</div>
+      <div class="font-semibold text-slate-900">cost_total={{ log.usage_record.cost_total|format_decimal }}</div>
     </div>
     {% else %}
     <p class="mt-4 text-sm text-slate-500">暂无用量记录。</p>

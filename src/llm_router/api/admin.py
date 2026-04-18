@@ -29,6 +29,18 @@ settings = get_settings()
 encryptor = Encryptor(settings.app_encryption_key)
 
 
+def _format_decimal(value: Decimal | str | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        value = Decimal(value)
+    if isinstance(value, Decimal):
+        if value == value.to_integral_value():
+            return str(value.to_integral_value())
+        return f"{value:f}".rstrip("0").rstrip(".")
+    return str(value)
+
+
 def _redirect(path: str) -> RedirectResponse:
     return RedirectResponse(path, status_code=303)
 
@@ -211,10 +223,10 @@ async def providers_page(request: Request, _: None = Depends(require_admin)):
             "protocol": pm.protocol,
             "endpoint": pm.endpoint,
             "upstream_model_name": pm.upstream_model_name,
-            "input_token_price": str(pm.input_token_price),
-            "output_token_price": str(pm.output_token_price),
-            "cache_read_token_price": str(pm.cache_read_token_price),
-            "cache_write_token_price": str(pm.cache_write_token_price),
+            "input_token_price": _format_decimal(pm.input_token_price),
+            "output_token_price": _format_decimal(pm.output_token_price),
+            "cache_read_token_price": _format_decimal(pm.cache_read_token_price),
+            "cache_write_token_price": _format_decimal(pm.cache_write_token_price),
             "timeout_seconds": pm.timeout_seconds,
             "supports_prompt_cache": pm.supports_prompt_cache,
             "is_active": pm.is_active,

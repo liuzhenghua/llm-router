@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from pathlib import Path
 
+import jinja2
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
@@ -22,6 +24,18 @@ BASE_PATH = Path(__file__).resolve().parent
 settings = get_settings()
 
 
+def _format_decimal(value: Decimal | float | str | None) -> str:
+    if value is None:
+        return "-"
+    if isinstance(value, str):
+        value = Decimal(value)
+    if isinstance(value, Decimal):
+        if value == value.to_integral_value():
+            return str(value.to_integral_value())
+        return f"{value:f}".rstrip("0").rstrip(".")
+    return str(value)
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await init_db()
@@ -32,7 +46,11 @@ def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
     app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
     app.mount("/static", StaticFiles(directory=BASE_PATH / "static"), name="static")
-    app.state.templates = Jinja2Templates(directory=str(BASE_PATH / "templates"))
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(str(BASE_PATH / "templates")),
+    )
+    env.filters["format_decimal"] = _format_decimal
+    app.state.templates = Jinja2Templates(env=env)
     app.state.admin_user_store = AdminUserStore(settings.admin_users_file)
 
     @app.middleware("http")
