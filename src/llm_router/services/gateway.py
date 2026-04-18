@@ -317,17 +317,7 @@ async def _proxy_stream(
             latency_ms = int((time.perf_counter() - started) * 1000)
             # 使用流式处理器获取合并后的响应和 usage
             response_body = stream_handler.get_accumulated_response() if not stream_failed else None
-            usage_dict = stream_handler.get_usage()
-
-            # 将 dict 转换为 UsageSnapshot
-            usage_snapshot = None
-            if usage_dict:
-                usage_snapshot = UsageSnapshot(
-                    prompt_tokens=usage_dict.get("prompt_tokens", 0),
-                    completion_tokens=usage_dict.get("completion_tokens", 0),
-                    cache_read_tokens=usage_dict.get("cache_read_input_tokens", 0) if context.protocol == ProviderProtocol.ANTHROPIC else usage_dict.get("cached_tokens", 0),
-                    cache_write_tokens=usage_dict.get("cache_creation_input_tokens", 0),
-                )
+            usage = stream_handler.get_usage()
 
             schedule_post_request_tasks(
                 _create_finalization_data(
@@ -345,7 +335,7 @@ async def _proxy_stream(
                     error_message=error_message or None,
                     request_logging_enabled=context.request_logging_enabled,
                     response_logging_enabled=context.response_logging_enabled,
-                    usage=usage_snapshot,
+                    usage=usage,
                     provider=provider,
                 )
             )

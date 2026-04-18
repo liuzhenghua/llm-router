@@ -1,5 +1,6 @@
 import json
 
+from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.streaming_handlers.base import BaseStreamingHandler, StreamChunk
 
 
@@ -8,7 +9,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
 
     def __init__(self):
         self._chunks: list[dict] = []
-        self._usage: dict | None = None
+        self._usage_dict: dict | None = None
         self._message: dict | None = None
         self._finish_reason = None
         self._model = None
@@ -33,7 +34,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             self._created = chunk["created"]
 
         if chunk.get("usage"):
-            self._usage = chunk["usage"]
+            self._usage_dict = chunk["usage"]
 
         for choice in chunk.get("choices", []):
             delta = choice.get("delta") or {}
@@ -85,9 +86,17 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
                     "finish_reason": self._finish_reason,
                 }
             ],
-            "usage": self._usage,
+            "usage": self._usage_dict,
         }
         return json.dumps(result, ensure_ascii=False)
 
-    def get_usage(self) -> dict | None:
-        return self._usage
+    def get_usage(self) -> UsageSnapshot | None:
+        if not self._usage_dict:
+            return None
+        details = self._usage_dict.get("prompt_tokens_details") or {}
+        return UsageSnapshot(
+            prompt_tokens=self._usage_dict.get("prompt_tokens", 0),
+            completion_tokens=self._usage_dict.get("completion_tokens", 0),
+            cache_read_tokens=details.get("cached_tokens", 0),
+            cache_write_tokens=0,
+        )

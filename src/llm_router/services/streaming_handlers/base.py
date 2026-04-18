@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from llm_router.domain.schemas import UsageSnapshot
+
 
 @dataclass
 class StreamChunk:
@@ -24,5 +26,5 @@ class BaseStreamingHandler(ABC):
         """获取合并后的非流式原始报文（JSON字符串）"""
 
     @abstractmethod
-    def get_usage(self) -> dict | None:
-        """获取 usage 快照（完整的 dict，有则覆盖）"""
+    def get_usage(self) -> UsageSnapshot | None:
+        """获取 usage 快照"""

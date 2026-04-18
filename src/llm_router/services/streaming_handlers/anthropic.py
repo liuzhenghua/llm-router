@@ -1,5 +1,6 @@
 import json
 
+from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.streaming_handlers.base import BaseStreamingHandler, StreamChunk
 
 
@@ -7,7 +8,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
     """Anthropic 流式处理器 - 将 SSE 事件合并为完整的 message"""
 
     def __init__(self):
-        self._usage: dict | None = None
+        self._usage_dict: dict | None = None
         self._message_blocks: list[dict] = []
         self._current_event: str | None = None
         self._current_block_type: str | None = None
@@ -42,7 +43,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
             self._model = data.get("message", {}).get("model")
             self._type = data.get("message", {}).get("type")
             if data.get("message", {}).get("usage"):
-                self._usage = data["message"]["usage"]
+                self._usage_dict = data["message"]["usage"]
 
         elif event == "content_block_start":
             block = data.get("content_block") or {}
@@ -75,7 +76,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
 
         elif event == "message_delta":
             if data.get("usage"):
-                self._usage = data["usage"]
+                self._usage_dict = data["usage"]
             self._stop_reason = data.get("delta", {}).get("stop_reason")
 
         elif event == "message_end":
@@ -87,7 +88,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
                 "content": self._message_blocks,
                 "stop_reason": self._stop_reason,
                 "stop_sequence": None,
-                "usage": self._usage,
+                "usage": self._usage_dict,
             }
 
     def get_accumulated_response(self) -> str:
@@ -95,5 +96,12 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
             return json.dumps(self._final_message, ensure_ascii=False)
         return json.dumps({"content": self._message_blocks}, ensure_ascii=False)
 
-    def get_usage(self) -> dict | None:
-        return self._usage
+    def get_usage(self) -> UsageSnapshot | None:
+        if not self._usage_dict:
+            return None
+        return UsageSnapshot(
+            prompt_tokens=self._usage_dict.get("input_tokens", 0),
+            completion_tokens=self._usage_dict.get("output_tokens", 0),
+            cache_read_tokens=self._usage_dict.get("cache_read_input_tokens", 0),
+            cache_write_tokens=self._usage_dict.get("cache_creation_input_tokens", 0),
+        )
