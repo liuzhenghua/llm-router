@@ -13,6 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import ApiKey
 from llm_router.domain.schemas import RequestContext, RoutedProvider, UsageSnapshot
+from llm_router.services.non_stream_handlers import (
+    AnthropicNonStreamHandler,
+    OpenAINonStreamHandler,
+)
 from llm_router.services.post_request import (
     ProviderPricesData,
     RequestFinalizationData,
@@ -43,22 +47,6 @@ HOP_BY_HOP_HEADERS = {
 
 def _filter_headers(headers: httpx.Headers) -> dict[str, str]:
     return {k: v for k, v in headers.items() if k.lower() not in HOP_BY_HOP_HEADERS}
-
-
-def _extract_openai_usage(payload: dict[str, Any], usage: UsageSnapshot) -> None:
-    usage_obj = payload.get("usage") or {}
-    usage.prompt_tokens = usage_obj.get("prompt_tokens", usage.prompt_tokens)
-    usage.completion_tokens = usage_obj.get("completion_tokens", usage.completion_tokens)
-    details = usage_obj.get("prompt_tokens_details") or {}
-    usage.cache_read_tokens = details.get("cached_tokens", usage.cache_read_tokens)
-
-
-def _extract_anthropic_usage(payload: dict[str, Any], usage: UsageSnapshot) -> None:
-    usage_obj = payload.get("usage") or payload.get("message", {}).get("usage") or {}
-    usage.prompt_tokens = usage_obj.get("input_tokens", usage.prompt_tokens)
-    usage.completion_tokens = usage_obj.get("output_tokens", usage.completion_tokens)
-    usage.cache_read_tokens = usage_obj.get("cache_read_input_tokens", usage.cache_read_tokens)
-    usage.cache_write_tokens = usage_obj.get("cache_creation_input_tokens", usage.cache_write_tokens)
 
 
 def _build_upstream_headers(provider: RoutedProvider, context: RequestContext, protocol: ProviderProtocol) -> dict[str, str]:
@@ -152,123 +140,6 @@ def _create_finalization_data(
         usage=usage_data,
         provider_prices=prices_data,
     )
-
-
-
-
-async def _proxy_non_stream(
-    session: AsyncSession,
-    *,
-    api_key: ApiKey,
-    context: RequestContext,
-    provider: RoutedProvider,
-    request_path: str,
-) -> JSONResponse:
-    payload = _prepare_payload(context.payload, provider, context.protocol)
-    headers = _build_upstream_headers(provider, context, context.protocol)
-    usage = UsageSnapshot()
-    started = time.perf_counter()
-    full_endpoint = provider.endpoint.rstrip("/") + request_path
-    try:
-        async with httpx.AsyncClient(timeout=provider.timeout_seconds) as client:
-            response = await client.post(full_endpoint, json=payload, headers=headers)
-        if response.status_code >= 400:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-        body = response.json()
-        if context.protocol == ProviderProtocol.OPENAI:
-            _extract_openai_usage(body, usage)
-        else:
-            _extract_anthropic_usage(body, usage)
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        schedule_post_request_tasks(
-            _create_finalization_data(
-                request_id=context.request_id,
-                upstream_request_id=response.headers.get("x-request-id") or response.headers.get("request-id"),
-                api_key_id=context.api_key_id,
-                logical_model_id=context.logical_model_id,
-                provider_model_id=provider.id,
-                protocol=context.protocol,
-                call_type="completion",
-                status_code=response.status_code,
-                success=True,
-                latency_ms=latency_ms,
-                request_payload=payload,
-                response_body=json.dumps(body, ensure_ascii=False),
-                error_message=None,
-                request_logging_enabled=context.request_logging_enabled,
-                response_logging_enabled=context.response_logging_enabled,
-                usage=usage,
-                provider=provider,
-            )
-        )
-        return JSONResponse(content=body, status_code=response.status_code, headers=_filter_headers(response.headers))
-    except HTTPException as exc:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        schedule_post_request_tasks(
-            _create_finalization_data(
-                request_id=context.request_id,
-                upstream_request_id=None,
-                api_key_id=context.api_key_id,
-                logical_model_id=context.logical_model_id,
-                provider_model_id=provider.id,
-                protocol=context.protocol,
-                call_type="completion",
-                status_code=exc.status_code,
-                success=False,
-                latency_ms=latency_ms,
-                request_payload=payload,
-                response_body=None,
-                error_message=str(exc.detail),
-                request_logging_enabled=context.request_logging_enabled,
-                response_logging_enabled=context.response_logging_enabled,
-                usage=None,
-                provider=provider,
-            )
-        )
-        raise
-    except Exception as exc:
-        latency_ms = int((time.perf_counter() - started) * 1000)
-        schedule_post_request_tasks(
-            _create_finalization_data(
-                request_id=context.request_id,
-                upstream_request_id=None,
-                api_key_id=context.api_key_id,
-                logical_model_id=context.logical_model_id,
-                provider_model_id=provider.id,
-                protocol=context.protocol,
-                call_type="completion",
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                success=False,
-                latency_ms=latency_ms,
-                request_payload=payload,
-                response_body=None,
-                error_message=str(exc),
-                request_logging_enabled=context.request_logging_enabled,
-                response_logging_enabled=context.response_logging_enabled,
-                usage=None,
-                provider=provider,
-            )
-        )
-        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
-
-
-def _extract_stream_delta(protocol: ProviderProtocol, event_name: str | None, data: dict[str, Any], usage: UsageSnapshot) -> str | None:
-    if protocol == ProviderProtocol.OPENAI:
-        _extract_openai_usage(data, usage)
-        for choice in data.get("choices", []):
-            delta = choice.get("delta") or {}
-            if content := delta.get("content"):
-                return str(content)
-        return None
-
-    if event_name == "message_start":
-        _extract_anthropic_usage(data, usage)
-    elif event_name == "message_delta":
-        _extract_anthropic_usage(data, usage)
-    elif event_name == "content_block_delta":
-        delta = data.get("delta") or {}
-        return delta.get("text")
-    return None
 
 
 async def _proxy_stream(
@@ -387,7 +258,12 @@ async def handle_proxy_request(
         try:
             if context.stream:
                 return await _proxy_stream(session, api_key=api_key, context=context, provider=provider, request_path=request_path)
-            return await _proxy_non_stream(session, api_key=api_key, context=context, provider=provider, request_path=request_path)
+            # 根据协议选择非流式处理器
+            if context.protocol == ProviderProtocol.OPENAI:
+                handler = OpenAINonStreamHandler()
+            else:
+                handler = AnthropicNonStreamHandler()
+            return await handler.proxy(session, api_key=api_key, context=context, provider=provider, request_path=request_path)
         except HTTPException as exc:
             last_error = exc
             if exc.status_code < 500:
