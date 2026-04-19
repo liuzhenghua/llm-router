@@ -113,6 +113,7 @@ class RequestLog(Base):
     logical_model_id: Mapped[int | None] = mapped_column(ForeignKey("logical_models.id"), nullable=True)
     provider_model_id: Mapped[int | None] = mapped_column(ForeignKey("provider_models.id"), nullable=True)
     protocol: Mapped[str] = mapped_column(String(32))
+    call_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     upstream_request_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, default=False)

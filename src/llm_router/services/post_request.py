@@ -48,6 +48,7 @@ class RequestFinalizationData:
     logical_model_id: int
     provider_model_id: int
     protocol: str
+    call_type: str
     status_code: int
     success: bool
     latency_ms: int
@@ -78,6 +79,7 @@ async def _create_request_log_task(
         existing.latency_ms = data.latency_ms
         existing.response_body = data.response_body
         existing.error_message = data.error_message
+        existing.call_type = data.call_type
         # upstream_request_id 可能在重试成功时才获取到
         if data.upstream_request_id:
             existing.upstream_request_id = data.upstream_request_id
@@ -90,6 +92,7 @@ async def _create_request_log_task(
         logical_model_id=data.logical_model_id,
         provider_model_id=data.provider_model_id,
         protocol=data.protocol,
+        call_type=data.call_type,
         upstream_request_id=data.upstream_request_id,
         status_code=data.status_code,
         success=data.success,
