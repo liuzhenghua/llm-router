@@ -13,9 +13,11 @@
   <div class="rounded-3xl bg-white p-6 shadow-sm">
     <h2 class="text-xl font-semibold">基础信息</h2>
     <div class="mt-4 space-y-2 text-sm text-slate-600">
-      <div>API Key ID: {{ log.api_key_id or "-" }}</div>
-      <div>逻辑模型 ID: {{ log.logical_model_id or "-" }}</div>
-      <div>供应商模型 ID: {{ log.provider_model_id or "-" }}</div>
+      <div>API Key: {{ log.api_key_name or "-" }}</div>
+      <div>逻辑模型: {{ log.logical_model_name or "-" }}</div>
+      <div>供应商模型: {{ log.provider_model_name or "-" }}</div>
+      <div>请求协议: {{ log.protocol or "-" }}</div>
+      <div>供应商协议: {{ log.provider_model_protocol or "-" }}</div>
       <div>上游请求 ID: {{ log.upstream_request_id or "-" }}</div>
       <div>延迟(ms): {{ log.latency_ms or "-" }}</div>
       <div>创建时间: {{ log.created_at }}</div>

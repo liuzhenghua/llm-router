@@ -699,12 +699,61 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
     session = request.state.db
     log = (
         await session.execute(
-            select(RequestLog).options(selectinload(RequestLog.usage_record)).where(RequestLog.id == request_log_id)
+            select(RequestLog).options(
+                selectinload(RequestLog.usage_record),
+                selectinload(RequestLog.api_key),
+                selectinload(RequestLog.provider_model),
+            ).where(RequestLog.id == request_log_id)
         )
     ).scalar_one_or_none()
     if log is None:
         return _redirect("/admin/requests")
-    return _render_admin(request, "request_detail.html", {"log": log}, nav_active="requests", title="Request Detail")
+
+    # Get logical_model_name via LogicalModelRoute
+    logical_model_name = None
+    if log.provider_model_id:
+        route = (
+            await session.execute(
+                select(LogicalModelRoute).where(LogicalModelRoute.provider_model_id == log.provider_model_id).limit(1)
+            )
+        ).scalar_one_or_none()
+        if route:
+            logical_model = (await session.execute(select(LogicalModel).where(LogicalModel.id == route.logical_model_id))).scalar_one_or_none()
+            if logical_model:
+                logical_model_name = logical_model.name
+
+    log_dict = {
+        "id": log.id,
+        "request_id": log.request_id,
+        "protocol": log.protocol,
+        "status_code": log.status_code,
+        "success": log.success,
+        "latency_ms": log.latency_ms,
+        "upstream_request_id": log.upstream_request_id,
+        "created_at": log.created_at,
+        "request_body": log.request_body,
+        "response_body": log.response_body,
+        "error_message": log.error_message,
+        "api_key_id": log.api_key_id,
+        "logical_model_id": log.logical_model_id,
+        "provider_model_id": log.provider_model_id,
+        "api_key_name": log.api_key.name if log.api_key else None,
+        "provider_model_name": log.provider_model.name if log.provider_model else None,
+        "provider_model_protocol": log.provider_model.protocol if log.provider_model else None,
+        "logical_model_name": logical_model_name,
+        "usage_record": {
+            "prompt_tokens": log.usage_record.prompt_tokens,
+            "completion_tokens": log.usage_record.completion_tokens,
+            "cache_read_tokens": log.usage_record.cache_read_tokens,
+            "cache_write_tokens": log.usage_record.cache_write_tokens,
+            "cost_input": str(log.usage_record.cost_input),
+            "cost_output": str(log.usage_record.cost_output),
+            "cost_cache_read": str(log.usage_record.cost_cache_read),
+            "cost_cache_write": str(log.usage_record.cost_cache_write),
+            "cost_total": str(log.usage_record.cost_total),
+        } if log.usage_record else None,
+    }
+    return _render_admin(request, "request_detail.html", {"log": log_dict}, nav_active="requests", title="Request Detail")
 
 
 @protected_router.get("/billing")
