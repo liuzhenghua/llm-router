@@ -640,8 +640,9 @@ async def get_route_degraded_status(
 async def request_logs_page(
     request: Request,
     request_id: str | None = Query(default=None),
-    protocol: str | None = Query(default=None),
-    status_filter: str | None = Query(default=None),
+    upstream_request_id: str | None = Query(default=None),
+    started_after: datetime | None = Query(default=None),
+    started_before: datetime | None = Query(default=None),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -652,16 +653,20 @@ async def request_logs_page(
         .limit(200)
     )
     if request_id:
-        stmt = stmt.where(or_(RequestLog.request_id.contains(request_id), RequestLog.upstream_request_id.contains(request_id)))
-    if protocol:
-        stmt = stmt.where(RequestLog.protocol == protocol)
-    if status_filter in {"success", "failed"}:
-        stmt = stmt.where(RequestLog.success.is_(status_filter == "success"))
+        stmt = stmt.where(RequestLog.request_id.contains(request_id))
+    if upstream_request_id:
+        stmt = stmt.where(RequestLog.upstream_request_id.contains(upstream_request_id))
+    if started_after:
+        stmt = stmt.where(RequestLog.started_at >= started_after)
+    if started_before:
+        stmt = stmt.where(RequestLog.started_at <= started_before)
     logs_result = (await session.execute(stmt)).scalars().all()
     logs = [
         {
             "id": log.id,
             "request_id": log.request_id,
+            "upstream_request_id": log.upstream_request_id,
+            "started_at": log.started_at.isoformat() if log.started_at else None,
             "protocol": log.protocol,
             "status_code": log.status_code,
             "success": log.success,
@@ -685,8 +690,9 @@ async def request_logs_page(
             "logs": logs,
             "filters": {
                 "request_id": request_id or "",
-                "protocol": protocol or "",
-                "status_filter": status_filter or "",
+                "upstream_request_id": upstream_request_id or "",
+                "started_after": started_after.isoformat() if started_after else "",
+                "started_before": started_before.isoformat() if started_before else "",
             },
         },
         nav_active="requests",

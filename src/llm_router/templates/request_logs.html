@@ -8,8 +8,25 @@
   <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
 </div>
 
-<div class="mb-2">
-  <input type="text" id="logs-search" placeholder="搜索日志..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+<div class="mb-4 flex flex-wrap gap-4 items-end">
+  <div class="flex-1 min-w-[200px]">
+    <label class="block text-xs text-slate-500 mb-1">Request ID</label>
+    <input type="text" id="search-request-id" placeholder="搜索 Request ID..." value="{{ filters.request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+  </div>
+  <div class="flex-1 min-w-[200px]">
+    <label class="block text-xs text-slate-500 mb-1">Upstream Request ID</label>
+    <input type="text" id="search-upstream-request-id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+  </div>
+  <div class="flex-1 min-w-[200px]">
+    <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
+    <div class="flex items-center gap-2">
+      <input type="datetime-local" id="search-started-after" value="{{ filters.started_after }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      <span class="text-slate-400">至</span>
+      <input type="datetime-local" id="search-started-before" value="{{ filters.started_before }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+    </div>
+  </div>
+  <button id="search-btn" class="rounded-xl bg-slate-800 px-4 py-2 text-sm text-white font-medium hover:bg-slate-700">搜索</button>
+  <button id="reset-btn" class="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-700 font-medium hover:bg-slate-50">重置</button>
 </div>
 
 <div id="logs-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
@@ -20,13 +37,46 @@ let allLogs = {{ logs|tojson }};
 let currentPage = 1;
 const rowsPerPage = 15;
 
-function renderTable() {
-  const searchTerm = document.getElementById('logs-search').value.toLowerCase();
-  const filteredLogs = allLogs.filter(log => {
-    return log.request_id.toLowerCase().includes(searchTerm) ||
-           (log.upstream_request_id && log.upstream_request_id.toLowerCase().includes(searchTerm)) ||
-           log.protocol.toLowerCase().includes(searchTerm);
+function parseDateTimeLocal(value) {
+  if (!value) return null;
+  return new Date(value);
+}
+
+function formatDateTime(isoString) {
+  if (!isoString) return '-';
+  // 解析 ISO 字符串并转换为本地时区显示
+  const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
+  const pad = n => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function filterLogs() {
+  const requestIdTerm = document.getElementById('search-request-id').value.toLowerCase();
+  const upstreamRequestIdTerm = document.getElementById('search-upstream-request-id').value.toLowerCase();
+  const startedAfter = parseDateTimeLocal(document.getElementById('search-started-after').value);
+  const startedBefore = parseDateTimeLocal(document.getElementById('search-started-before').value);
+
+  return allLogs.filter(log => {
+    if (requestIdTerm && !log.request_id.toLowerCase().includes(requestIdTerm)) {
+      return false;
+    }
+    if (upstreamRequestIdTerm && !(log.upstream_request_id && log.upstream_request_id.toLowerCase().includes(upstreamRequestIdTerm))) {
+      return false;
+    }
+    if (startedAfter && log.started_at) {
+      const logDate = new Date(log.started_at);
+      if (logDate < startedAfter) return false;
+    }
+    if (startedBefore && log.started_at) {
+      const logDate = new Date(log.started_at);
+      if (logDate > startedBefore) return false;
+    }
+    return true;
   });
+}
+
+function renderTable() {
+  const filteredLogs = filterLogs();
 
   const tableContainer = document.getElementById('logs-table-container');
   const paginationContainer = document.getElementById('logs-pagination-container');
@@ -46,6 +96,7 @@ function renderTable() {
   table.innerHTML = `
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
+        <th scope="col" class="px-6 py-3">Started At</th>
         <th scope="col" class="px-6 py-3">Request ID</th>
         <th scope="col" class="px-6 py-3">Protocol</th>
         <th scope="col" class="px-6 py-3">Status</th>
@@ -69,6 +120,7 @@ function renderTable() {
       usageHtml = `P: ${log.usage_record.prompt_tokens}, C: ${log.usage_record.completion_tokens}<br>${cost}`;
     }
     tr.innerHTML = `
+      <td class="px-6 py-2.5 text-slate-900">${formatDateTime(log.started_at)}</td>
       <td class="px-6 py-2.5 font-medium text-slate-900">${log.request_id}</td>
       <td class="px-6 py-2.5">${log.protocol}</td>
       <td class="px-6 py-2.5">${log.success ? '<span class="text-emerald-600">Success</span>' : '<span class="text-rose-600">Failed</span>'} (${log.status_code})</td>
@@ -113,7 +165,16 @@ function renderTable() {
   }
 }
 
-document.getElementById('logs-search').addEventListener('input', () => {
+document.getElementById('search-btn').addEventListener('click', () => {
+  currentPage = 1;
+  renderTable();
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('search-request-id').value = '';
+  document.getElementById('search-upstream-request-id').value = '';
+  document.getElementById('search-started-after').value = '';
+  document.getElementById('search-started-before').value = '';
   currentPage = 1;
   renderTable();
 });
