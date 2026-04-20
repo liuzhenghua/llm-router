@@ -4,6 +4,7 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -51,6 +52,16 @@ def _format_decimal(value: Decimal | float | str | None) -> str:
             return str(value.to_integral_value())
         return f"{value:f}".rstrip("0").rstrip(".")
     return str(value)
+
+
+def _format_datetime(value: str | None) -> str:
+    if value is None:
+        return "-"
+    try:
+        dt = datetime.fromisoformat(value)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        return value
 
 
 @asynccontextmanager
@@ -145,6 +156,7 @@ def create_app() -> FastAPI:
         loader=jinja2.FileSystemLoader(str(BASE_PATH / "templates")),
     )
     env.filters["format_decimal"] = _format_decimal
+    env.filters["format_datetime"] = _format_datetime
     app.state.templates = Jinja2Templates(env=env)
     app.state.admin_user_store = AdminUserStore(settings.admin_users_file)
 

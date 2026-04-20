@@ -20,80 +20,17 @@
   <div class="flex-1 min-w-[200px]">
     <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
     <div class="flex items-center gap-2">
-      <input type="datetime-local" id="search-started-after" value="{{ filters.started_after }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      <input type="datetime-local" id="search-started-after" value="{{ filters.started_after or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
       <span class="text-slate-400">至</span>
-      <input type="datetime-local" id="search-started-before" value="{{ filters.started_before }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      <input type="datetime-local" id="search-started-before" value="{{ filters.started_before or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
     </div>
   </div>
   <button id="search-btn" class="rounded-xl bg-slate-800 px-4 py-2 text-sm text-white font-medium hover:bg-slate-700">搜索</button>
   <button id="reset-btn" class="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-700 font-medium hover:bg-slate-50">重置</button>
 </div>
 
-<div id="logs-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
-<div id="logs-pagination-container" class="mt-2 flex items-center justify-between"></div>
-
-<script>
-let allLogs = {{ logs|tojson }};
-let currentPage = 1;
-const rowsPerPage = 15;
-
-function parseDateTimeLocal(value) {
-  if (!value) return null;
-  return new Date(value);
-}
-
-function formatDateTime(isoString) {
-  if (!isoString) return '-';
-  // 解析 ISO 字符串并转换为本地时区显示
-  const date = new Date(isoString.endsWith('Z') ? isoString : isoString + 'Z');
-  const pad = n => n.toString().padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-
-function filterLogs() {
-  const requestIdTerm = document.getElementById('search-request-id').value.toLowerCase();
-  const upstreamRequestIdTerm = document.getElementById('search-upstream-request-id').value.toLowerCase();
-  const startedAfter = parseDateTimeLocal(document.getElementById('search-started-after').value);
-  const startedBefore = parseDateTimeLocal(document.getElementById('search-started-before').value);
-
-  return allLogs.filter(log => {
-    if (requestIdTerm && !log.request_id.toLowerCase().includes(requestIdTerm)) {
-      return false;
-    }
-    if (upstreamRequestIdTerm && !(log.upstream_request_id && log.upstream_request_id.toLowerCase().includes(upstreamRequestIdTerm))) {
-      return false;
-    }
-    if (startedAfter && log.started_at) {
-      const logDate = new Date(log.started_at);
-      if (logDate < startedAfter) return false;
-    }
-    if (startedBefore && log.started_at) {
-      const logDate = new Date(log.started_at);
-      if (logDate > startedBefore) return false;
-    }
-    return true;
-  });
-}
-
-function renderTable() {
-  const filteredLogs = filterLogs();
-
-  const tableContainer = document.getElementById('logs-table-container');
-  const paginationContainer = document.getElementById('logs-pagination-container');
-  tableContainer.innerHTML = '';
-  paginationContainer.innerHTML = '';
-
-  if (filteredLogs.length === 0) {
-    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关日志。</p>';
-    return;
-  }
-
-  const totalPages = Math.ceil(filteredLogs.length / rowsPerPage);
-  const paginatedLogs = filteredLogs.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-
-  const table = document.createElement('table');
-  table.className = 'w-full text-sm text-left text-slate-500';
-  table.innerHTML = `
+<div id="logs-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm">
+  <table class="w-full text-sm text-left text-slate-500">
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
         <th scope="col" class="px-6 py-3">Started At</th>
@@ -108,79 +45,85 @@ function renderTable() {
       </tr>
     </thead>
     <tbody>
+      {% for log in logs %}
+      <tr class="bg-white border-b">
+        <td class="px-6 py-2.5 text-slate-900">{{ log.started_at | format_datetime }}</td>
+        <td class="px-6 py-2.5 font-medium text-slate-900">{{ log.request_id }}</td>
+        <td class="px-6 py-2.5">{{ log.protocol }}</td>
+        <td class="px-6 py-2.5">
+          {% if log.success %}
+          <span class="text-emerald-600">Success</span>
+          {% else %}
+          <span class="text-rose-600">Failed</span>
+          {% endif %}
+          ({{ log.status_code }})
+        </td>
+        <td class="px-6 py-2.5">{{ log.latency_ms | default('-') }}ms</td>
+        <td class="px-6 py-2.5">{{ log.api_key_name | default('-') }}</td>
+        <td class="px-6 py-2.5">{{ log.provider_model_name | default('-') }}</td>
+        <td class="px-6 py-2.5 min-w-[120px] text-xs">
+          {% if log.usage_record %}
+          P: {{ log.usage_record.prompt_tokens }}, C: {{ log.usage_record.completion_tokens }}<br>
+          {{ "%.6f" | format(log.usage_record.cost_total) if log.usage_record.cost_total else 'N/A' }}
+          {% else %}
+          -
+          {% endif %}
+        </td>
+        <td class="px-6 py-2.5">
+          <a href="/admin/requests/{{ log.id }}" class="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="9" class="text-center text-slate-500 p-4">没有找到相关日志。</td>
+      </tr>
+      {% endfor %}
     </tbody>
-  `;
-  const tbody = table.querySelector('tbody');
-  paginatedLogs.forEach(log => {
-    const tr = document.createElement('tr');
-    tr.className = 'bg-white border-b';
-    let usageHtml = '-';
-    if (log.usage_record) {
-      const cost = log.usage_record.cost_total ? parseFloat(log.usage_record.cost_total).toFixed(6) : 'N/A';
-      usageHtml = `P: ${log.usage_record.prompt_tokens}, C: ${log.usage_record.completion_tokens}<br>${cost}`;
-    }
-    tr.innerHTML = `
-      <td class="px-6 py-2.5 text-slate-900">${formatDateTime(log.started_at)}</td>
-      <td class="px-6 py-2.5 font-medium text-slate-900">${log.request_id}</td>
-      <td class="px-6 py-2.5">${log.protocol}</td>
-      <td class="px-6 py-2.5">${log.success ? '<span class="text-emerald-600">Success</span>' : '<span class="text-rose-600">Failed</span>'} (${log.status_code})</td>
-      <td class="px-6 py-2.5">${log.latency_ms || "-"}ms</td>
-      <td class="px-6 py-2.5">${log.api_key_name || "-"}</td>
-      <td class="px-6 py-2.5">${log.provider_model_name || "-"}</td>
-      <td class="px-6 py-2.5 min-w-[120px] text-xs">${usageHtml}</td>
-      <td class="px-6 py-2.5">
-        <a href="/admin/requests/${log.id}" class="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-  tableContainer.appendChild(table);
+  </table>
+</div>
 
-  // Pagination
-  if (totalPages > 1) {
-    const prevButton = document.createElement('button');
-    prevButton.textContent = '上一页';
-    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    prevButton.disabled = currentPage === 1;
-    prevButton.onclick = () => {
-      currentPage--;
-      renderTable();
-    };
-    paginationContainer.appendChild(prevButton);
+{% macro build_query_string(page, filters) %}
+/admin/requests?page={{ page }}{% if filters.request_id %}&request_id={{ filters.request_id }}{% endif %}{% if filters.upstream_request_id %}&upstream_request_id={{ filters.upstream_request_id }}{% endif %}{% if filters.started_after %}&started_after={{ filters.started_after }}{% endif %}{% if filters.started_before %}&started_before={{ filters.started_before }}{% endif %}
+{% endmacro %}
 
-    const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
-    pageInfo.className = 'text-xs text-slate-500';
-    paginationContainer.appendChild(pageInfo);
+<div id="logs-pagination-container" class="mt-2 flex items-center justify-between">
+  {% if pagination.pages > 1 %}
+  <div class="flex items-center gap-2">
+    {% if pagination.has_prev %}
+    <a href="{{ build_query_string(pagination.prev_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs">上一页</a>
+    {% else %}
+    <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400">上一页</button>
+    {% endif %}
 
-    const nextButton = document.createElement('button');
-    nextButton.textContent = '下一页';
-    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    nextButton.disabled = currentPage === totalPages;
-    nextButton.onclick = () => {
-      currentPage++;
-      renderTable();
-    };
-    paginationContainer.appendChild(nextButton);
-  }
-}
+    <span class="text-xs text-slate-500">第 {{ pagination.page }} / {{ pagination.pages }} 页</span>
 
+    {% if pagination.has_next %}
+    <a href="{{ build_query_string(pagination.next_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs">下一页</a>
+    {% else %}
+    <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400">下一页</button>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<script>
 document.getElementById('search-btn').addEventListener('click', () => {
-  currentPage = 1;
-  renderTable();
+  const requestId = document.getElementById('search-request-id').value;
+  const upstreamRequestId = document.getElementById('search-upstream-request-id').value;
+  const startedAfter = document.getElementById('search-started-after').value;
+  const startedBefore = document.getElementById('search-started-before').value;
+
+  const params = new URLSearchParams();
+  if (requestId) params.append('request_id', requestId);
+  if (upstreamRequestId) params.append('upstream_request_id', upstreamRequestId);
+  if (startedAfter) params.append('started_after', startedAfter);
+  if (startedBefore) params.append('started_before', startedBefore);
+
+  window.location.href = `/admin/requests?${params.toString()}`;
 });
 
 document.getElementById('reset-btn').addEventListener('click', () => {
-  document.getElementById('search-request-id').value = '';
-  document.getElementById('search-upstream-request-id').value = '';
-  document.getElementById('search-started-after').value = '';
-  document.getElementById('search-started-before').value = '';
-  currentPage = 1;
-  renderTable();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  renderTable();
+  window.location.href = '/admin/requests';
 });
 </script>
 {% endblock %}

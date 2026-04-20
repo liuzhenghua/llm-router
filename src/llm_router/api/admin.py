@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import desc, or_, select
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from llm_router.core.config import get_settings
@@ -643,24 +644,43 @@ async def request_logs_page(
     upstream_request_id: str | None = Query(default=None),
     started_after: datetime | None = Query(default=None),
     started_before: datetime | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
+    per_page = 50
     stmt = (
         select(RequestLog)
         .options(selectinload(RequestLog.usage_record), selectinload(RequestLog.api_key), selectinload(RequestLog.provider_model))
         .order_by(desc(RequestLog.id))
-        .limit(200)
     )
+    count_stmt = select(func.count()).select_from(RequestLog)
     if request_id:
         stmt = stmt.where(RequestLog.request_id.contains(request_id))
+        count_stmt = count_stmt.where(RequestLog.request_id.contains(request_id))
     if upstream_request_id:
         stmt = stmt.where(RequestLog.upstream_request_id.contains(upstream_request_id))
+        count_stmt = count_stmt.where(RequestLog.upstream_request_id.contains(upstream_request_id))
     if started_after:
         stmt = stmt.where(RequestLog.started_at >= started_after)
+        count_stmt = count_stmt.where(RequestLog.started_at >= started_after)
     if started_before:
         stmt = stmt.where(RequestLog.started_at <= started_before)
+        count_stmt = count_stmt.where(RequestLog.started_at <= started_before)
+    total = (await session.execute(count_stmt)).scalar() or 0
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    if page > total_pages:
+        page = total_pages
+    stmt = stmt.limit(per_page).offset((page - 1) * per_page)
     logs_result = (await session.execute(stmt)).scalars().all()
+    pagination = {
+        "page": page,
+        "pages": total_pages,
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+        "prev_num": page - 1 if page > 1 else None,
+        "next_num": page + 1 if page < total_pages else None,
+    }
     logs = [
         {
             "id": log.id,
@@ -678,7 +698,7 @@ async def request_logs_page(
             "usage_record": {
                 "prompt_tokens": log.usage_record.prompt_tokens,
                 "completion_tokens": log.usage_record.completion_tokens,
-                "cost_total": str(log.usage_record.cost_total),
+                "cost_total": log.usage_record.cost_total,
             } if log.usage_record else None,
         }
         for log in logs_result
@@ -694,6 +714,7 @@ async def request_logs_page(
                 "started_after": started_after.isoformat() if started_after else "",
                 "started_before": started_before.isoformat() if started_before else "",
             },
+            "pagination": pagination,
         },
         nav_active="requests",
         title="Request Logs",
