@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm_router.domain.enums import ProviderProtocol
+from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.post_request import (
     ProviderPricesData,
@@ -32,6 +33,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
         self._upstream_response = None
         self._client = None
         self._started = None
+        self._started_at = None
 
     def prepare_payload(self, payload: dict, provider: Any) -> dict:
         patched = json.loads(json.dumps(payload))
@@ -191,6 +193,8 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             request_body=request_body,
             response_body=response_body_serialized,
             error_message=kwargs["error_message"],
+            started_at=kwargs.get("started_at"),
+            ended_at=kwargs.get("ended_at"),
             usage=usage_data,
             provider_prices=prices_data,
         )
@@ -207,6 +211,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
         payload = self.prepare_payload(context.payload, provider)
         headers = self.build_upstream_headers(provider, context)
         self._started = time.perf_counter()
+        self._started_at = utcnow()
         full_endpoint = provider.endpoint.rstrip("/") + request_path
 
         self._client = httpx.AsyncClient(timeout=provider.timeout_seconds)
@@ -259,6 +264,8 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
                         response_logging_enabled=context.response_logging_enabled,
                         usage=usage,
                         provider=provider,
+                        started_at=self._started_at,
+                        ended_at=utcnow(),
                     )
                 )
                 await stream_cm.__aexit__(None, None, None)

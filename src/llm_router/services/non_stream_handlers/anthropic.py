@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm_router.domain.enums import ProviderProtocol
+from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.non_stream_handlers.base import BaseNonStreamHandler
 from llm_router.services.post_request import (
@@ -65,6 +66,7 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
         payload = self.prepare_payload(context.payload, provider)
         headers = self.build_upstream_headers(provider, context)
         started = time.perf_counter()
+        started_at = utcnow()
         full_endpoint = provider.endpoint.rstrip("/") + request_path
 
         try:
@@ -98,6 +100,8 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
                     response_logging_enabled=context.response_logging_enabled,
                     usage=usage,
                     provider=provider,
+                    started_at=started_at,
+                    ended_at=utcnow(),
                 )
             )
 
@@ -126,6 +130,8 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
                     response_logging_enabled=context.response_logging_enabled,
                     usage=None,
                     provider=provider,
+                    started_at=started_at,
+                    ended_at=utcnow(),
                 )
             )
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -188,6 +194,8 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
             request_body=request_body,
             response_body=response_body_serialized,
             error_message=kwargs["error_message"],
+            started_at=kwargs.get("started_at"),
+            ended_at=kwargs.get("ended_at"),
             usage=usage_data,
             provider_prices=prices_data,
         )

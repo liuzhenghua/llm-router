@@ -55,6 +55,8 @@ class RequestFinalizationData:
     request_body: str | None
     response_body: str | None
     error_message: str | None
+    started_at: datetime | None
+    ended_at: datetime | None
     usage: UsageSnapshotData | None
     provider_prices: ProviderPricesData | None
 
@@ -83,6 +85,7 @@ async def _create_request_log_task(
         # upstream_request_id 可能在重试成功时才获取到
         if data.upstream_request_id:
             existing.upstream_request_id = data.upstream_request_id
+        existing.ended_at = data.ended_at
         await session.flush()
         return existing
 
@@ -100,6 +103,8 @@ async def _create_request_log_task(
         request_body=data.request_body,
         response_body=data.response_body,
         error_message=data.error_message,
+        started_at=data.started_at,
+        ended_at=data.ended_at,
     )
     session.add(request_log)
     await session.flush()
