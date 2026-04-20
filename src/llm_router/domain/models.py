@@ -95,8 +95,11 @@ class LogicalModelRoute(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     logical_model_id: Mapped[int] = mapped_column(ForeignKey("logical_models.id", ondelete="CASCADE"))
     provider_model_id: Mapped[int] = mapped_column(ForeignKey("provider_models.id", ondelete="CASCADE"))
+    # 优先级：数值越小越优先，按 priority 分组后按权重分配流量
     priority: Mapped[int] = mapped_column(Integer, default=100)
+    # 权重：同组内按权重加权随机分配流量，weight=0 表示不参与路由
     weight: Mapped[int] = mapped_column(Integer, default=1)
+    # 是否为后备路由：true=后备路由（主路由全部失败才调用），false=主路由
     is_fallback: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(16), default="active")
 

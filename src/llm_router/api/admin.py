@@ -567,6 +567,75 @@ async def delete_route(request: Request, route_id: int, _: None = Depends(requir
     return _redirect_back(request, "/admin/logical-models")
 
 
+@protected_router.post("/routes/{route_id}/recover")
+async def recover_route(request: Request, route_id: int, _: None = Depends(require_admin)) -> JSONResponse:
+    """
+    手动恢复降级路由为 active 状态
+
+    清除路由的降级状态，使其重新参与路由调度
+    """
+    from llm_router.services.cache.degraded_cache import DegradedRouteCache
+
+    dual_cache = get_dual_cache()
+    if not dual_cache:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Cache not available"},
+        )
+
+    degraded_cache = DegradedRouteCache(dual_cache)
+    recovered = await degraded_cache.recover(route_id)
+
+    if recovered:
+        return JSONResponse(
+            status_code=200,
+            content={"detail": "Route recovered successfully"},
+        )
+    else:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Route not in degraded state"},
+        )
+
+
+@protected_router.get("/routes/{route_id}/degraded-status")
+async def get_route_degraded_status(
+    request: Request,
+    route_id: int,
+    _: None = Depends(require_admin),
+) -> JSONResponse:
+    """
+    获取路由的降级状态
+    """
+    from llm_router.services.cache.degraded_cache import DegradedRouteCache
+
+    dual_cache = get_dual_cache()
+    if not dual_cache:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Cache not available"},
+        )
+
+    degraded_cache = DegradedRouteCache(dual_cache)
+    status = await degraded_cache.get_status(route_id)
+
+    if status is None:
+        return JSONResponse(
+            status_code=200,
+            content={"degraded": False},
+        )
+    else:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "degraded": True,
+                "degraded_type": status.degraded_type.value,
+                "fail_count": status.fail_count,
+                "last_fail_time": status.last_fail_time,
+            },
+        )
+
+
 @protected_router.get("/requests")
 async def request_logs_page(
     request: Request,

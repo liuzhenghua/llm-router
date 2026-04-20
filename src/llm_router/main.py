@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -25,6 +26,7 @@ from llm_router.services.cache.in_memory_cache import InMemoryCache
 from llm_router.services.cache.redis_cache import RedisCache
 from llm_router.services.cache.redis_lock import set_lock_manager, RedisLockManager
 from llm_router.services.cache.spend_queue import SpendDeltaQueue, set_spend_queue
+from llm_router.services.degraded_route_recovery import run_recovery_task
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ _dual_cache: DualCache | None = None
 _spend_queue: SpendDeltaQueue | None = None
 _db_writer: DbSpendWriter | None = None
 _redis_cache: RedisCache | None = None
+_degraded_recovery_task: asyncio.Task | None = None
 
 
 def _format_decimal(value: Decimal | float | str | None) -> str:
@@ -108,11 +111,26 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     set_db_writer(_db_writer)
     await _db_writer.start()
 
+    # 启动降级路由恢复定时任务（仅在 server 模式下）
+    global _degraded_recovery_task
+    if settings.app_mode == AppMode.SERVER:
+        _degraded_recovery_task = asyncio.create_task(
+            run_recovery_task(SessionLocal, interval_seconds=300)  # 5 分钟
+        )
+        logger.info("Degraded route recovery task started")
+
     logger.info(f"Cache system initialized (mode: {settings.app_mode.value})")
 
     yield
 
     # === 清理 ===
+    if _degraded_recovery_task:
+        _degraded_recovery_task.cancel()
+        try:
+            await _degraded_recovery_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Degraded route recovery task stopped")
     if _db_writer:
         await _db_writer.stop()
     if _redis_cache:

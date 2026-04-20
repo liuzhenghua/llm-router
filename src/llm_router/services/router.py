@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import random
 from datetime import date
 from decimal import Decimal
+from typing import Sequence
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -12,8 +14,17 @@ from llm_router.core.config import get_settings
 from llm_router.core.security import Encryptor, hash_api_key
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import ApiKey, LogicalModel, LogicalModelRoute
-from llm_router.domain.schemas import CachedApiKey, CachedProvider, CachedRoute, RequestContext, RoutedProvider
+from llm_router.domain.schemas import (
+    CachedApiKey,
+    CachedProvider,
+    CachedRoute,
+    RequestContext,
+    RoutableProvider,
+    RoutableProviderGroup,
+    RoutedProvider,
+)
 from llm_router.services.billing import check_balance_and_budget
+from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType
 from llm_router.services.cache.dual_cache import get_dual_cache
 from llm_router.services.rate_limit import rate_limiter
 
@@ -167,71 +178,158 @@ def _check_balance_from_cache(cached: CachedApiKey) -> None:
         raise ValueError("Daily budget limit exceeded")
 
 
+def weighted_random_select(
+    candidates: Sequence[RoutableProvider],
+) -> RoutableProvider | None:
+    """
+    加权随机选择
+
+    Args:
+        candidates: 可选候选列表（weight > 0）
+
+    Returns:
+        选中的候选，或 None（无可用候选）
+    """
+    if not candidates:
+        return None
+
+    # 过滤 weight > 0 的候选
+    valid_candidates = [c for c in candidates if c.weight > 0]
+    if not valid_candidates:
+        return None
+
+    # 计算总权重
+    total_weight = sum(c.weight for c in valid_candidates)
+    if total_weight <= 0:
+        return None
+
+    # 随机选择
+    r = random.randint(0, total_weight - 1)
+    cumulative = 0
+    for candidate in valid_candidates:
+        cumulative += candidate.weight
+        if r < cumulative:
+            return candidate
+
+    # 理论上不会走到这里，但作为保底返回最后一个
+    return valid_candidates[-1]
+
+
 async def resolve_provider_candidates(
     session: AsyncSession,
     logical_model_id: int,
     protocol: ProviderProtocol,
-) -> list[RoutedProvider]:
-    dual_cache = get_dual_cache()
+) -> list[RoutableProviderGroup]:
+    """
+    解析可用的 provider 候选列表，按优先级分组
 
-    # === 1. 尝试从缓存获取路由 ===
+    路由流程：
+    1. 获取所有 active 且 weight > 0 的路由
+    2. 过滤掉 degraded 状态的路由
+    3. 按 is_fallback 和 priority 分组
+    4. 组按 priority 排序，fallback 组在最后
+
+    Returns:
+        list[RoutableProviderGroup]，按 priority 升序排列
+    """
+    dual_cache = get_dual_cache()
+    degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
+
+    # === 1. 获取路由数据 ===
+    cached_routes_data = None
     if dual_cache:
         cached_routes_data = await dual_cache.get_routes_by_logical_model(logical_model_id)
-        if cached_routes_data:
-            providers: list[RoutedProvider] = []
-            for route_data in cached_routes_data:
-                route = CachedRoute.from_dict(route_data)
-                if route.status != "active":
-                    continue
 
-                cached_provider_data = await dual_cache.get_provider(route.provider_model_id)
-                if not cached_provider_data:
-                    continue
-
-                provider = CachedProvider.from_dict(cached_provider_data)
-                if not provider.is_active or provider.protocol != protocol.value:
-                    continue
-
-                providers.append(
-                    RoutedProvider(
-                        id=provider.id,
-                        name=provider.name,
-                        protocol=protocol,
-                        endpoint=provider.endpoint,
-                        api_key=encryptor.decrypt(provider.encrypted_api_key),
-                        upstream_model_name=provider.upstream_model_name,
-                        timeout_seconds=provider.timeout_seconds,
-                        input_token_price=provider.input_token_price,
-                        output_token_price=provider.output_token_price,
-                        cache_read_token_price=provider.cache_read_token_price,
-                        cache_write_token_price=provider.cache_write_token_price,
-                        supports_prompt_cache=provider.supports_prompt_cache,
-                    )
-                )
-
-            if providers:
-                return providers
-
-    # === 2. 缓存 miss：从 DB 查询 ===
-    stmt = (
-        select(LogicalModelRoute)
-        .options(joinedload(LogicalModelRoute.provider_model))
-        .where(
-            LogicalModelRoute.logical_model_id == logical_model_id,
-            LogicalModelRoute.status == "active",
+    if cached_routes_data:
+        # 缓存命中
+        routes_data = cached_routes_data
+    else:
+        # 缓存 miss：从 DB 查询
+        stmt = (
+            select(LogicalModelRoute)
+            .options(joinedload(LogicalModelRoute.provider_model))
+            .where(
+                LogicalModelRoute.logical_model_id == logical_model_id,
+                LogicalModelRoute.status == "active",
+            )
+            .order_by(LogicalModelRoute.priority.asc(), LogicalModelRoute.id.asc())
         )
-        .order_by(LogicalModelRoute.priority.asc(), LogicalModelRoute.id.asc())
-    )
-    routes = (await session.execute(stmt)).scalars().all()
-    providers: list[RoutedProvider] = []
-    routes_to_cache: list[dict] = []
+        db_routes = (await session.execute(stmt)).scalars().all()
 
-    for route in routes:
-        provider = route.provider_model
+        routes_data = []
+        routes_to_cache: list[dict] = []
+
+        for route in db_routes:
+            provider = route.provider_model
+            if not provider.is_active or provider.protocol != protocol.value:
+                continue
+
+            # 构建缓存数据
+            cached_route = CachedRoute(
+                route_id=route.id,
+                logical_model_id=route.logical_model_id,
+                provider_model_id=provider.id,
+                priority=route.priority,
+                weight=route.weight,
+                is_fallback=route.is_fallback,
+                status=route.status,
+            )
+            routes_data.append(cached_route.to_dict())
+
+            if dual_cache:
+                routes_to_cache.append(cached_route.to_dict())
+
+                cached_provider = CachedProvider(
+                    id=provider.id,
+                    name=provider.name,
+                    endpoint=provider.endpoint,
+                    encrypted_api_key=provider.encrypted_api_key,
+                    protocol=provider.protocol,
+                    upstream_model_name=provider.upstream_model_name,
+                    input_token_price=provider.input_token_price,
+                    output_token_price=provider.output_token_price,
+                    cache_read_token_price=provider.cache_read_token_price,
+                    cache_write_token_price=provider.cache_write_token_price,
+                    supports_prompt_cache=provider.supports_prompt_cache,
+                    timeout_seconds=provider.timeout_seconds,
+                    is_active=provider.is_active,
+                )
+                await dual_cache.set_provider(provider.id, cached_provider.to_dict())
+
+        # 回填路由列表缓存
+        if dual_cache and routes_to_cache:
+            await dual_cache.set_routes(logical_model_id, routes_to_cache)
+
+    # === 2. 解析路由并构建 provider ===
+    all_routable: list[tuple[int, int, bool, int, RoutedProvider]] = []  # (route_id, priority, is_fallback, weight, provider)
+
+    for route_data in routes_data:
+        route = CachedRoute.from_dict(route_data)
+
+        # 过滤 weight <= 0
+        if route.weight <= 0:
+            continue
+
+        # 检查 degraded 状态
+        if degraded_cache:
+            degraded_status = await degraded_cache.get_status(route.route_id)
+            if degraded_status is not None:
+                # 路由已降级，跳过
+                continue
+
+        # 获取 provider 数据
+        cached_provider_data = None
+        if dual_cache:
+            cached_provider_data = await dual_cache.get_provider(route.provider_model_id)
+
+        if not cached_provider_data:
+            continue
+
+        provider = CachedProvider.from_dict(cached_provider_data)
         if not provider.is_active or provider.protocol != protocol.value:
             continue
 
-        routed = RoutedProvider(
+        routed_provider = RoutedProvider(
             id=provider.id,
             name=provider.name,
             protocol=protocol,
@@ -245,43 +343,48 @@ async def resolve_provider_candidates(
             cache_write_token_price=provider.cache_write_token_price,
             supports_prompt_cache=provider.supports_prompt_cache,
         )
-        providers.append(routed)
 
-        # 缓存数据
-        if dual_cache:
-            cached_route = CachedRoute(
-                route_id=route.id,
-                logical_model_id=route.logical_model_id,
-                provider_model_id=provider.id,
-                priority=route.priority,
-                weight=route.weight,
-                is_fallback=route.is_fallback,
-                status=route.status,
-            )
-            routes_to_cache.append(cached_route.to_dict())
+        all_routable.append((route.route_id, route.priority, route.is_fallback, route.weight, routed_provider))
 
-            cached_provider = CachedProvider(
-                id=provider.id,
-                name=provider.name,
-                endpoint=provider.endpoint,
-                encrypted_api_key=provider.encrypted_api_key,
-                protocol=provider.protocol,
-                upstream_model_name=provider.upstream_model_name,
-                input_token_price=provider.input_token_price,
-                output_token_price=provider.output_token_price,
-                cache_read_token_price=provider.cache_read_token_price,
-                cache_write_token_price=provider.cache_write_token_price,
-                supports_prompt_cache=provider.supports_prompt_cache,
-                timeout_seconds=provider.timeout_seconds,
-                is_active=provider.is_active,
-            )
-            await dual_cache.set_provider(provider.id, cached_provider.to_dict())
+    # === 3. 按 is_fallback 和 priority 分组 ===
+    main_groups: dict[int, list[RoutableProvider]] = {}  # priority -> providers
+    fallback_groups: dict[int, list[RoutableProvider]] = {}
 
-    # 回填路由列表缓存
-    if dual_cache and routes_to_cache:
-        await dual_cache.set_routes(logical_model_id, routes_to_cache)
+    for route_id, priority, is_fallback, weight, provider in all_routable:
+        routable = RoutableProvider(
+            route_id=route_id,
+            provider=provider,
+            weight=weight,
+        )
+        if is_fallback:
+            if priority not in fallback_groups:
+                fallback_groups[priority] = []
+            fallback_groups[priority].append(routable)
+        else:
+            if priority not in main_groups:
+                main_groups[priority] = []
+            main_groups[priority].append(routable)
 
-    if not providers:
+    # === 4. 构建返回列表 ===
+    result: list[RoutableProviderGroup] = []
+
+    # 先添加 main 组，按 priority 升序
+    for priority in sorted(main_groups.keys()):
+        result.append(RoutableProviderGroup(
+            priority=priority,
+            is_fallback=False,
+            providers=main_groups[priority],
+        ))
+
+    # 再添加 fallback 组
+    for priority in sorted(fallback_groups.keys()):
+        result.append(RoutableProviderGroup(
+            priority=priority,
+            is_fallback=True,
+            providers=fallback_groups[priority],
+        ))
+
+    if not result:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="No provider available")
 
-    return providers
+    return result

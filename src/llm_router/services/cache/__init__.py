@@ -1,4 +1,5 @@
 from llm_router.services.cache.db_writer import DbSpendWriter, get_db_writer, set_db_writer
+from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType, RouteDegradedStatus
 from llm_router.services.cache.dual_cache import DualCache, get_dual_cache, set_dual_cache
 from llm_router.services.cache.in_memory_cache import InMemoryCache
 from llm_router.services.cache.redis_cache import RedisCache
@@ -21,4 +22,7 @@ __all__ = [
     "DbSpendWriter",
     "get_db_writer",
     "set_db_writer",
+    "DegradedRouteCache",
+    "DegradedType",
+    "RouteDegradedStatus",
 ]

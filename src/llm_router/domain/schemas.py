@@ -186,3 +186,35 @@ class CachedProvider:
             timeout_seconds=d.get("timeout_seconds", 60),
             is_active=d["is_active"],
         )
+
+
+# ==================== 路由策略数据结构 ====================
+
+
+@dataclass(slots=True)
+class RoutableProvider:
+    """可路由的 provider，包含路由 ID 和权重信息"""
+    route_id: int
+    provider: RoutedProvider
+    weight: int  # 权重，0 表示不参与路由
+
+    def to_tuple(self) -> tuple[int, RoutedProvider, int]:
+        """返回 (route_id, provider, weight) 元组"""
+        return (self.route_id, self.provider, self.weight)
+
+
+@dataclass(slots=True)
+class RoutableProviderGroup:
+    """
+    同一优先级的 provider 组
+
+    同组内按权重分配流量，不同组按优先级顺序调用
+    """
+    priority: int
+    is_fallback: bool
+    providers: list[RoutableProvider]
+
+    @property
+    def total_weight(self) -> int:
+        """组内总权重"""
+        return sum(p.weight for p in self.providers if p.weight > 0)

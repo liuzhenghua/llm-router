@@ -28,6 +28,7 @@ class DualCache:
     KEY_APIKEY_ID = "apikey:id:{id}"
     KEY_ROUTE_LOGICAL = "route:logical:{logical_model_id}"
     KEY_PROVIDER_ID = "provider:id:{id}"
+    KEY_DEGRADED_ROUTES = "route:degraded:set"  # 存储所有降级路由 ID 的集合
 
     def __init__(
         self,
@@ -176,6 +177,25 @@ class DualCache:
         await self._memory.delete(cache_key)
         if self._redis and self._redis.is_available:
             await self._redis.delete(cache_key)
+
+    # ==================== Degraded Routes 操作 ====================
+
+    async def add_degraded_route(self, route_id: int) -> None:
+        """添加降级路由到集合"""
+        if self._redis and self._redis.is_available:
+            await self._redis._client.sadd(self.KEY_DEGRADED_ROUTES, route_id)
+
+    async def remove_degraded_route(self, route_id: int) -> None:
+        """从降级集合中移除路由"""
+        if self._redis and self._redis.is_available:
+            await self._redis._client.srem(self.KEY_DEGRADED_ROUTES, route_id)
+
+    async def get_all_degraded_route_ids(self) -> list[int]:
+        """获取所有降级路由 ID"""
+        if self._redis and self._redis.is_available:
+            members = await self._redis._client.smembers(self.KEY_DEGRADED_ROUTES)
+            return [int(m) for m in members]
+        return []
 
 
 # 全局实例（lifespan 中初始化）
