@@ -127,6 +127,7 @@ class RequestLog(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
 
     api_key: Mapped[ApiKey | None] = relationship(back_populates="request_logs")
+    provider_model: Mapped["ProviderModel | None"] = relationship(foreign_keys=[provider_model_id])
     usage_record: Mapped["UsageRecord | None"] = relationship(back_populates="request_log", uselist=False)
 
 

@@ -647,7 +647,7 @@ async def request_logs_page(
     session = request.state.db
     stmt = (
         select(RequestLog)
-        .options(selectinload(RequestLog.usage_record))
+        .options(selectinload(RequestLog.usage_record), selectinload(RequestLog.api_key), selectinload(RequestLog.provider_model))
         .order_by(desc(RequestLog.id))
         .limit(200)
     )
@@ -668,6 +668,8 @@ async def request_logs_page(
             "latency_ms": log.latency_ms,
             "api_key_id": log.api_key_id,
             "provider_model_id": log.provider_model_id,
+            "api_key_name": log.api_key.name if log.api_key else None,
+            "provider_model_name": log.provider_model.name if log.provider_model else None,
             "usage_record": {
                 "prompt_tokens": log.usage_record.prompt_tokens,
                 "completion_tokens": log.usage_record.completion_tokens,
