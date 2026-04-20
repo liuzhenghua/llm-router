@@ -182,19 +182,38 @@ class DualCache:
 
     async def add_degraded_route(self, route_id: int) -> None:
         """添加降级路由到集合"""
+        # 1. 先读写内存（LOCAL 模式）
+        ids = await self._memory.get(self.KEY_DEGRADED_ROUTES) or set()
+        ids.add(route_id)
+        await self._memory.set(self.KEY_DEGRADED_ROUTES, ids)
+
+        # 2. 再写 Redis（server 模式）
         if self._redis and self._redis.is_available:
             await self._redis._client.sadd(self.KEY_DEGRADED_ROUTES, route_id)
 
     async def remove_degraded_route(self, route_id: int) -> None:
         """从降级集合中移除路由"""
+        # 1. 先读写内存（LOCAL 模式）
+        ids = await self._memory.get(self.KEY_DEGRADED_ROUTES) or set()
+        ids.discard(route_id)
+        await self._memory.set(self.KEY_DEGRADED_ROUTES, ids)
+
+        # 2. 再写 Redis（server 模式）
         if self._redis and self._redis.is_available:
             await self._redis._client.srem(self.KEY_DEGRADED_ROUTES, route_id)
 
     async def get_all_degraded_route_ids(self) -> list[int]:
         """获取所有降级路由 ID"""
+        # 1. 优先读内存
+        ids = await self._memory.get(self.KEY_DEGRADED_ROUTES) or set()
+        if ids:
+            return list(ids)
+
+        # 2. 回读 Redis（server 模式）
         if self._redis and self._redis.is_available:
             members = await self._redis._client.smembers(self.KEY_DEGRADED_ROUTES)
             return [int(m) for m in members]
+
         return []
 
 

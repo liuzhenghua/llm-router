@@ -111,13 +111,12 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     set_db_writer(_db_writer)
     await _db_writer.start()
 
-    # 启动降级路由恢复定时任务（仅在 server 模式下）
+    # 启动降级路由恢复定时任务
     global _degraded_recovery_task
-    if settings.app_mode == AppMode.SERVER:
-        _degraded_recovery_task = asyncio.create_task(
-            run_recovery_task(SessionLocal, interval_seconds=300)  # 5 分钟
-        )
-        logger.info("Degraded route recovery task started")
+    _degraded_recovery_task = asyncio.create_task(
+        run_recovery_task(SessionLocal, interval_seconds=300)  # 5 分钟
+    )
+    logger.info("Degraded route recovery task started")
 
     logger.info(f"Cache system initialized (mode: {settings.app_mode.value})")
 
