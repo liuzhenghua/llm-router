@@ -175,6 +175,7 @@ def create_app() -> FastAPI:
         response.background = BackgroundTask(close_session)
         return response
 
+
     @app.get("/healthz")
     async def healthz():
         return {"status": "ok", "mode": settings.app_mode}
@@ -200,6 +201,7 @@ def main() -> None:
         port=settings.port,
         reload=settings.debug,
         factory=False,
+        http="h11",
     )
 
 
