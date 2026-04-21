@@ -24,7 +24,7 @@
   <div class="rounded-2xl bg-white p-4 shadow-sm">
     <h2 class="text-lg font-semibold">最近账本</h2>
     <div class="mb-2 mt-2">
-      <input type="text" id="ledgers-search" placeholder="搜索账本..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+      <input type="text" id="ledgers-search" placeholder="搜索账本..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="ledgers-table-container" class="overflow-x-auto"></div>
     <div id="ledgers-pagination-container" class="mt-2 flex items-center justify-between"></div>
@@ -33,7 +33,7 @@
   <div class="rounded-2xl bg-white p-4 shadow-sm">
     <h2 class="text-lg font-semibold">最近费用记录</h2>
     <div class="mb-2 mt-2">
-      <input type="text" id="usage-search" placeholder="搜索费用记录..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+      <input type="text" id="usage-search" placeholder="搜索费用记录..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="usage-table-container" class="overflow-x-auto"></div>
     <div id="usage-pagination-container" class="mt-2 flex items-center justify-between"></div>
@@ -42,7 +42,7 @@
   <div class="rounded-2xl bg-white p-4 shadow-sm">
     <h2 class="text-lg font-semibold">最近日报</h2>
     <div class="mb-2 mt-2">
-      <input type="text" id="summaries-search" placeholder="搜索日报..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+      <input type="text" id="summaries-search" placeholder="搜索日报..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="summaries-table-container" class="overflow-x-auto"></div>
     <div id="summaries-pagination-container" class="mt-2 flex items-center justify-between"></div>
@@ -77,7 +77,7 @@ function createPaginatedTable(config) {
     table.innerHTML = `
       <thead class="text-xs text-slate-700 uppercase bg-slate-50">
         <tr>
-          ${config.headers.map(h => `<th scope="col" class="px-6 py-3">${h}</th>`).join('')}
+          ${config.headers.map(h => `<th scope="col" class="px-2 py-3 whitespace-nowrap">${h}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -86,32 +86,29 @@ function createPaginatedTable(config) {
     `;
     tableContainer.appendChild(table);
 
-    if (totalPages > 1) {
-      const prevButton = document.createElement('button');
-      prevButton.textContent = '上一页';
-      prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-      prevButton.disabled = currentPage === 1;
-      prevButton.onclick = () => {
-        currentPage--;
-        render();
-      };
-      paginationContainer.appendChild(prevButton);
+    const paginDiv = document.createElement('div');
+    paginDiv.className = 'flex items-center gap-2';
 
-      const pageInfo = document.createElement('span');
-      pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
-      pageInfo.className = 'text-xs text-slate-500';
-      paginationContainer.appendChild(pageInfo);
+    const prevButton = document.createElement('button');
+    prevButton.textContent = '上一页';
+    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === 1 ? ' text-slate-400' : '');
+    prevButton.disabled = currentPage === 1;
+    prevButton.onclick = () => { currentPage--; render(); };
+    paginDiv.appendChild(prevButton);
 
-      const nextButton = document.createElement('button');
-      nextButton.textContent = '下一页';
-      nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-      nextButton.disabled = currentPage === totalPages;
-      nextButton.onclick = () => {
-        currentPage++;
-        render();
-      };
-      paginationContainer.appendChild(nextButton);
-    }
+    const pageInfo = document.createElement('span');
+    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+    pageInfo.className = 'text-xs text-slate-500';
+    paginDiv.appendChild(pageInfo);
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = '下一页';
+    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === totalPages ? ' text-slate-400' : '');
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.onclick = () => { currentPage++; render(); };
+    paginDiv.appendChild(nextButton);
+
+    paginationContainer.appendChild(paginDiv);
   }
 
   document.getElementById(config.searchId).addEventListener('input', () => {
@@ -132,12 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
     headers: ['类型', '金额', 'API Key ID', '变动前', '变动后', '备注'],
     filterFn: (item, term) => item.change_type.toLowerCase().includes(term) || (item.remark && item.remark.toLowerCase().includes(term)),
     rowFn: item => `
-      <td class="px-6 py-2.5">${item.change_type}</td>
-      <td class="px-6 py-2.5">${item.amount}</td>
-      <td class="px-6 py-2.5">${item.api_key_id}</td>
-      <td class="px-6 py-2.5">${item.balance_before}</td>
-      <td class="px-6 py-2.5">${item.balance_after}</td>
-      <td class="px-6 py-2.5">${item.remark || '-'}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.change_type}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.amount}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_id}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance_before}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance_after}</td>
+      <td class="px-2 py-2 text-xs">${item.remark || '-'}</td>
     `
   });
 
@@ -150,10 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
     headers: ['Request Log ID', 'Cost', 'Tokens (P/C/R)', 'Request ID'],
     filterFn: (item, term) => String(item.request_log_id).includes(term) || (item.request_log && item.request_log.request_id.toLowerCase().includes(term)),
     rowFn: item => `
-      <td class="px-6 py-2.5">${item.request_log_id}</td>
-      <td class="px-6 py-2.5">${item.cost_total}</td>
-      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
-      <td class="px-6 py-2.5">${item.request_log ? item.request_log.request_id : '-'}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.request_log_id}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.cost_total}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
+      <td class="px-2 py-2 text-xs">${item.request_log ? item.request_log.request_id : '-'}</td>
     `
   });
 
@@ -166,11 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     headers: ['API Key ID', '日期', '请求数', '总费用', 'Tokens (P/C/R)'],
     filterFn: (item, term) => String(item.api_key_id).includes(term) || item.summary_date.includes(term),
     rowFn: item => `
-      <td class="px-6 py-2.5">${item.api_key_id}</td>
-      <td class="px-6 py-2.5">${item.summary_date}</td>
-      <td class="px-6 py-2.5">${item.request_count}</td>
-      <td class="px-6 py-2.5">${item.cost_total}</td>
-      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_id}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.summary_date}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.request_count}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.cost_total}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
     `
   });
 });

@@ -9,7 +9,7 @@
 </div>
 
 <div class="mb-2">
-  <input type="text" id="providers-search" placeholder="搜索 Providers..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+  <input type="text" id="providers-search" placeholder="搜索 Providers..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
 </div>
 
 <div id="providers-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
@@ -98,11 +98,11 @@ function renderTable() {
   table.innerHTML = `
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-6 py-3">名称</th>
-        <th scope="col" class="px-6 py-3">协议</th>
-        <th scope="col" class="px-6 py-3">Endpoint</th>
-        <th scope="col" class="px-6 py-3">状态</th>
-        <th scope="col" class="px-6 py-3">操作</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">协议</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Endpoint</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
       </tr>
     </thead>
     <tbody>
@@ -113,48 +113,45 @@ function renderTable() {
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
-      <td class="px-6 py-2.5 font-medium text-slate-900">${item.name}</td>
-      <td class="px-6 py-2.5">${item.protocol}</td>
-      <td class="px-6 py-2.5">${item.endpoint}</td>
-      <td class="px-6 py-2.5">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
-      <td class="px-6 py-2.5 flex gap-2">
+      <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.protocol}</td>
+      <td class="px-2 py-2 text-xs">${item.endpoint}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
+      <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <form method="post" action="/admin/provider-models/${item.id}/delete" onsubmit="return confirm('确认禁用这个 Provider 吗？');">
           <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>
         </form>
-      </td>
+      </div></td>
     `;
     tbody.appendChild(tr);
   });
   tableContainer.appendChild(table);
 
   // Pagination
-  if (totalPages > 1) {
-    const prevButton = document.createElement('button');
-    prevButton.textContent = '上一页';
-    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    prevButton.disabled = currentPage === 1;
-    prevButton.onclick = () => {
-      currentPage--;
-      renderTable();
-    };
-    paginationContainer.appendChild(prevButton);
+  const paginDiv = document.createElement('div');
+  paginDiv.className = 'flex items-center gap-2';
 
-    const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
-    pageInfo.className = 'text-xs text-slate-500';
-    paginationContainer.appendChild(pageInfo);
+  const prevButton = document.createElement('button');
+  prevButton.textContent = '上一页';
+  prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === 1 ? ' text-slate-400' : '');
+  prevButton.disabled = currentPage === 1;
+  prevButton.onclick = () => { currentPage--; renderTable(); };
+  paginDiv.appendChild(prevButton);
 
-    const nextButton = document.createElement('button');
-    nextButton.textContent = '下一页';
-    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    nextButton.disabled = currentPage === totalPages;
-    nextButton.onclick = () => {
-      currentPage++;
-      renderTable();
-    };
-    paginationContainer.appendChild(nextButton);
-  }
+  const pageInfo = document.createElement('span');
+  pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+  pageInfo.className = 'text-xs text-slate-500';
+  paginDiv.appendChild(pageInfo);
+
+  const nextButton = document.createElement('button');
+  nextButton.textContent = '下一页';
+  nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === totalPages ? ' text-slate-400' : '');
+  nextButton.disabled = currentPage === totalPages;
+  nextButton.onclick = () => { currentPage++; renderTable(); };
+  paginDiv.appendChild(nextButton);
+
+  paginationContainer.appendChild(paginDiv);
 }
 
 document.getElementById('providers-search').addEventListener('input', () => {

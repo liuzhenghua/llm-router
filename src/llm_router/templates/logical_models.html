@@ -6,7 +6,7 @@
 </div>
 
 <div class="mb-2">
-  <input type="text" id="logical-models-search" placeholder="搜索模型..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+  <input type="text" id="logical-models-search" placeholder="搜索模型..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
 </div>
 
 <div id="logical-models-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
@@ -41,7 +41,7 @@
     <div class="mb-6 flex items-center justify-between"><h3 class="text-2xl font-semibold">路由规则</h3><button type="button" onclick='closeModal("routes-modal")' class="rounded-full px-3 py-1 text-slate-500">关闭</button></div>
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <input type="text" id="routes-search" placeholder="搜索..." class="w-full rounded-2xl border border-slate-200 px-4 py-2 text-sm">
+        <input type="text" id="routes-search" placeholder="搜索..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       </div>
       <button type="button" onclick="openCreateRouteModal()" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增路由</button>
     </div>
@@ -107,10 +107,10 @@ function renderLogicalModelsTable() {
   table.innerHTML = `
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-6 py-3">名称</th>
-        <th scope="col" class="px-6 py-3">描述</th>
-        <th scope="col" class="px-6 py-3">状态</th>
-        <th scope="col" class="px-6 py-3">操作</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">描述</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
       </tr>
     </thead>
     <tbody>
@@ -121,45 +121,42 @@ function renderLogicalModelsTable() {
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
-      <td class="px-6 py-2.5 font-medium text-slate-900">${item.name}</td>
-      <td class="px-6 py-2.5">${item.description || "无描述"}</td>
-      <td class="px-6 py-2.5">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
-      <td class="px-6 py-2.5 flex gap-2">
+      <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
+      <td class="px-2 py-2 text-xs">${item.description || "无描述"}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
+      <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">路由</button>
         <button type="button" onclick='fillForm("edit-logical-model-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-logical-model-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
-      </td>
+      </div></td>
     `;
     tbody.appendChild(tr);
   });
   tableContainer.appendChild(table);
 
   // Pagination
-  if (totalPages > 1) {
-    const prevButton = document.createElement('button');
-    prevButton.textContent = '上一页';
-    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    prevButton.disabled = currentLogicalModelPage === 1;
-    prevButton.onclick = () => {
-      currentLogicalModelPage--;
-      renderLogicalModelsTable();
-    };
-    paginationContainer.appendChild(prevButton);
+  const paginDiv = document.createElement('div');
+  paginDiv.className = 'flex items-center gap-2';
 
-    const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentLogicalModelPage} / ${totalPages} 页`;
-    pageInfo.className = 'text-xs text-slate-500';
-    paginationContainer.appendChild(pageInfo);
+  const prevButton = document.createElement('button');
+  prevButton.textContent = '上一页';
+  prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentLogicalModelPage === 1 ? ' text-slate-400' : '');
+  prevButton.disabled = currentLogicalModelPage === 1;
+  prevButton.onclick = () => { currentLogicalModelPage--; renderLogicalModelsTable(); };
+  paginDiv.appendChild(prevButton);
 
-    const nextButton = document.createElement('button');
-    nextButton.textContent = '下一页';
-    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    nextButton.disabled = currentLogicalModelPage === totalPages;
-    nextButton.onclick = () => {
-      currentLogicalModelPage++;
-      renderLogicalModelsTable();
-    };
-    paginationContainer.appendChild(nextButton);
-  }
+  const pageInfo = document.createElement('span');
+  pageInfo.textContent = `第 ${currentLogicalModelPage} / ${totalPages} 页`;
+  pageInfo.className = 'text-xs text-slate-500';
+  paginDiv.appendChild(pageInfo);
+
+  const nextButton = document.createElement('button');
+  nextButton.textContent = '下一页';
+  nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentLogicalModelPage === totalPages ? ' text-slate-400' : '');
+  nextButton.disabled = currentLogicalModelPage === totalPages;
+  nextButton.onclick = () => { currentLogicalModelPage++; renderLogicalModelsTable(); };
+  paginDiv.appendChild(nextButton);
+
+  paginationContainer.appendChild(paginDiv);
 }
 
 document.getElementById('logical-models-search').addEventListener('input', () => {
@@ -219,12 +216,12 @@ function renderRoutesTable() {
   table.innerHTML = `
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-6 py-3">Provider</th>
-        <th scope="col" class="px-6 py-3">优先级</th>
-        <th scope="col" class="px-6 py-3">权重</th>
-        <th scope="col" class="px-6 py-3">状态</th>
-        <th scope="col" class="px-6 py-3">后备</th>
-        <th scope="col" class="px-6 py-3">操作</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Provider</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">优先级</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">权重</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">后备</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
       </tr>
     </thead>
     <tbody>
@@ -236,49 +233,46 @@ function renderRoutesTable() {
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
-      <td class="px-6 py-2.5">${providerModel ? providerModel.name : 'N/A'}</td>
-      <td class="px-6 py-2.5">${route.priority}</td>
-      <td class="px-6 py-2.5">${route.weight}</td>
-      <td class="px-6 py-2.5">${route.status}</td>
-      <td class="px-6 py-2.5">${route.is_fallback ? '是' : '否'}</td>
-      <td class="px-6 py-2.5 flex gap-2">
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${providerModel ? providerModel.name : 'N/A'}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${route.priority}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${route.weight}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${route.status}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${route.is_fallback ? '是' : '否'}</td>
+      <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='openEditRouteModal(${JSON.stringify(route)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <form method="post" action="/admin/routes/${route.id}/delete" onsubmit="return confirm('确认删除这个路由吗？');">
           <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
         </form>
-      </td>
+      </div></td>
     `;
     tbody.appendChild(tr);
   });
   tableContainer.appendChild(table);
 
   // Pagination
-  if (totalPages > 1) {
-    const prevButton = document.createElement('button');
-    prevButton.textContent = '上一页';
-    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    prevButton.disabled = currentRoutePage === 1;
-    prevButton.onclick = () => {
-      currentRoutePage--;
-      renderRoutesTable();
-    };
-    paginationContainer.appendChild(prevButton);
+  const rPaginDiv = document.createElement('div');
+  rPaginDiv.className = 'flex items-center gap-2';
 
-    const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentRoutePage} / ${totalPages} 页`;
-    pageInfo.className = 'text-xs text-slate-500';
-    paginationContainer.appendChild(pageInfo);
+  const rPrevButton = document.createElement('button');
+  rPrevButton.textContent = '上一页';
+  rPrevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentRoutePage === 1 ? ' text-slate-400' : '');
+  rPrevButton.disabled = currentRoutePage === 1;
+  rPrevButton.onclick = () => { currentRoutePage--; renderRoutesTable(); };
+  rPaginDiv.appendChild(rPrevButton);
 
-    const nextButton = document.createElement('button');
-    nextButton.textContent = '下一页';
-    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs';
-    nextButton.disabled = currentRoutePage === totalPages;
-    nextButton.onclick = () => {
-      currentRoutePage++;
-      renderRoutesTable();
-    };
-    paginationContainer.appendChild(nextButton);
-  }
+  const rPageInfo = document.createElement('span');
+  rPageInfo.textContent = `第 ${currentRoutePage} / ${totalPages} 页`;
+  rPageInfo.className = 'text-xs text-slate-500';
+  rPaginDiv.appendChild(rPageInfo);
+
+  const rNextButton = document.createElement('button');
+  rNextButton.textContent = '下一页';
+  rNextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentRoutePage === totalPages ? ' text-slate-400' : '');
+  rNextButton.disabled = currentRoutePage === totalPages;
+  rNextButton.onclick = () => { currentRoutePage++; renderRoutesTable(); };
+  rPaginDiv.appendChild(rNextButton);
+
+  paginationContainer.appendChild(rPaginDiv);
 }
 
 function openCreateRouteModal() {
