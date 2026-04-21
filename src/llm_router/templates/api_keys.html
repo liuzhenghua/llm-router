@@ -24,8 +24,23 @@
 </div>
 {% endif %}
 
-<div class="mb-2">
-  <input type="text" id="api-keys-search" placeholder="搜索 API Keys..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+<div class="mb-4 flex flex-wrap gap-2 items-end">
+  <div class="min-w-[180px] flex-1">
+    <label class="block text-xs text-slate-500 mb-1">名称</label>
+    <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+  </div>
+  <div class="shrink-0 w-[130px]">
+    <label class="block text-xs text-slate-500 mb-1">状态</label>
+    <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <option value="">全部</option>
+      <option value="active">active</option>
+      <option value="disabled">disabled</option>
+    </select>
+  </div>
+  <div class="flex gap-2 shrink-0">
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+  </div>
 </div>
 
 <div id="api-keys-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
@@ -123,11 +138,19 @@ let allApiKeys = {{ api_keys|tojson }};
 let currentPage = 1;
 const rowsPerPage = 10;
 
+function getFilters() {
+  return {
+    name: document.getElementById('search-name').value.trim().toLowerCase(),
+    status: document.getElementById('search-status').value,
+  };
+}
+
 function renderTable() {
-  const searchTerm = document.getElementById('api-keys-search').value.toLowerCase();
+  const { name, status } = getFilters();
   const filteredKeys = allApiKeys.filter(key => {
-    return key.name.toLowerCase().includes(searchTerm) ||
-           key.status.toLowerCase().includes(searchTerm);
+    if (name && !key.name.toLowerCase().includes(name)) return false;
+    if (status && key.status !== status) return false;
+    return true;
   });
 
   const tableContainer = document.getElementById('api-keys-table-container');
@@ -205,9 +228,20 @@ function renderTable() {
   paginationContainer.appendChild(paginDiv);
 }
 
-document.getElementById('api-keys-search').addEventListener('input', () => {
+document.getElementById('search-btn').addEventListener('click', () => {
   currentPage = 1;
   renderTable();
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('search-name').value = '';
+  document.getElementById('search-status').value = '';
+  currentPage = 1;
+  renderTable();
+});
+
+document.getElementById('search-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { currentPage = 1; renderTable(); }
 });
 
 document.addEventListener('DOMContentLoaded', () => {

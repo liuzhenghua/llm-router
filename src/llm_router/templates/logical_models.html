@@ -5,8 +5,23 @@
   <button type="button" onclick="openModal('create-logical-model-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增逻辑模型</button>
 </div>
 
-<div class="mb-2">
-  <input type="text" id="logical-models-search" placeholder="搜索模型..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+<div class="mb-4 flex flex-wrap gap-2 items-end">
+  <div class="min-w-[180px] flex-1">
+    <label class="block text-xs text-slate-500 mb-1">名称</label>
+    <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+  </div>
+  <div class="shrink-0 w-[130px]">
+    <label class="block text-xs text-slate-500 mb-1">状态</label>
+    <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <option value="">全部</option>
+      <option value="active">active</option>
+      <option value="disabled">disabled</option>
+    </select>
+  </div>
+  <div class="flex gap-2 shrink-0">
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+  </div>
 </div>
 
 <div id="logical-models-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
@@ -82,11 +97,20 @@ let allRoutesForModels = {{ routes|tojson }};
 let currentLogicalModelPage = 1;
 const logicalModelsPerPage = 10;
 
+function getFilters() {
+  return {
+    name: document.getElementById('search-name').value.trim().toLowerCase(),
+    status: document.getElementById('search-status').value,
+  };
+}
+
 function renderLogicalModelsTable() {
-  const searchTerm = document.getElementById('logical-models-search').value.toLowerCase();
+  const { name, status } = getFilters();
   const filteredModels = allLogicalModels.filter(model => {
-    return model.name.toLowerCase().includes(searchTerm) ||
-           (model.description && model.description.toLowerCase().includes(searchTerm));
+    if (name && !model.name.toLowerCase().includes(name) && !(model.description && model.description.toLowerCase().includes(name))) return false;
+    if (status === 'active' && !model.is_active) return false;
+    if (status === 'disabled' && model.is_active) return false;
+    return true;
   });
 
   const tableContainer = document.getElementById('logical-models-table-container');
@@ -159,9 +183,20 @@ function renderLogicalModelsTable() {
   paginationContainer.appendChild(paginDiv);
 }
 
-document.getElementById('logical-models-search').addEventListener('input', () => {
+document.getElementById('search-btn').addEventListener('click', () => {
   currentLogicalModelPage = 1;
   renderLogicalModelsTable();
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('search-name').value = '';
+  document.getElementById('search-status').value = '';
+  currentLogicalModelPage = 1;
+  renderLogicalModelsTable();
+});
+
+document.getElementById('search-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { currentLogicalModelPage = 1; renderLogicalModelsTable(); }
 });
 
 document.addEventListener('DOMContentLoaded', () => {

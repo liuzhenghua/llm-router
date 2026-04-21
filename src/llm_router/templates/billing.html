@@ -23,8 +23,25 @@
 <div class="grid gap-6 xl:grid-cols-1">
   <div class="rounded-2xl bg-white p-4 shadow-sm">
     <h2 class="text-lg font-semibold">最近账本</h2>
-    <div class="mb-2 mt-2">
-      <input type="text" id="ledgers-search" placeholder="搜索账本..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <div class="mb-2 mt-2 flex flex-wrap gap-2 items-end">
+      <div class="min-w-[160px] flex-1">
+        <label class="block text-xs text-slate-500 mb-1">备注</label>
+        <input type="text" id="ledgers-search" placeholder="搜索备注..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      </div>
+      <div class="shrink-0 w-[130px]">
+        <label class="block text-xs text-slate-500 mb-1">变动类型</label>
+        <select id="ledgers-change-type" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+          <option value="">全部</option>
+          <option value="topup">充値 (topup)</option>
+          <option value="charge">扣费 (charge)</option>
+          <option value="adjust">调整 (adjust)</option>
+          <option value="refund">退款 (refund)</option>
+        </select>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button id="ledgers-search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
+        <button id="ledgers-reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+      </div>
     </div>
     <div id="ledgers-table-container" class="overflow-x-auto"></div>
     <div id="ledgers-pagination-container" class="mt-2 flex items-center justify-between"></div>
@@ -117,17 +134,22 @@ function createPaginatedTable(config) {
   });
 
   render();
+  return { render, resetPage: () => { currentPage = 1; } };
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  createPaginatedTable({
+  const ledgersTable = createPaginatedTable({
     data: {{ ledgers|tojson }},
     searchId: 'ledgers-search',
     tableContainerId: 'ledgers-table-container',
     paginationContainerId: 'ledgers-pagination-container',
     noDataText: '没有找到相关账本。',
     headers: ['类型', '金额', 'API Key ID', '变动前', '变动后', '备注'],
-    filterFn: (item, term) => item.change_type.toLowerCase().includes(term) || (item.remark && item.remark.toLowerCase().includes(term)),
+    filterFn: (item, term) => {
+      const changeType = document.getElementById('ledgers-change-type').value;
+      if (changeType && item.change_type !== changeType) return false;
+      return !term || item.change_type.toLowerCase().includes(term) || (item.remark && item.remark.toLowerCase().includes(term));
+    },
     rowFn: item => `
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.change_type}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.amount}</td>
@@ -137,6 +159,18 @@ document.addEventListener('DOMContentLoaded', () => {
       <td class="px-2 py-2 text-xs">${item.remark || '-'}</td>
     `
   });
+
+  document.getElementById('ledgers-search-btn').addEventListener('click', () => { ledgersTable.resetPage(); ledgersTable.render(); });
+  document.getElementById('ledgers-reset-btn').addEventListener('click', () => {
+    document.getElementById('ledgers-search').value = '';
+    document.getElementById('ledgers-change-type').value = '';
+    ledgersTable.resetPage();
+    ledgersTable.render();
+  });
+  document.getElementById('ledgers-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { ledgersTable.resetPage(); ledgersTable.render(); }
+  });
+  document.getElementById('ledgers-change-type').addEventListener('change', () => { ledgersTable.resetPage(); ledgersTable.render(); });
 
   createPaginatedTable({
     data: {{ usage_records|tojson }},

@@ -8,8 +8,31 @@
   <button type="button" onclick="openModal('create-provider-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增 Provider</button>
 </div>
 
-<div class="mb-2">
-  <input type="text" id="providers-search" placeholder="搜索 Providers..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+<div class="mb-4 flex flex-wrap gap-2 items-end">
+  <div class="min-w-[180px] flex-1">
+    <label class="block text-xs text-slate-500 mb-1">名称</label>
+    <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+  </div>
+  <div class="shrink-0 w-[130px]">
+    <label class="block text-xs text-slate-500 mb-1">协议</label>
+    <select id="search-protocol" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <option value="">全部</option>
+      <option value="openai">openai</option>
+      <option value="anthropic">anthropic</option>
+    </select>
+  </div>
+  <div class="shrink-0 w-[130px]">
+    <label class="block text-xs text-slate-500 mb-1">状态</label>
+    <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <option value="">全部</option>
+      <option value="active">active</option>
+      <option value="disabled">disabled</option>
+    </select>
+  </div>
+  <div class="flex gap-2 shrink-0">
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+  </div>
 </div>
 
 <div id="providers-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
@@ -72,12 +95,22 @@ let allProviders = {{ provider_models|tojson }};
 let currentPage = 1;
 const rowsPerPage = 10;
 
+function getFilters() {
+  return {
+    name: document.getElementById('search-name').value.trim().toLowerCase(),
+    protocol: document.getElementById('search-protocol').value,
+    status: document.getElementById('search-status').value,
+  };
+}
+
 function renderTable() {
-  const searchTerm = document.getElementById('providers-search').value.toLowerCase();
+  const { name, protocol, status } = getFilters();
   const filteredProviders = allProviders.filter(provider => {
-    return provider.name.toLowerCase().includes(searchTerm) ||
-           provider.protocol.toLowerCase().includes(searchTerm) ||
-           provider.endpoint.toLowerCase().includes(searchTerm);
+    if (name && !provider.name.toLowerCase().includes(name)) return false;
+    if (protocol && provider.protocol !== protocol) return false;
+    if (status === 'active' && !provider.is_active) return false;
+    if (status === 'disabled' && provider.is_active) return false;
+    return true;
   });
 
   const tableContainer = document.getElementById('providers-table-container');
@@ -154,9 +187,21 @@ function renderTable() {
   paginationContainer.appendChild(paginDiv);
 }
 
-document.getElementById('providers-search').addEventListener('input', () => {
+document.getElementById('search-btn').addEventListener('click', () => {
   currentPage = 1;
   renderTable();
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  document.getElementById('search-name').value = '';
+  document.getElementById('search-protocol').value = '';
+  document.getElementById('search-status').value = '';
+  currentPage = 1;
+  renderTable();
+});
+
+document.getElementById('search-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { currentPage = 1; renderTable(); }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
