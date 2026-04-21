@@ -17,6 +17,7 @@
       <div>逻辑模型: {{ log.logical_model_name or "-" }}</div>
       <div>供应商模型: {{ log.provider_model_name or "-" }}</div>
       <div>请求协议: {{ log.protocol or "-" }}</div>
+      <div>请求类型: {{ log.call_type or "-" }}</div>
       <div>供应商协议: {{ log.provider_model_protocol or "-" }}</div>
       <div>上游请求 ID: {{ log.upstream_request_id or "-" }}</div>
       <div>延迟(ms): {{ log.latency_ms or "-" }}</div>

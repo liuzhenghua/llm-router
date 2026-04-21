@@ -37,6 +37,7 @@
         <th scope="col" class="px-6 py-3">Request ID</th>
         <th scope="col" class="px-6 py-3">Upstream Request ID</th>
         <th scope="col" class="px-6 py-3">Protocol</th>
+        <th scope="col" class="px-6 py-3">Call Type</th>
         <th scope="col" class="px-6 py-3">Status</th>
         <th scope="col" class="px-6 py-3">Latency</th>
         <th scope="col" class="px-6 py-3">API Key</th>
@@ -52,6 +53,7 @@
         <td class="px-6 py-2.5 font-medium text-slate-900">{{ log.request_id }}</td>
         <td class="px-6 py-2.5">{{ log.upstream_request_id | default('-') }}</td>
         <td class="px-6 py-2.5">{{ log.protocol }}</td>
+        <td class="px-6 py-2.5">{{ log.call_type | default('-') }}</td>
         <td class="px-6 py-2.5">
           {% if log.success %}
           <span class="text-emerald-600">Success</span>
@@ -76,7 +78,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="10" class="text-center text-slate-500 p-4">没有找到相关日志。</td>
+        <td colspan="11" class="text-center text-slate-500 p-4">没有找到相关日志。</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -88,7 +90,6 @@
 {% endmacro %}
 
 <div id="logs-pagination-container" class="mt-2 flex items-center justify-between">
-  {% if pagination.pages > 1 %}
   <div class="flex items-center gap-2">
     {% if pagination.has_prev %}
     <a href="{{ build_query_string(pagination.prev_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs">上一页</a>
@@ -104,7 +105,6 @@
     <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400">下一页</button>
     {% endif %}
   </div>
-  {% endif %}
 </div>
 
 <script>
