@@ -222,6 +222,30 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             detail = (await self._upstream_response.aread()).decode("utf-8")
             await stream_cm.__aexit__(None, None, None)
             await self._client.aclose()
+            latency_ms = int((time.perf_counter() - self._started) * 1000)
+            schedule_post_request_tasks(
+                self._create_finalization_data(
+                    request_id=context.request_id,
+                    upstream_request_id=self.get_upstream_request_id(),
+                    api_key_id=context.api_key_id,
+                    logical_model_id=context.logical_model_id,
+                    provider_model_id=provider.id,
+                    protocol=ProviderProtocol.OPENAI,
+                    call_type="acompletion",
+                    status_code=self._upstream_response.status_code,
+                    success=False,
+                    latency_ms=latency_ms,
+                    request_payload=payload,
+                    response_body=None,
+                    error_message=detail,
+                    request_logging_enabled=context.request_logging_enabled,
+                    response_logging_enabled=context.response_logging_enabled,
+                    usage=None,
+                    provider=provider,
+                    started_at=self._started_at,
+                    ended_at=utcnow(),
+                )
+            )
             raise HTTPException(status_code=self._upstream_response.status_code, detail=detail)
 
         async def event_iterator():
