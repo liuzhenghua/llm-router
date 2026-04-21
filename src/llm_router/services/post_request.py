@@ -28,6 +28,7 @@ class UsageSnapshotData:
     completion_tokens: int = 0
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
+    reasoning_tokens: int = 0
 
 
 @dataclass(slots=True, frozen=True)
@@ -170,6 +171,7 @@ async def _record_billing_task(
             completion_tokens=0,
             cache_read_tokens=0,
             cache_write_tokens=0,
+            reasoning_tokens=0,
             cost_total=Decimal("0"),
         )
         session.add(summary)
@@ -180,6 +182,7 @@ async def _record_billing_task(
         summary.completion_tokens += usage.completion_tokens
         summary.cache_read_tokens += usage.cache_read_tokens
         summary.cache_write_tokens += usage.cache_write_tokens
+        summary.reasoning_tokens += usage.reasoning_tokens
     summary.cost_total = Decimal(summary.cost_total) + total_cost
 
     # 创建 UsageRecord
@@ -190,6 +193,7 @@ async def _record_billing_task(
             completion_tokens=usage.completion_tokens,
             cache_read_tokens=usage.cache_read_tokens,
             cache_write_tokens=usage.cache_write_tokens,
+            reasoning_tokens=usage.reasoning_tokens,
             input_token_price_snapshot=prices.input_token_price,
             output_token_price_snapshot=prices.output_token_price,
             cache_read_price_snapshot=prices.cache_read_token_price,

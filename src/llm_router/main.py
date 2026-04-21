@@ -55,11 +55,13 @@ def _format_decimal(value: Decimal | float | str | None) -> str:
 
 
 def _format_datetime(value: str | None) -> str:
+    """Return UTC ISO string with Z suffix; frontend JS converts to local timezone."""
     if value is None:
-        return "-"
+        return ""
     try:
         dt = datetime.fromisoformat(value)
-        return dt.strftime("%Y-%m-%d %H:%M:%S")
+        # stored as naive UTC, append Z to indicate UTC
+        return dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
     except (ValueError, TypeError):
         return value
 

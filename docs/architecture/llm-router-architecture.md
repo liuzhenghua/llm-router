@@ -121,7 +121,9 @@
 - `cache_read_cost = cache_read_tokens / 1_000_000 * cache_read_token_price`
 - `cache_write_cost = cache_write_tokens / 1_000_000 * cache_write_token_price`
 
-费用在请求发生时按价格快照记录，因此后续改价不会影响历史账单。
+说明：
+- `reasoning_tokens`（思考 tokens）包含在 `completion_tokens` 中，用于单独统计，不单独计费
+- 费用在请求发生时按价格快照记录，因此后续改价不会影响历史账单
 
 ## Quota and Access Control
 

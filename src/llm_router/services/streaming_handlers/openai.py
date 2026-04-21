@@ -126,12 +126,14 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
     def get_usage(self) -> UsageSnapshot | None:
         if not self._usage_dict:
             return None
-        details = self._usage_dict.get("prompt_tokens_details") or {}
+        prompt_token_details = self._usage_dict.get("prompt_tokens_details") or {}
+        completion_token_details = self._usage_dict.get("completion_tokens_details") or {}
         return UsageSnapshot(
             prompt_tokens=self._usage_dict.get("prompt_tokens", 0),
             completion_tokens=self._usage_dict.get("completion_tokens", 0),
-            cache_read_tokens=details.get("cached_tokens", 0),
+            cache_read_tokens=prompt_token_details.get("cached_tokens", 0),
             cache_write_tokens=0,
+            reasoning_tokens=completion_token_details.get("reasoning_tokens", 0),
         )
 
     def get_upstream_request_id(self) -> str | None:

@@ -25,6 +25,7 @@ def test_compute_costs_uses_per_million_pricing():
         completion_tokens=500,
         cache_read_tokens=1000,
         cache_write_tokens=200,
+        reasoning_tokens=0,
     )
 
     costs = compute_costs(provider, usage)

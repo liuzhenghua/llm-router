@@ -147,12 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
     tableContainerId: 'usage-table-container',
     paginationContainerId: 'usage-pagination-container',
     noDataText: '没有找到相关费用记录。',
-    headers: ['Request Log ID', 'Cost', 'Tokens (P/C)', 'Request ID'],
+    headers: ['Request Log ID', 'Cost', 'Tokens (P/C/R)', 'Request ID'],
     filterFn: (item, term) => String(item.request_log_id).includes(term) || (item.request_log && item.request_log.request_id.toLowerCase().includes(term)),
     rowFn: item => `
       <td class="px-6 py-2.5">${item.request_log_id}</td>
       <td class="px-6 py-2.5">${item.cost_total}</td>
-      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens}</td>
+      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
       <td class="px-6 py-2.5">${item.request_log ? item.request_log.request_id : '-'}</td>
     `
   });
@@ -163,14 +163,14 @@ document.addEventListener('DOMContentLoaded', () => {
     tableContainerId: 'summaries-table-container',
     paginationContainerId: 'summaries-pagination-container',
     noDataText: '没有找到相关日报。',
-    headers: ['API Key ID', '日期', '请求数', '总费用', 'Tokens (P/C)'],
+    headers: ['API Key ID', '日期', '请求数', '总费用', 'Tokens (P/C/R)'],
     filterFn: (item, term) => String(item.api_key_id).includes(term) || item.summary_date.includes(term),
     rowFn: item => `
       <td class="px-6 py-2.5">${item.api_key_id}</td>
       <td class="px-6 py-2.5">${item.summary_date}</td>
       <td class="px-6 py-2.5">${item.request_count}</td>
       <td class="px-6 py-2.5">${item.cost_total}</td>
-      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens}</td>
+      <td class="px-6 py-2.5">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
     `
   });
 });

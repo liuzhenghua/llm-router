@@ -142,6 +142,7 @@ class UsageRecord(Base):
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_read_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_write_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    reasoning_tokens: Mapped[int] = mapped_column(Integer, default=0)
     input_token_price_snapshot: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     output_token_price_snapshot: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     cache_read_price_snapshot: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
@@ -187,6 +188,7 @@ class DailyUsageSummary(Base):
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_read_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_write_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    reasoning_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cost_total: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

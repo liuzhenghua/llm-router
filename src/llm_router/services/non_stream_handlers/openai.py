@@ -36,12 +36,14 @@ class OpenAINonStreamHandler(BaseNonStreamHandler):
         usage_obj = body.get("usage")
         if not usage_obj:
             return None
-        details = usage_obj.get("prompt_tokens_details") or {}
+        prompt_token_details = usage_obj.get("prompt_tokens_details") or {}
+        completion_token_details = usage_obj.get("completion_tokens_details") or {}
         return UsageSnapshot(
             prompt_tokens=usage_obj.get("prompt_tokens", 0),
             completion_tokens=usage_obj.get("completion_tokens", 0),
-            cache_read_tokens=details.get("cached_tokens", 0),
+            cache_read_tokens=prompt_token_details.get("cached_tokens", 0),
             cache_write_tokens=0,
+            reasoning_tokens=completion_token_details.get("reasoning_tokens", 0),
         )
 
     def get_upstream_request_id(self, body: dict, headers: httpx.Headers) -> str | None:

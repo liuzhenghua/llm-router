@@ -30,6 +30,7 @@
     <div class="mt-4 space-y-2 text-sm text-slate-600">
       <div>输入 Tokens: {{ log.usage_record.prompt_tokens }}</div>
       <div>输出 Tokens: {{ log.usage_record.completion_tokens }}</div>
+      <div>思考 Tokens: {{ log.usage_record.reasoning_tokens }}</div>
       <div>缓存读取 Tokens: {{ log.usage_record.cache_read_tokens }}</div>
       <div>缓存写入 Tokens: {{ log.usage_record.cache_write_tokens }}</div>
       <div>输入成本: {{ log.usage_record.cost_input|format_decimal }}</div>

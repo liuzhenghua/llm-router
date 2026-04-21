@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # 增量队列刷新间隔（秒）
     spend_queue_flush_interval: int = 30
 
+    # Admin 列表每页数量
+    admin_page_size: int = 10
+
     @computed_field
     @property
     def effective_database_url(self) -> str:

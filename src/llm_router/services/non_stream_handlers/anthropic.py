@@ -45,6 +45,7 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
             completion_tokens=usage_obj.get("output_tokens", 0),
             cache_read_tokens=usage_obj.get("cache_read_input_tokens", 0),
             cache_write_tokens=usage_obj.get("cache_creation_input_tokens", 0),
+            reasoning_tokens=usage_obj.get("reasoning_tokens", 0),
         )
 
     def get_upstream_request_id(self, body: dict, headers: httpx.Headers) -> str | None:

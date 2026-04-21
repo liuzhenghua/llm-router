@@ -648,7 +648,7 @@ async def request_logs_page(
     _: None = Depends(require_admin),
 ):
     session = request.state.db
-    per_page = 50
+    per_page = settings.admin_page_size
     stmt = (
         select(RequestLog)
         .options(selectinload(RequestLog.usage_record), selectinload(RequestLog.api_key), selectinload(RequestLog.provider_model))
@@ -698,6 +698,7 @@ async def request_logs_page(
             "usage_record": {
                 "prompt_tokens": log.usage_record.prompt_tokens,
                 "completion_tokens": log.usage_record.completion_tokens,
+                "reasoning_tokens": log.usage_record.reasoning_tokens,
                 "cost_total": log.usage_record.cost_total,
             } if log.usage_record else None,
         }
@@ -711,8 +712,8 @@ async def request_logs_page(
             "filters": {
                 "request_id": request_id or "",
                 "upstream_request_id": upstream_request_id or "",
-                "started_after": started_after.isoformat() if started_after else "",
-                "started_before": started_before.isoformat() if started_before else "",
+                "started_after": started_after.strftime("%Y-%m-%dT%H:%M:%S") + "Z" if started_after else "",
+                "started_before": started_before.strftime("%Y-%m-%dT%H:%M:%S") + "Z" if started_before else "",
             },
             "pagination": pagination,
         },
@@ -773,6 +774,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
             "completion_tokens": log.usage_record.completion_tokens,
             "cache_read_tokens": log.usage_record.cache_read_tokens,
             "cache_write_tokens": log.usage_record.cache_write_tokens,
+            "reasoning_tokens": log.usage_record.reasoning_tokens,
             "cost_input": str(log.usage_record.cost_input),
             "cost_output": str(log.usage_record.cost_output),
             "cost_cache_read": str(log.usage_record.cost_cache_read),
@@ -826,6 +828,7 @@ async def billing_page(
             "cost_total": str(item.cost_total),
             "prompt_tokens": item.prompt_tokens,
             "completion_tokens": item.completion_tokens,
+            "reasoning_tokens": item.reasoning_tokens,
             "request_log": {"request_id": item.request_log.request_id} if item.request_log else None,
         }
         for item in usage_records_result
@@ -840,6 +843,7 @@ async def billing_page(
             "cost_total": str(item.cost_total),
             "prompt_tokens": item.prompt_tokens,
             "completion_tokens": item.completion_tokens,
+            "reasoning_tokens": item.reasoning_tokens,
         }
         for item in summaries_result
     ]
