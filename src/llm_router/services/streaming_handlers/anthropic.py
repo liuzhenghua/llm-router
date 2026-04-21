@@ -85,6 +85,8 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
             self._current_block_type = block.get("type")
             if self._current_block_type == "text":
                 self._current_text = ""
+            elif self._current_block_type == "thinking":
+                self._thinking_content = ""
             elif self._current_block_type == "tool_use":
                 self._current_tool_name = block.get("name", "")
                 self._current_tool_call_id = block.get("id", "")
@@ -99,8 +101,10 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
             elif delta.get("type") == "thinking_delta":
                 self._thinking_content += delta.get("thinking", "")
 
-        elif event == "content_block_end":
-            if self._current_block_type == "text":
+        elif event == "content_block_stop":
+            if self._current_block_type == "thinking":
+                self._message_blocks.append({"type": "thinking", "thinking": self._thinking_content})
+            elif self._current_block_type == "text":
                 self._message_blocks.append({"type": "text", "text": self._current_text})
             elif self._current_block_type == "tool_use":
                 self._message_blocks.append({
@@ -132,8 +136,6 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
             "stop_sequence": None,
             "usage": self._usage_dict,
         }
-        if self._thinking_content:
-            result["thinking"] = self._thinking_content
         return json.dumps(result, ensure_ascii=False)
 
     def get_usage(self) -> UsageSnapshot | None:
