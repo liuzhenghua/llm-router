@@ -21,7 +21,9 @@ def _per_million_cost(tokens: int, unit_price: Decimal) -> Decimal:
 
 
 def compute_costs(provider: RoutedProvider, usage: UsageSnapshot) -> BillingResult:
-    cost_input = _per_million_cost(usage.prompt_tokens, provider.input_token_price)
+    # 注意: prompt_tokens 包含 cache_read_tokens 和 cache_write_tokens，需减去避免重复计费
+    non_cache_prompt_tokens = max(0, usage.prompt_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
+    cost_input = _per_million_cost(non_cache_prompt_tokens, provider.input_token_price)
     cost_output = _per_million_cost(usage.completion_tokens, provider.output_token_price)
     cost_cache_read = _per_million_cost(usage.cache_read_tokens, provider.cache_read_token_price)
     cost_cache_write = _per_million_cost(usage.cache_write_tokens, provider.cache_write_token_price)

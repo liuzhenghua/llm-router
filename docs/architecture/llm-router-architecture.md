@@ -116,12 +116,13 @@
 
 计算公式：
 
-- `input_cost = prompt_tokens / 1_000_000 * input_token_price`
+- `input_cost = (prompt_tokens - cache_read_tokens - cache_write_tokens) / 1_000_000 * input_token_price`
 - `output_cost = completion_tokens / 1_000_000 * output_token_price`
 - `cache_read_cost = cache_read_tokens / 1_000_000 * cache_read_token_price`
 - `cache_write_cost = cache_write_tokens / 1_000_000 * cache_write_token_price`
 
 说明：
+- `prompt_tokens` 包含 `cache_read_tokens` 和 `cache_write_tokens`，因此需减去后避免重复计费
 - `reasoning_tokens`（思考 tokens）包含在 `completion_tokens` 中，用于单独统计，不单独计费
 - 费用在请求发生时按价格快照记录，因此后续改价不会影响历史账单
 

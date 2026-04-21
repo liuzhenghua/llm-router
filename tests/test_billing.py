@@ -30,8 +30,8 @@ def test_compute_costs_uses_per_million_pricing():
 
     costs = compute_costs(provider, usage)
 
-    assert costs.cost_input == Decimal("0.00500")
+    assert costs.cost_input == Decimal("0.00200")  # (2000-1000-200)/1M * 2.50
     assert costs.cost_output == Decimal("0.00500")
     assert costs.cost_cache_read == Decimal("0.00125")
     assert costs.cost_cache_write == Decimal("0.00010")
-    assert costs.total_cost == Decimal("0.01135")
+    assert costs.total_cost == Decimal("0.00835")  # 0.00200+0.00500+0.00125+0.00010

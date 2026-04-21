@@ -136,8 +136,10 @@ async def _record_billing_task(
         api_key.daily_spend_amount = ZERO
 
     # 计算费用
+    # 注意: prompt_tokens 包含 cache_read_tokens 和 cache_write_tokens，需减去避免重复计费
     if usage and prices:
-        cost_input = _per_million_cost(usage.prompt_tokens, prices.input_token_price)
+        non_cache_prompt_tokens = max(0, usage.prompt_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
+        cost_input = _per_million_cost(non_cache_prompt_tokens, prices.input_token_price)
         cost_output = _per_million_cost(usage.completion_tokens, prices.output_token_price)
         cost_cache_read = _per_million_cost(usage.cache_read_tokens, prices.cache_read_token_price)
         cost_cache_write = _per_million_cost(usage.cache_write_tokens, prices.cache_write_token_price)

@@ -171,16 +171,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
 
         response_body_serialized = kwargs["response_body"] if kwargs.get("response_logging_enabled") else None
 
-        usage_data = None
-        if kwargs.get("usage"):
-            usage = kwargs["usage"]
-            usage_data = UsageSnapshotData(
-                prompt_tokens=usage.prompt_tokens,
-                completion_tokens=usage.completion_tokens,
-                cache_read_tokens=usage.cache_read_tokens,
-                cache_write_tokens=usage.cache_write_tokens,
-            )
-
+        usage_data = kwargs.get("usage")
         prices_data = ProviderPricesData(
             input_token_price=kwargs["provider"].input_token_price,
             output_token_price=kwargs["provider"].output_token_price,
