@@ -19,3 +19,4 @@ wheels/
 .pytest_cache/
 /.env
 .DS_Store
+.qoder

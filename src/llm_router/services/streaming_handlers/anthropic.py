@@ -32,7 +32,6 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
         self._current_tool_name: str = ""
         self._current_tool_args: str = ""
         self._current_tool_call_id: str = ""
-        self._final_message: dict | None = None
         self._stop_reason: str | None = None
         self._model: str | None = None
         self._id: str | None = None
@@ -117,24 +116,20 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
                 self._usage_dict = data["usage"]
             self._stop_reason = data.get("delta", {}).get("stop_reason")
 
-        elif event == "message_end":
-            self._final_message = {
-                "id": self._id,
-                "type": self._type,
-                "model": self._model,
-                "role": "assistant",
-                "content": self._message_blocks,
-                "stop_reason": self._stop_reason,
-                "stop_sequence": None,
-                "usage": self._usage_dict,
-            }
-            if self._thinking_content:
-                self._final_message["thinking"] = self._thinking_content
-
     def get_accumulated_response(self) -> str:
-        if self._final_message:
-            return json.dumps(self._final_message, ensure_ascii=False)
-        return json.dumps({"content": self._message_blocks}, ensure_ascii=False)
+        result = {
+            "id": self._id,
+            "type": self._type or "message",
+            "model": self._model,
+            "role": "assistant",
+            "content": self._message_blocks,
+            "stop_reason": self._stop_reason,
+            "stop_sequence": None,
+            "usage": self._usage_dict,
+        }
+        if self._thinking_content:
+            result["thinking"] = self._thinking_content
+        return json.dumps(result, ensure_ascii=False)
 
     def get_usage(self) -> UsageSnapshot | None:
         if not self._usage_dict:
@@ -183,6 +178,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
                 completion_tokens=usage.completion_tokens,
                 cache_read_tokens=usage.cache_read_tokens,
                 cache_write_tokens=usage.cache_write_tokens,
+                reasoning_tokens=usage.reasoning_tokens,
             )
 
         prices_data = ProviderPricesData(
