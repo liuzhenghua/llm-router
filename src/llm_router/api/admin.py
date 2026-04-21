@@ -644,6 +644,8 @@ async def request_logs_page(
     upstream_request_id: str | None = Query(default=None),
     started_after: datetime | None = Query(default=None),
     started_before: datetime | None = Query(default=None),
+    api_key_id: int | None = Query(default=None),
+    provider_model_id: int | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     _: None = Depends(require_admin),
 ):
@@ -667,6 +669,12 @@ async def request_logs_page(
     if started_before:
         stmt = stmt.where(RequestLog.started_at <= started_before)
         count_stmt = count_stmt.where(RequestLog.started_at <= started_before)
+    if api_key_id:
+        stmt = stmt.where(RequestLog.api_key_id == api_key_id)
+        count_stmt = count_stmt.where(RequestLog.api_key_id == api_key_id)
+    if provider_model_id:
+        stmt = stmt.where(RequestLog.provider_model_id == provider_model_id)
+        count_stmt = count_stmt.where(RequestLog.provider_model_id == provider_model_id)
     total = (await session.execute(count_stmt)).scalar() or 0
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
@@ -705,6 +713,8 @@ async def request_logs_page(
         }
         for log in logs_result
     ]
+    api_keys_list = (await session.execute(select(ApiKey).order_by(ApiKey.name.asc()))).scalars().all()
+    provider_models_list = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
     return _render_admin(
         request,
         "request_logs.html",
@@ -715,7 +725,11 @@ async def request_logs_page(
                 "upstream_request_id": upstream_request_id or "",
                 "started_after": started_after.strftime("%Y-%m-%dT%H:%M:%S") + "Z" if started_after else "",
                 "started_before": started_before.strftime("%Y-%m-%dT%H:%M:%S") + "Z" if started_before else "",
+                "api_key_id": api_key_id or "",
+                "provider_model_id": provider_model_id or "",
             },
+            "api_keys_list": [{"id": k.id, "name": k.name} for k in api_keys_list],
+            "provider_models_list": [{"id": m.id, "name": m.name} for m in provider_models_list],
             "pagination": pagination,
         },
         nav_active="requests",
