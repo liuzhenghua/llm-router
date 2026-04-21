@@ -8,71 +8,77 @@
   <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
 </div>
 
-<div class="mb-4 flex flex-wrap gap-4 items-end">
-  <div class="flex-1 min-w-[200px]">
+<div class="mb-4 flex flex-wrap gap-2 items-end">
+  <div class="min-w-[180px] flex-1">
     <label class="block text-xs text-slate-500 mb-1">Request ID</label>
-    <input type="text" id="search-request-id" placeholder="搜索 Request ID..." value="{{ filters.request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+    <input type="text" id="search-request-id" placeholder="搜索 Request ID..." value="{{ filters.request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
-  <div class="flex-1 min-w-[200px]">
+  <div class="min-w-[180px] flex-1">
     <label class="block text-xs text-slate-500 mb-1">Upstream Request ID</label>
-    <input type="text" id="search-upstream-request-id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+    <input type="text" id="search-upstream-request-id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
-  <div class="flex-1 min-w-[200px]">
+  <div class="min-w-[260px] flex-1">
     <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
-    <div class="flex items-center gap-2">
-      <input type="datetime-local" id="search-started-after" data-utc="{{ filters.started_after or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
-      <span class="text-slate-400">至</span>
-      <input type="datetime-local" id="search-started-before" data-utc="{{ filters.started_before or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+    <div class="flex items-center gap-1.5">
+      <input type="datetime-local" id="search-started-after" data-utc="{{ filters.started_after or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
+      <span class="text-slate-400 shrink-0 text-xs">至</span>
+      <input type="datetime-local" id="search-started-before" data-utc="{{ filters.started_before or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
     </div>
   </div>
-  <button id="search-btn" class="rounded-xl bg-slate-800 px-4 py-2 text-sm text-white font-medium hover:bg-slate-700">搜索</button>
-  <button id="reset-btn" class="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-700 font-medium hover:bg-slate-50">重置</button>
+  <div class="flex gap-2 shrink-0">
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+  </div>
 </div>
 
 <div id="logs-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm">
   <table class="w-full text-sm text-left text-slate-500">
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-6 py-3">Started At</th>
-        <th scope="col" class="px-6 py-3">Request ID</th>
-        <th scope="col" class="px-6 py-3">Upstream Request ID</th>
-        <th scope="col" class="px-6 py-3">Protocol</th>
-        <th scope="col" class="px-6 py-3">Call Type</th>
-        <th scope="col" class="px-6 py-3">Status</th>
-        <th scope="col" class="px-6 py-3">Latency</th>
-        <th scope="col" class="px-6 py-3">API Key</th>
-        <th scope="col" class="px-6 py-3">Provider Model</th>
-        <th scope="col" class="px-6 py-3">费用</th>
-        <th scope="col" class="px-6 py-3"></th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Started At</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Request ID</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Upstream Request ID</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Status</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Latency</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Provider Model</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">费用</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap"></th>
       </tr>
     </thead>
     <tbody>
       {% for log in logs %}
       <tr class="bg-white border-b">
-        <td class="px-6 py-2.5 text-slate-900" data-utc="{{ log.started_at }}"></td>
-        <td class="px-6 py-2.5 font-medium text-slate-900">{{ log.request_id }}</td>
-        <td class="px-6 py-2.5">{{ log.upstream_request_id | default('-') }}</td>
-        <td class="px-6 py-2.5">{{ log.protocol }}</td>
-        <td class="px-6 py-2.5">{{ log.call_type | default('-') }}</td>
-        <td class="px-6 py-2.5">
+        <td class="px-2 py-2 text-slate-900 whitespace-nowrap text-xs" data-utc="{{ log.started_at or '' }}"></td>
+        <td class="px-2 py-2 whitespace-nowrap">
+          <div class="max-w-[80px] truncate text-xs" title="{{ log.request_id }}">{{ log.request_id }}</div>
+        </td>
+        <td class="px-2 py-2 whitespace-nowrap">
+          <div class="max-w-[240px] truncate text-xs" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id | default('-') }}</div>
+        </td>
+        <td class="px-2 py-2 whitespace-nowrap">
           {% if log.success %}
           <span class="text-emerald-600">Success</span>
           {% else %}
           <span class="text-rose-600">Failed</span>
           {% endif %}
-          ({{ log.status_code }})
+          <span class="text-slate-400">({{ log.status_code }})</span>
         </td>
-        <td class="px-6 py-2.5">{{ log.latency_ms | default('-') }}ms</td>
-        <td class="px-6 py-2.5">{{ log.api_key_name | default('-') }}</td>
-        <td class="px-6 py-2.5">{{ log.provider_model_name | default('-') }}</td>
-        <td class="px-6 py-2.5">
+        <td class="px-2 py-2 whitespace-nowrap">{{ log.latency_ms | default('-') }}ms</td>
+        <td class="px-2 py-2 whitespace-nowrap">
+          <div class="max-w-[100px] truncate text-xs" title="{{ log.api_key_name or '-' }}">{{ log.api_key_name | default('-') }}</div>
+        </td>
+        <td class="px-2 py-2 whitespace-nowrap text-xs">
+          <div class="max-w-[120px] truncate" title="{{ log.provider_model_name or '-' }}">{{ log.provider_model_name | default('-') }}</div>
+        </td>
+        <td class="px-2 py-2 whitespace-nowrap">
           {% if log.usage_record %}
           {{ "%.4f" | format(log.usage_record.cost_total) if log.usage_record.cost_total else 'N/A' }}
           {% else %}
           -
           {% endif %}
         </td>
-        <td class="px-6 py-2.5">
+        <td class="px-2 py-2 whitespace-nowrap">
           <a href="/admin/requests/{{ log.id }}" class="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
         </td>
       </tr>
@@ -84,6 +90,7 @@
     </tbody>
   </table>
 </div>
+
 
 {% macro build_query_string(page, filters) %}
 /admin/requests?page={{ page }}{% if filters.request_id %}&request_id={{ filters.request_id }}{% endif %}{% if filters.upstream_request_id %}&upstream_request_id={{ filters.upstream_request_id }}{% endif %}{% if filters.started_after %}&started_after={{ filters.started_after }}{% endif %}{% if filters.started_before %}&started_before={{ filters.started_before }}{% endif %}
@@ -149,8 +156,8 @@ function doSearch() {
 
 // 页面加载时转换所有时间显示，并回显时间搜索条件
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('td[data-utc]').forEach(td => {
-    td.textContent = formatLocalDateTime(td.dataset.utc);
+  document.querySelectorAll('td[data-utc]').forEach(el => {
+    el.textContent = formatLocalDateTime(el.dataset.utc);
   });
 
   const startedAfterInput = document.getElementById('search-started-after');

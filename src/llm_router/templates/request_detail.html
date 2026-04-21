@@ -46,13 +46,19 @@
   </div>
 
   <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">请求体</h2>
-    <pre id="request-body-pre" class="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.request_body or "未记录请求内容" }}</pre>
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold">请求体</h2>
+      <button onclick="copyPre('request-body-pre', this)" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">复制</button>
+    </div>
+    <pre id="request-body-pre" class="mt-4 overflow-x-auto overflow-y-auto max-h-96 rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.request_body or "未记录请求内容" }}</pre>
   </div>
 
   <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">响应体 / 错误</h2>
-    <pre id="response-body-pre" class="mt-4 overflow-x-auto rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.response_body or log.error_message or "未记录响应内容" }}</pre>
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-semibold">响应体 / 错误</h2>
+      <button onclick="copyPre('response-body-pre', this)" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">复制</button>
+    </div>
+    <pre id="response-body-pre" class="mt-4 overflow-x-auto overflow-y-auto max-h-96 rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.response_body or log.error_message or "未记录响应内容" }}</pre>
   </div>
 </div>
 
@@ -75,6 +81,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   formatJsonInPre('request-body-pre');
   formatJsonInPre('response-body-pre');
+
+  window.copyPre = function(elementId, btn) {
+    const pre = document.getElementById(elementId);
+    if (!pre) return;
+    navigator.clipboard.writeText(pre.textContent).then(() => {
+      const original = btn.textContent;
+      btn.textContent = '已复制!';
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.disabled = false;
+      }, 2000);
+    }).catch(() => {
+      btn.textContent = '失败';
+      setTimeout(() => { btn.textContent = '复制'; }, 2000);
+    });
+  };
 });
 </script>
 {% endblock %}
