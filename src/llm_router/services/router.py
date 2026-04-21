@@ -63,7 +63,10 @@ async def resolve_request_context(
         await rate_limiter.check(cached.id, cached.qps_limit)
 
         # 余额检查（使用缓存的余额）
-        _check_balance_from_cache(cached)
+        try:
+            _check_balance_from_cache(cached)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)) from exc
 
         # 检查模型权限
         if cached.allowed_logical_models_json and logical_model_name not in cached.allowed_logical_models_json:
