@@ -17,12 +17,21 @@
     <label class="block text-xs text-slate-500 mb-1">Upstream Request ID</label>
     <input type="text" id="search-upstream-request-id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
-  <div class="min-w-[260px] flex-1">
+  <div class="min-w-[300px] flex-1">
     <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
-    <div class="flex items-center gap-1.5">
-      <input type="datetime-local" id="search-started-after" data-utc="{{ filters.started_after or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
-      <span class="text-slate-400 shrink-0 text-xs">至</span>
-      <input type="datetime-local" id="search-started-before" data-utc="{{ filters.started_before or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
+    <div class="flex flex-col gap-1.5">
+      <div class="flex items-center gap-1">
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100" data-minutes="60">近1小时</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100" data-minutes="360">近6小时</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100" data-minutes="1440">近24小时</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 hover:bg-slate-100" data-minutes="10080">近7天</button>
+        <button type="button" id="clear-time-range" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100">清除</button>
+      </div>
+      <div class="flex items-center gap-1.5">
+        <input type="datetime-local" id="search-started-after" data-utc="{{ filters.started_after or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
+        <span class="text-slate-400 shrink-0 text-xs">至</span>
+        <input type="datetime-local" id="search-started-before" data-utc="{{ filters.started_before or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
+      </div>
     </div>
   </div>
   <div class="flex gap-2 shrink-0">
@@ -118,7 +127,7 @@
 // 将 UTC ISO 字符串转换为本地时区显示（yyyy-MM-dd HH:mm:ss）
 function formatLocalDateTime(utcStr) {
   if (!utcStr) return '-';
-  const date = new Date(utcStr + 'Z');
+  const date = new Date(utcStr.endsWith('Z') ? utcStr : utcStr + 'Z');
   const pad = n => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
@@ -133,7 +142,14 @@ function localToUTC(localDateStr) {
 // 将 UTC 字符串转换为 datetime-local 格式（yyyy-MM-ddTHH:mm）
 function utcToDatetimeLocal(utcStr) {
   if (!utcStr) return '';
-  const date = new Date(utcStr + 'Z');
+  // utcStr may already end with 'Z'; avoid appending a second one
+  const date = new Date(utcStr.endsWith('Z') ? utcStr : utcStr + 'Z');
+  const pad = n => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// 将 Date 对象转换为 datetime-local 格式
+function dateToDatetimeLocal(date) {
   const pad = n => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
@@ -181,6 +197,26 @@ document.querySelectorAll('#search-request-id, #search-upstream-request-id, #sea
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   window.location.href = '/admin/requests';
+});
+
+// 时间预设快捷按钮
+document.querySelectorAll('.time-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const minutes = parseInt(btn.dataset.minutes, 10);
+    const now = new Date();
+    const from = new Date(now.getTime() - minutes * 60 * 1000);
+    document.getElementById('search-started-after').value = dateToDatetimeLocal(from);
+    document.getElementById('search-started-before').value = dateToDatetimeLocal(now);
+    // 高亮当前选中的预设
+    document.querySelectorAll('.time-preset').forEach(b => b.classList.remove('bg-slate-800', 'text-white', 'border-slate-800'));
+    btn.classList.add('bg-slate-800', 'text-white', 'border-slate-800');
+  });
+});
+
+document.getElementById('clear-time-range').addEventListener('click', () => {
+  document.getElementById('search-started-after').value = '';
+  document.getElementById('search-started-before').value = '';
+  document.querySelectorAll('.time-preset').forEach(b => b.classList.remove('bg-slate-800', 'text-white', 'border-slate-800'));
 });
 </script>
 {% endblock %}
