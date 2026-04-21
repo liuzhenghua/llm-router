@@ -20,9 +20,9 @@
   <div class="flex-1 min-w-[200px]">
     <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
     <div class="flex items-center gap-2">
-      <input type="datetime-local" id="search-started-after" value="{{ filters.started_after or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      <input type="datetime-local" id="search-started-after" data-utc="{{ filters.started_after or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
       <span class="text-slate-400">至</span>
-      <input type="datetime-local" id="search-started-before" value="{{ filters.started_before or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+      <input type="datetime-local" id="search-started-before" data-utc="{{ filters.started_before or '' }}" class="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm">
     </div>
   </div>
   <button id="search-btn" class="rounded-xl bg-slate-800 px-4 py-2 text-sm text-white font-medium hover:bg-slate-700">搜索</button>
@@ -35,6 +35,7 @@
       <tr>
         <th scope="col" class="px-6 py-3">Started At</th>
         <th scope="col" class="px-6 py-3">Request ID</th>
+        <th scope="col" class="px-6 py-3">Upstream Request ID</th>
         <th scope="col" class="px-6 py-3">Protocol</th>
         <th scope="col" class="px-6 py-3">Status</th>
         <th scope="col" class="px-6 py-3">Latency</th>
@@ -47,8 +48,9 @@
     <tbody>
       {% for log in logs %}
       <tr class="bg-white border-b">
-        <td class="px-6 py-2.5 text-slate-900">{{ log.started_at | format_datetime }}</td>
+        <td class="px-6 py-2.5 text-slate-900" data-utc="{{ log.started_at }}"></td>
         <td class="px-6 py-2.5 font-medium text-slate-900">{{ log.request_id }}</td>
+        <td class="px-6 py-2.5">{{ log.upstream_request_id | default('-') }}</td>
         <td class="px-6 py-2.5">{{ log.protocol }}</td>
         <td class="px-6 py-2.5">
           {% if log.success %}
@@ -74,7 +76,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="9" class="text-center text-slate-500 p-4">没有找到相关日志。</td>
+        <td colspan="10" class="text-center text-slate-500 p-4">没有找到相关日志。</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -106,11 +108,35 @@
 </div>
 
 <script>
-document.getElementById('search-btn').addEventListener('click', () => {
+// 将 UTC ISO 字符串转换为本地时区显示（yyyy-MM-dd HH:mm:ss）
+function formatLocalDateTime(utcStr) {
+  if (!utcStr) return '-';
+  const date = new Date(utcStr + 'Z');
+  const pad = n => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+// 将本地 datetime-local 字符串转换为 UTC 字符串（传给后端）
+function localToUTC(localDateStr) {
+  if (!localDateStr) return '';
+  const date = new Date(localDateStr);
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+// 将 UTC 字符串转换为 datetime-local 格式（yyyy-MM-ddTHH:mm）
+function utcToDatetimeLocal(utcStr) {
+  if (!utcStr) return '';
+  const date = new Date(utcStr + 'Z');
+  const pad = n => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// 执行搜索
+function doSearch() {
   const requestId = document.getElementById('search-request-id').value;
   const upstreamRequestId = document.getElementById('search-upstream-request-id').value;
-  const startedAfter = document.getElementById('search-started-after').value;
-  const startedBefore = document.getElementById('search-started-before').value;
+  const startedAfter = localToUTC(document.getElementById('search-started-after').value);
+  const startedBefore = localToUTC(document.getElementById('search-started-before').value);
 
   const params = new URLSearchParams();
   if (requestId) params.append('request_id', requestId);
@@ -119,6 +145,31 @@ document.getElementById('search-btn').addEventListener('click', () => {
   if (startedBefore) params.append('started_before', startedBefore);
 
   window.location.href = `/admin/requests?${params.toString()}`;
+}
+
+// 页面加载时转换所有时间显示，并回显时间搜索条件
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('td[data-utc]').forEach(td => {
+    td.textContent = formatLocalDateTime(td.dataset.utc);
+  });
+
+  const startedAfterInput = document.getElementById('search-started-after');
+  const startedBeforeInput = document.getElementById('search-started-before');
+  if (startedAfterInput.dataset.utc) {
+    startedAfterInput.value = utcToDatetimeLocal(startedAfterInput.dataset.utc);
+  }
+  if (startedBeforeInput.dataset.utc) {
+    startedBeforeInput.value = utcToDatetimeLocal(startedBeforeInput.dataset.utc);
+  }
+});
+
+document.getElementById('search-btn').addEventListener('click', doSearch);
+
+// 按 Enter 执行搜索
+document.querySelectorAll('#search-request-id, #search-upstream-request-id, #search-started-after, #search-started-before').forEach(input => {
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doSearch();
+  });
 });
 
 document.getElementById('reset-btn').addEventListener('click', () => {
