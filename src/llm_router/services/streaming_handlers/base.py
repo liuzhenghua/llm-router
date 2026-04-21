@@ -19,6 +19,7 @@ class StreamChunk:
     event_type: str | None
     data: dict | None
     content: str | None
+    reasoning_content: str | None = None
     content_type: str | None = None  # "text", "tool_use"
 
 

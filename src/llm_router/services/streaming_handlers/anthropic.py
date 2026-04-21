@@ -28,6 +28,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
         self._current_event: str | None = None
         self._current_block_type: str | None = None
         self._current_text: str = ""
+        self._thinking_content: str = ""
         self._current_tool_name: str = ""
         self._current_tool_args: str = ""
         self._current_tool_call_id: str = ""
@@ -96,6 +97,8 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
                 self._current_text += delta.get("text", "")
             elif delta.get("type") == "input_json_delta":
                 self._current_tool_args += delta.get("partial_json", "")
+            elif delta.get("type") == "thinking_delta":
+                self._thinking_content += delta.get("thinking", "")
 
         elif event == "content_block_end":
             if self._current_block_type == "text":
@@ -125,6 +128,8 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
                 "stop_sequence": None,
                 "usage": self._usage_dict,
             }
+            if self._thinking_content:
+                self._final_message["thinking"] = self._thinking_content
 
     def get_accumulated_response(self) -> str:
         if self._final_message:

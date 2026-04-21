@@ -26,6 +26,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
         self._chunks: list[dict] = []
         self._usage_dict: dict | None = None
         self._message: dict | None = None
+        self._reasoning_content: str = ""
         self._finish_reason = None
         self._model = None
         self._id = None
@@ -79,6 +80,9 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
                 self._message.setdefault("content", "")
                 self._message["content"] += delta["content"]
 
+            if delta.get("reasoning_content"):
+                self._reasoning_content += delta["reasoning_content"]
+
             if delta.get("role"):
                 self._message["role"] = delta["role"]
 
@@ -107,6 +111,9 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
                 self._finish_reason = choice["finish_reason"]
 
     def get_accumulated_response(self) -> str:
+        message = self._message or {}
+        if self._reasoning_content:
+            message["reasoning_content"] = self._reasoning_content
         result = {
             "id": self._id,
             "object": "chat.completion",
@@ -115,7 +122,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             "choices": [
                 {
                     "index": 0,
-                    "message": self._message or {},
+                    "message": message,
                     "finish_reason": self._finish_reason,
                 }
             ],
