@@ -40,11 +40,14 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
         usage_obj = body.get("usage") or body.get("message", {}).get("usage")
         if not usage_obj:
             return None
+        input_tokens = usage_obj.get("input_tokens", 0)
+        cache_creation = usage_obj.get("cache_creation_input_tokens", 0)
+        cache_read = usage_obj.get("cache_read_input_tokens", 0)
         return UsageSnapshot(
-            prompt_tokens=usage_obj.get("input_tokens", 0),
+            prompt_tokens=input_tokens + cache_creation + cache_read,
             completion_tokens=usage_obj.get("output_tokens", 0),
-            cache_read_tokens=usage_obj.get("cache_read_input_tokens", 0),
-            cache_write_tokens=usage_obj.get("cache_creation_input_tokens", 0),
+            cache_read_tokens=cache_read,
+            cache_write_tokens=cache_creation,
             reasoning_tokens=usage_obj.get("reasoning_tokens", 0),
         )
 

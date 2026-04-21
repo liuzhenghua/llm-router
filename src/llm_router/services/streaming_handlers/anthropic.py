@@ -113,7 +113,12 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
 
         elif event == "message_delta":
             if data.get("usage"):
-                self._usage_dict = data["usage"]
+                # Use dict.update() to merge: native Anthropic puts input tokens in
+                # message_start and only output_tokens in message_delta; other providers
+                # (e.g. kimi) include all fields in message_delta.
+                if self._usage_dict is None:
+                    self._usage_dict = {}
+                self._usage_dict.update(data["usage"])
             self._stop_reason = data.get("delta", {}).get("stop_reason")
 
     def get_accumulated_response(self) -> str:
@@ -134,11 +139,14 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
     def get_usage(self) -> UsageSnapshot | None:
         if not self._usage_dict:
             return None
+        input_tokens = self._usage_dict.get("input_tokens", 0)
+        cache_creation = self._usage_dict.get("cache_creation_input_tokens", 0)
+        cache_read = self._usage_dict.get("cache_read_input_tokens", 0)
         return UsageSnapshot(
-            prompt_tokens=self._usage_dict.get("input_tokens", 0),
+            prompt_tokens=input_tokens + cache_creation + cache_read,
             completion_tokens=self._usage_dict.get("output_tokens", 0),
-            cache_read_tokens=self._usage_dict.get("cache_read_input_tokens", 0),
-            cache_write_tokens=self._usage_dict.get("cache_creation_input_tokens", 0),
+            cache_read_tokens=cache_read,
+            cache_write_tokens=cache_creation,
             reasoning_tokens=self._usage_dict.get("reasoning_tokens", 0),
         )
 
