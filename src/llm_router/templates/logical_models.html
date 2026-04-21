@@ -214,13 +214,44 @@ function openRoutesModalForModel(logicalModelId) {
   openRoutesModal(logicalModelId, routesForModel);
 }
 
-function openRoutesModal(logicalModelId, routes) {
+let routeHealthMap = {};
+
+async function fetchRoutesHealth(routes) {
+  await Promise.all(routes.map(async (route) => {
+    try {
+      const resp = await fetch(`/admin/routes/${route.id}/degraded-status`);
+      if (resp.ok) {
+        routeHealthMap[route.id] = await resp.json();
+      }
+    } catch (e) { /* ignore */ }
+  }));
+}
+
+async function recoverRoute(routeId) {
+  try {
+    const resp = await fetch(`/admin/routes/${routeId}/recover`, { method: 'POST' });
+    const data = await resp.json();
+    if (resp.ok) {
+      routeHealthMap[routeId] = { degraded: false };
+      renderRoutesTable();
+    } else {
+      alert(data.detail || '恢复失败');
+    }
+  } catch (e) {
+    alert('请求失败，请重试');
+  }
+}
+
+async function openRoutesModal(logicalModelId, routes) {
   currentLogicalModelId = logicalModelId;
   currentRoutes = routes;
+  routeHealthMap = {};
   document.getElementById('routes-search').value = '';
   currentRoutePage = 1;
-  renderRoutesTable();
   openModal('routes-modal');
+  renderRoutesTable();
+  await fetchRoutesHealth(routes);
+  renderRoutesTable();
 }
 
 function renderRoutesTable() {
@@ -256,6 +287,7 @@ function renderRoutesTable() {
         <th scope="col" class="px-2 py-3 whitespace-nowrap">权重</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">后备</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">健康状态</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
       </tr>
     </thead>
@@ -265,6 +297,19 @@ function renderRoutesTable() {
   const tbody = table.querySelector('tbody');
   paginatedRoutes.forEach(route => {
     const providerModel = {{ provider_models|tojson }}.find(p => p.id === route.provider_model_id);
+    const health = routeHealthMap[route.id];
+    let healthBadge;
+    if (health === undefined) {
+      healthBadge = '<span class="text-slate-300 text-xs">--</span>';
+    } else if (!health.degraded) {
+      healthBadge = '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">健康</span>';
+    } else {
+      const typeLabel = health.degraded_type === 'quota_exhausted' ? '配额耗尽' : (health.degraded_type || '异常');
+      healthBadge = `<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">降级</span><span class="ml-1 text-xs text-slate-400">${typeLabel}</span>`;
+    }
+    const recoverBtn = (health && health.degraded)
+      ? `<button type="button" onclick="recoverRoute(${route.id})" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">立即恢复</button>`
+      : '';
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
@@ -273,7 +318,9 @@ function renderRoutesTable() {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${route.weight}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${route.status}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${route.is_fallback ? '是' : '否'}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${healthBadge}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
+        ${recoverBtn}
         <button type="button" onclick='openEditRouteModal(${JSON.stringify(route)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <form method="post" action="/admin/routes/${route.id}/delete" onsubmit="return confirm('确认删除这个路由吗？');">
           <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
