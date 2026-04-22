@@ -151,7 +151,7 @@ Designed for development, self-hosting, and low-cost single-node deployment.
 
 Designed for multi-instance deployment.
 
-- MySQL (`asyncmy`) as shared database
+- MySQL (`aiomysql`) as shared database
 - Redis for distributed cache and spend queue
 - `redis_enabled = True`, `use_mysql = True`
 - Redis is always optional — if unreachable, the gateway gracefully falls back to in-memory cache

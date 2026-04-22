@@ -69,7 +69,7 @@ class Settings(BaseSettings):
             return self.database_url
         if self.use_mysql:
             return (
-                f"mysql+asyncmy://{self.mysql_user}:{self.mysql_password}"
+                f"mysql+aiomysql://{self.mysql_user}:{self.mysql_password}"
                 f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
             )
         return f"sqlite+aiosqlite:///{self.sqlite_path}"

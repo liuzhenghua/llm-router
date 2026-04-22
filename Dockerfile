@@ -2,6 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 WORKDIR /app
 ENV UV_LINK_MODE=copy
+ENV UV_HTTP_TIMEOUT=120
 ENV PYTHONUNBUFFERED=1
 
 COPY pyproject.toml README.md .python-version ./

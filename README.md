@@ -39,7 +39,7 @@
 - **Prompt cache awareness** — handles `cache_read_tokens` and `cache_write_tokens` so cached tokens are never double-billed
 - **Streaming support** — transparent SSE pass-through for both OpenAI and Anthropic streaming
 - **Audit logging** — optional per-key request/response content capture; metadata always recorded
-- **Two deployment modes** — `local` (SQLite + in-memory cache, zero external dependencies) for instant startup; `server` (MySQL + Redis) for multi-instance, production-scale deployments — same codebase, just flip `APP_MODE`
+- **Flexible deployment** — defaults to SQLite + in-memory cache with zero external dependencies; enable MySQL (`USE_MYSQL=true`) and/or Redis (`REDIS_ENABLED=true`) independently to scale to multi-instance, production deployments — same codebase, no code changes required
 - **Built-in admin panel** — manage keys, providers, routes, and view logs and billing without any extra tooling
 
 ---
@@ -183,15 +183,16 @@ docker compose exec llm-router uv run llm-router init-admin --username admin --p
 
 Key environment variables (see `.env.example` for the full list):
 
-| Variable | Description |
-|---|---|
-| `APP_MODE` | `local` (SQLite) or `server` (MySQL) |
-| `APP_ENCRYPTION_KEY` | Fernet key used to encrypt upstream provider API keys |
-| `SESSION_SECRET` | Secret for admin session cookies |
-| `DATABASE_URL` | SQLAlchemy DB URL (auto-set in Docker Compose) |
-| `REDIS_URL` | Redis URL — optional, only used in `server` mode |
-| `TABLE_PREFIX` | Optional prefix for all table names, e.g. `lr_` → `lr_api_keys` |
-| `LOG_LEVEL` | Logging verbosity |
+| Variable | Default | Description |
+|---|---|---|
+| `USE_MYSQL` | `false` | Set to `true` to use MySQL instead of SQLite |
+| `REDIS_ENABLED` | `false` | Set to `true` to enable Redis cache, queue, and distributed lock |
+| `APP_ENCRYPTION_KEY` | — | Fernet key used to encrypt upstream provider API keys |
+| `SESSION_SECRET` | — | Secret for admin session cookies |
+| `DATABASE_URL` | — | Override SQLAlchemy DB URL directly (skips `USE_MYSQL` auto-build) |
+| `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` / `MYSQL_PASSWORD` / `MYSQL_DATABASE` | — | MySQL connection settings (used when `USE_MYSQL=true`) |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB` / `REDIS_PASSWORD` | — | Redis connection settings (used when `REDIS_ENABLED=true`) |
+| `TABLE_PREFIX` | `""` | Optional prefix for all table names, e.g. `lr_` → `lr_api_keys` |
 
 ---
 
