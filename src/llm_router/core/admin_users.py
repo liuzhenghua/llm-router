@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from sqlalchemy import func, inspect, select
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.schema import CreateTable
 
@@ -27,7 +27,7 @@ class AdminUserService:
         try:
             result = await session.execute(select(func.count(AdminUser.id)))
             return (result.scalar() or 0) > 0
-        except OperationalError:
+        except (OperationalError, ProgrammingError):
             await session.rollback()
             return False
 
@@ -58,7 +58,7 @@ class AdminUserService:
             if not user:
                 return False
             return verify_password(password, user.password_hash)
-        except OperationalError:
+        except (OperationalError, ProgrammingError):
             await session.rollback()
             return False
 
