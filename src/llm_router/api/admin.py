@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
 from llm_router.core.config import get_settings
@@ -378,6 +378,23 @@ async def enable_api_key(request: Request, api_key_id: int, _: None = Depends(re
         await session.commit()
         await _invalidate_apikey_cache(api_key)
     return JSONResponse({"ok": True, "id": api_key_id})
+
+
+@protected_router.post("/api-keys/{api_key_id}/destroy")
+async def destroy_api_key(request: Request, api_key_id: int, _: None = Depends(require_admin)):
+    """永久删除 API Key 及其关联数据"""
+    session = request.state.db
+    api_key = await session.get(ApiKey, api_key_id)
+    if api_key is None:
+        return JSONResponse({"ok": False, "error": "API Key 不存在"}, status_code=404)
+    # 先失效缓存
+    await _invalidate_apikey_cache(api_key)
+    # 将 RequestLog 中的 api_key_id 置为 NULL（FK nullable，无 CASCADE）
+    await session.execute(update(RequestLog).where(RequestLog.api_key_id == api_key_id).values(api_key_id=None))
+    # 删除 API Key（BalanceLedger / DailyUsageSummary 有 ondelete=CASCADE）
+    await session.delete(api_key)
+    await session.commit()
+    return JSONResponse({"ok": True})
 
 
 @protected_router.post("/logical-models")

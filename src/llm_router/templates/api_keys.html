@@ -47,24 +47,24 @@
 <div id="api-keys-pagination-container" class="mt-2 flex items-center justify-between"></div>
 
 <!-- Shared Edit Modal -->
-<dialog id="edit-api-key-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-  <div class="rounded-[2rem] bg-white p-8">
-    <div class="mb-6 flex items-center justify-between">
-      <h3 class="text-2xl font-semibold">编辑 API Key</h3>
-      <button type="button" onclick="closeModal('edit-api-key-modal')" class="rounded-full px-3 py-1 text-slate-500 hover:text-slate-700">关闭</button>
+<dialog id="edit-api-key-modal" class="w-full max-w-3xl rounded-2xl p-0 backdrop:bg-slate-950/50">
+  <div class="rounded-2xl bg-white p-6">
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-800">编辑 API Key</h3>
+      <button type="button" onclick="closeModal('edit-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form id="edit-api-key-form" class="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="id" id="edit-id">
-      <label class="block"><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" required class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label class="block"><span class="mb-2 block text-sm text-slate-600">状态</span><select name="status" class="w-full rounded-2xl border border-slate-200 px-4 py-3"><option value="active">active</option><option value="disabled">disabled</option></select></label>
-      <label class="block"><span class="mb-2 block text-sm text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label class="block"><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600">状态</span><select name="status" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="active">active</option><option value="disabled">disabled</option></select></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="block md:col-span-2">
-        <span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span>
+        <span class="mb-1 block text-xs text-slate-600">允许访问的逻辑模型</span>
         <div class="model-selector" id="model-selector-edit">
           <div class="selected-tags flex flex-wrap gap-2 mb-2 min-h-[32px]"></div>
           <div class="dropdown-wrapper relative">
-            <input type="text" class="model-search w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="搜索模型...">
+            <input type="text" class="model-search w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="搜索模型...">
             <div class="dropdown hidden absolute bottom-full left-0 right-0 z-10 mb-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div class="sticky top-0 flex gap-2 border-b border-slate-100 bg-white px-3 py-2">
                 <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800">全选</button>
@@ -76,47 +76,47 @@
           <input type="hidden" name="allowed_models" class="hidden-input" value="">
         </div>
       </div>
-      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="request_content_logging_enabled" value="true">记录请求内容</label>
-      <label class="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600"><input type="checkbox" name="response_content_logging_enabled" value="true">记录响应内容</label>
-      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">保存</button>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="request_content_logging_enabled" value="true">记录请求内容</label>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="response_content_logging_enabled" value="true">记录响应内容</label>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">保存</button>
     </form>
   </div>
 </dialog>
 
 <!-- Shared Topup Modal -->
-<dialog id="topup-api-key-modal" class="w-full max-w-xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-  <div class="rounded-[2rem] bg-white p-8">
-    <div class="mb-6 flex items-center justify-between">
-      <h3 class="text-2xl font-semibold">充值</h3>
-      <button type="button" onclick="closeModal('topup-api-key-modal')" class="rounded-full px-3 py-1 text-slate-500 hover:text-slate-700">关闭</button>
+<dialog id="topup-api-key-modal" class="w-full max-w-xl rounded-2xl p-0 backdrop:bg-slate-950/50">
+  <div class="rounded-2xl bg-white p-6">
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-800">充值</h3>
+      <button type="button" onclick="closeModal('topup-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form id="topup-api-key-form" class="grid gap-4">
       <input type="hidden" name="id" id="topup-id">
-      <label><span class="mb-2 block text-sm text-slate-600">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <button type="submit" class="rounded-2xl bg-emerald-600 px-4 py-3 text-white hover:bg-emerald-700">确认充值</button>
+      <label><span class="mb-1 block text-xs text-slate-600">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">确认充值</button>
     </form>
   </div>
 </dialog>
 
 <!-- Create Modal -->
-<dialog id="create-api-key-modal" class="w-full max-w-3xl rounded-[2rem] p-0 backdrop:bg-slate-950/40">
-  <div class="rounded-[2rem] bg-white p-8">
-    <div class="mb-6 flex items-center justify-between">
-      <h3 class="text-2xl font-semibold">创建 API Key</h3>
-      <button type="button" onclick="closeModal('create-api-key-modal')" class="rounded-full px-3 py-1 text-slate-500 hover:text-slate-700">关闭</button>
+<dialog id="create-api-key-modal" class="w-full max-w-3xl rounded-2xl p-0 backdrop:bg-slate-950/50">
+  <div class="rounded-2xl bg-white p-6">
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-800">创建 API Key</h3>
+      <button type="button" onclick="closeModal('create-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form method="post" action="/admin/api-keys" class="grid gap-4 md:grid-cols-2" id="create-api-key-form">
-      <label><span class="mb-2 block text-sm text-slate-600">名称</span><input name="name" required class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">初始余额</span><input name="balance" type="number" step="0.01" min="0" value="0" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
-      <label><span class="mb-2 block text-sm text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" value="5" class="w-full rounded-2xl border border-slate-200 px-4 py-3"></label>
+      <label><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600">初始余额</span><input name="balance" type="number" step="0.01" min="0" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" value="5" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="block md:col-span-2">
-        <span class="mb-2 block text-sm text-slate-600">允许访问的逻辑模型</span>
+        <span class="mb-1 block text-xs text-slate-600">允许访问的逻辑模型</span>
         <div class="model-selector" id="model-selector-create">
           <div class="selected-tags flex flex-wrap gap-2 mb-2 min-h-[32px]"></div>
           <div class="dropdown-wrapper relative">
-            <input type="text" class="model-search w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm" placeholder="搜索模型...">
+            <input type="text" class="model-search w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="搜索模型...">
             <div class="dropdown hidden absolute bottom-full left-0 right-0 z-10 mb-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div class="sticky top-0 flex gap-2 border-b border-slate-100 bg-white px-3 py-2">
                 <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800">全选</button>
@@ -128,7 +128,7 @@
           <input type="hidden" name="allowed_models" class="hidden-input" value="">
         </div>
       </div>
-      <button type="submit" class="rounded-2xl bg-slate-950 px-4 py-3 text-white md:col-span-2">创建 API Key</button>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">创建 API Key</button>
     </form>
   </div>
 </dialog>
@@ -196,6 +196,7 @@ function renderTable() {
         <button type="button" onclick='openEditModal(${JSON.stringify(item)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <button type="button" onclick='openTopupModal(${JSON.stringify(item)})' class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">充值</button>
         ${item.status === 'active' ? `<button type="button" onclick="disableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>` : `<button type="button" onclick="enableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">启用</button>`}
+        <button type="button" onclick="destroyApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs text-rose-800">删除</button>
       </div></td>
     `;
     tbody.appendChild(tr);
@@ -486,6 +487,25 @@ function enableApiKey(id, name) {
         showToast(name + ' 已启用');
       } else {
         showToast(result.error || '操作失败', 'error');
+      }
+    })
+    .catch(() => showToast('网络错误，请重试', 'error'));
+}
+
+// ---- Destroy (hard delete) API Key ----
+function destroyApiKey(id, name) {
+  if (!confirm('确认永久删除 「' + name + '」 吗？\n\n此操作不可撤销，相关日志记录将保留但与该 Key 解除关联！')) return;
+  fetch('/admin/api-keys/' + id + '/destroy', { method: 'POST' })
+    .then(res => res.json())
+    .then(result => {
+      if (result.ok) {
+        allApiKeys = allApiKeys.filter(k => k.id != id);
+        const totalPages = Math.ceil(allApiKeys.length / rowsPerPage);
+        if (currentPage > 1 && currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        renderTable();
+        showToast('「' + name + '」 已永久删除');
+      } else {
+        showToast(result.error || '删除失败', 'error');
       }
     })
     .catch(() => showToast('网络错误，请重试', 'error'));
