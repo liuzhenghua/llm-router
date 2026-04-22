@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import desc, func, or_, select, update
 from sqlalchemy.orm import selectinload
 
+from llm_router.core.admin_users import AdminUserService
 from llm_router.core.config import get_settings
 from llm_router.core.security import Encryptor, generate_api_key, hash_api_key
 from llm_router.domain.enums import ChangeType
@@ -23,6 +24,8 @@ from llm_router.domain.models import (
     UsageRecord,
 )
 from llm_router.services.cache.dual_cache import get_dual_cache
+
+_admin_user_service = AdminUserService()
 
 
 public_router = APIRouter(tags=["admin"])
@@ -97,6 +100,12 @@ async def _invalidate_route_cache(logical_model_id: int) -> None:
 
 
 async def require_admin(request: Request) -> None:
+    session = request.state.db
+    if not await _admin_user_service.has_any_user(session):
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"Location": "/admin/setup"},
+        )
     if not request.session.get("admin_user"):
         raise HTTPException(
             status_code=status.HTTP_303_SEE_OTHER,
@@ -118,16 +127,57 @@ def _render_admin(
     return request.app.state.templates.TemplateResponse(request, template, payload, status_code=status_code)
 
 
+@public_router.get("/setup")
+async def setup_page(request: Request):
+    session = request.state.db
+    if await _admin_user_service.has_any_user(session):
+        return _redirect("/admin/login")
+    return request.app.state.templates.TemplateResponse(
+        request, "setup.html", {"request": request, "error": None}
+    )
+
+
+@public_router.post("/setup")
+async def setup_action(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+):
+    session = request.state.db
+    if await _admin_user_service.has_any_user(session):
+        return _redirect("/admin/login")
+    if not username.strip():
+        return request.app.state.templates.TemplateResponse(
+            request, "setup.html", {"request": request, "error": "用户名不能为空"}, status_code=400
+        )
+    if len(password) < 6:
+        return request.app.state.templates.TemplateResponse(
+            request, "setup.html", {"request": request, "error": "密码长度至少 6 位"}, status_code=400
+        )
+    if password != confirm_password:
+        return request.app.state.templates.TemplateResponse(
+            request, "setup.html", {"request": request, "error": "两次密码不一致"}, status_code=400
+        )
+    await _admin_user_service.create_or_update_user(session, username.strip(), password)
+    request.session["admin_user"] = username.strip()
+    return _redirect("/admin")
+
+
 @public_router.get("/login")
 async def login_page(request: Request):
     if request.session.get("admin_user"):
         return _redirect("/admin")
+    session = request.state.db
+    if not await _admin_user_service.has_any_user(session):
+        return _redirect("/admin/setup")
     return request.app.state.templates.TemplateResponse(request, "login.html", {"request": request, "error": None})
 
 
 @public_router.post("/login")
 async def login_action(request: Request, username: str = Form(...), password: str = Form(...)):
-    if request.app.state.admin_user_store.authenticate(username, password):
+    session = request.state.db
+    if await _admin_user_service.authenticate(session, username, password):
         request.session["admin_user"] = username
         return _redirect("/admin")
     return request.app.state.templates.TemplateResponse(

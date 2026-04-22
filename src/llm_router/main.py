@@ -18,7 +18,6 @@ from starlette.background import BackgroundTask
 from starlette.middleware.sessions import SessionMiddleware
 
 from llm_router.api import admin, anthropic, openai
-from llm_router.core.admin_users import AdminUserStore
 from llm_router.core.config import get_settings
 from llm_router.core.database import SessionLocal, init_db
 from llm_router.core.logging_config import setup_logging
@@ -159,7 +158,6 @@ def create_app() -> FastAPI:
     env.filters["format_decimal"] = _format_decimal
     env.filters["format_datetime"] = _format_datetime
     app.state.templates = Jinja2Templates(env=env)
-    app.state.admin_user_store = AdminUserStore(settings.admin_users_file)
 
     @app.middleware("http")
     async def db_session_middleware(request: Request, call_next):

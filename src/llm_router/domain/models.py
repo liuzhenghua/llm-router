@@ -208,3 +208,12 @@ class DailyUsageSummary(Base):
         onupdate=utcnow,
         server_default=func.now(),
     )
+
+
+class AdminUser(Base, TimestampMixin):
+    __tablename__ = table_name("admin_users")
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
