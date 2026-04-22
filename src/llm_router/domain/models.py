@@ -71,9 +71,9 @@ class ProviderModel(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
-    endpoint: Mapped[str] = mapped_column(String(255))
+    openai_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    anthropic_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
     encrypted_api_key: Mapped[str] = mapped_column(Text)
-    protocol: Mapped[str] = mapped_column(String(32), index=True)
     upstream_model_name: Mapped[str] = mapped_column(String(120))
     input_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     output_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))

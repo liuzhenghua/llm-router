@@ -141,9 +141,9 @@ class CachedProvider:
     """Provider 缓存数据（encrypted_api_key 缓存后解密使用）"""
     id: int
     name: str
-    endpoint: str
+    openai_endpoint: str | None
+    anthropic_endpoint: str | None
     encrypted_api_key: str  # 缓存加密后的，调用时解密
-    protocol: str
     upstream_model_name: str
     input_token_price: Decimal
     output_token_price: Decimal
@@ -157,9 +157,9 @@ class CachedProvider:
         return {
             "id": self.id,
             "name": self.name,
-            "endpoint": self.endpoint,
+            "openai_endpoint": self.openai_endpoint,
+            "anthropic_endpoint": self.anthropic_endpoint,
             "encrypted_api_key": self.encrypted_api_key,
-            "protocol": self.protocol,
             "upstream_model_name": self.upstream_model_name,
             "input_token_price": str(self.input_token_price),
             "output_token_price": str(self.output_token_price),
@@ -175,9 +175,9 @@ class CachedProvider:
         return cls(
             id=d["id"],
             name=d["name"],
-            endpoint=d["endpoint"],
+            openai_endpoint=d.get("openai_endpoint"),
+            anthropic_endpoint=d.get("anthropic_endpoint"),
             encrypted_api_key=d["encrypted_api_key"],
-            protocol=d["protocol"],
             upstream_model_name=d["upstream_model_name"],
             input_token_price=Decimal(d["input_token_price"]),
             output_token_price=Decimal(d["output_token_price"]),

@@ -243,8 +243,8 @@ async def providers_page(request: Request, _: None = Depends(require_admin)):
         {
             "id": pm.id,
             "name": pm.name,
-            "protocol": pm.protocol,
-            "endpoint": pm.endpoint,
+            "openai_endpoint": pm.openai_endpoint or "",
+            "anthropic_endpoint": pm.anthropic_endpoint or "",
             "upstream_model_name": pm.upstream_model_name,
             "input_token_price": _format_decimal(pm.input_token_price),
             "output_token_price": _format_decimal(pm.output_token_price),
@@ -434,8 +434,8 @@ async def update_logical_model(
 async def create_provider_model(
     request: Request,
     name: str = Form(...),
-    protocol: str = Form(...),
-    endpoint: str = Form(...),
+    openai_endpoint: str = Form(default=""),
+    anthropic_endpoint: str = Form(default=""),
     upstream_model_name: str = Form(...),
     api_key_secret: str = Form(...),
     input_token_price: Decimal = Form(default=Decimal("0")),
@@ -446,12 +446,16 @@ async def create_provider_model(
     timeout_seconds: int = Form(default=120),
     _: None = Depends(require_admin),
 ):
+    oe = openai_endpoint.strip()
+    ae = anthropic_endpoint.strip()
+    if not oe and not ae:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="At least one of openai_endpoint or anthropic_endpoint is required")
     session = request.state.db
     session.add(
         ProviderModel(
             name=name,
-            protocol=protocol,
-            endpoint=endpoint,
+            openai_endpoint=oe or None,
+            anthropic_endpoint=ae or None,
             upstream_model_name=upstream_model_name,
             encrypted_api_key=encryptor.encrypt(api_key_secret),
             input_token_price=input_token_price,
@@ -471,8 +475,8 @@ async def update_provider_model(
     request: Request,
     provider_model_id: int,
     name: str = Form(...),
-    protocol: str = Form(...),
-    endpoint: str = Form(...),
+    openai_endpoint: str = Form(default=""),
+    anthropic_endpoint: str = Form(default=""),
     upstream_model_name: str = Form(...),
     api_key_secret: str = Form(default=""),
     input_token_price: Decimal = Form(default=Decimal("0")),
@@ -484,13 +488,17 @@ async def update_provider_model(
     is_active: bool = Form(default=False),
     _: None = Depends(require_admin),
 ):
+    oe = openai_endpoint.strip()
+    ae = anthropic_endpoint.strip()
+    if not oe and not ae:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="At least one of openai_endpoint or anthropic_endpoint is required")
     session = request.state.db
     provider_model = await session.get(ProviderModel, provider_model_id)
     if provider_model is None:
         return _redirect("/admin/providers")
     provider_model.name = name
-    provider_model.protocol = protocol
-    provider_model.endpoint = endpoint
+    provider_model.openai_endpoint = oe or None
+    provider_model.anthropic_endpoint = ae or None
     provider_model.upstream_model_name = upstream_model_name
     if api_key_secret.strip():
         provider_model.encrypted_api_key = encryptor.encrypt(api_key_secret)
@@ -800,7 +808,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "provider_model_id": log.provider_model_id,
         "api_key_name": log.api_key.name if log.api_key else None,
         "provider_model_name": log.provider_model.name if log.provider_model else None,
-        "provider_model_protocol": log.provider_model.protocol if log.provider_model else None,
+        "provider_model_protocol": log.protocol,
         "logical_model_name": logical_model_name,
         "usage_record": {
             "prompt_tokens": log.usage_record.prompt_tokens,

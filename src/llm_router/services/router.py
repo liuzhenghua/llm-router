@@ -264,7 +264,12 @@ async def resolve_provider_candidates(
 
         for route in db_routes:
             provider = route.provider_model
-            if not provider.is_active or provider.protocol != protocol.value:
+            if not provider.is_active:
+                continue
+
+            # Check if provider has an endpoint for the requested protocol
+            _ep = provider.openai_endpoint if protocol == ProviderProtocol.OPENAI else provider.anthropic_endpoint
+            if not _ep:
                 continue
 
             # 构建缓存数据
@@ -285,9 +290,9 @@ async def resolve_provider_candidates(
                 cached_provider = CachedProvider(
                     id=provider.id,
                     name=provider.name,
-                    endpoint=provider.endpoint,
+                    openai_endpoint=provider.openai_endpoint,
+                    anthropic_endpoint=provider.anthropic_endpoint,
                     encrypted_api_key=provider.encrypted_api_key,
-                    protocol=provider.protocol,
                     upstream_model_name=provider.upstream_model_name,
                     input_token_price=provider.input_token_price,
                     output_token_price=provider.output_token_price,
@@ -329,14 +334,19 @@ async def resolve_provider_candidates(
             continue
 
         provider = CachedProvider.from_dict(cached_provider_data)
-        if not provider.is_active or provider.protocol != protocol.value:
+        if not provider.is_active:
+            continue
+
+        # Resolve endpoint for requested protocol
+        resolved_endpoint = provider.openai_endpoint if protocol == ProviderProtocol.OPENAI else provider.anthropic_endpoint
+        if not resolved_endpoint:
             continue
 
         routed_provider = RoutedProvider(
             id=provider.id,
             name=provider.name,
             protocol=protocol,
-            endpoint=provider.endpoint,
+            endpoint=resolved_endpoint,
             api_key=encryptor.decrypt(provider.encrypted_api_key),
             upstream_model_name=provider.upstream_model_name,
             timeout_seconds=provider.timeout_seconds,

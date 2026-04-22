@@ -14,14 +14,6 @@
     <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="shrink-0 w-[130px]">
-    <label class="block text-xs text-slate-500 mb-1">协议</label>
-    <select id="search-protocol" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      <option value="">全部</option>
-      <option value="openai">openai</option>
-      <option value="anthropic">anthropic</option>
-    </select>
-  </div>
-  <div class="shrink-0 w-[130px]">
     <label class="block text-xs text-slate-500 mb-1">状态</label>
     <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       <option value="">全部</option>
@@ -44,14 +36,14 @@
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">编辑 Provider</h3><button type="button" onclick='closeModal("edit-provider-modal-{{ item.id }}")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
     <form id="edit-provider-form-{{ item.id }}" method="post" action="/admin/provider-models/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
       <label><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">协议</span><select name="protocol" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
-      <label><span class="mb-1 block text-xs text-slate-600">Endpoint</span><input name="endpoint" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">OpenAI Endpoint <span class="text-slate-400">（与 Anthropic Endpoint 至少填一个）</span></span><input name="openai_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">Anthropic Endpoint <span class="text-slate-400">（与 OpenAI Endpoint 至少填一个）</span></span><input name="anthropic_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">输入单价 / 1M</span><input name="input_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">输出单价 / 1M</span><input name="output_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" id="edit-supports-prompt-cache-{{ item.id }}" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300">支持 Prompt Cache</label>
-      <div id="cache-inputs" class="hidden md:col-span-2">
+      <div id="cache-inputs-{{ item.id }}" class="hidden md:col-span-2">
         <div class="ml-6 grid gap-4 md:grid-cols-2">
           <label><span class="mb-1 block text-xs text-slate-600">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
           <label><span class="mb-1 block text-xs text-slate-600">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
@@ -70,11 +62,11 @@
 <dialog id="create-provider-modal" class="w-full max-w-4xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">新增 Provider</h3><button type="button" onclick='closeModal("create-provider-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
-    <form method="post" action="/admin/provider-models" class="grid gap-4 md:grid-cols-2">
+    <form id="create-provider-form" method="post" action="/admin/provider-models" class="grid gap-4 md:grid-cols-2" onsubmit="return validateProviderForm(this)">
       <label><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
-      <label><span class="mb-1 block text-xs text-slate-600">协议</span><select name="protocol" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="openai">openai</option><option value="anthropic">anthropic</option></select></label>
-      <label><span class="mb-1 block text-xs text-slate-600">Endpoint</span><input name="endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
       <label><span class="mb-1 block text-xs text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
+      <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">OpenAI Endpoint <span class="text-slate-400">（与 Anthropic Endpoint 至少填一个）</span></span><input name="openai_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">Anthropic Endpoint <span class="text-slate-400">（与 OpenAI Endpoint 至少填一个）</span></span><input name="anthropic_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">API Key</span><input name="api_key_secret" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
       <label><span class="mb-1 block text-xs text-slate-600">输入单价 / 1M</span><input name="input_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">输出单价 / 1M</span><input name="output_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
@@ -95,19 +87,27 @@ let allProviders = {{ provider_models|tojson }};
 let currentPage = 1;
 const rowsPerPage = 10;
 
+function validateProviderForm(form) {
+  const oe = form.querySelector('[name="openai_endpoint"]').value.trim();
+  const ae = form.querySelector('[name="anthropic_endpoint"]').value.trim();
+  if (!oe && !ae) {
+    showToast('OpenAI Endpoint 与 Anthropic Endpoint 至少填一个', 'error');
+    return false;
+  }
+  return true;
+}
+
 function getFilters() {
   return {
     name: document.getElementById('search-name').value.trim().toLowerCase(),
-    protocol: document.getElementById('search-protocol').value,
     status: document.getElementById('search-status').value,
   };
 }
 
 function renderTable() {
-  const { name, protocol, status } = getFilters();
+  const { name, status } = getFilters();
   const filteredProviders = allProviders.filter(provider => {
     if (name && !provider.name.toLowerCase().includes(name)) return false;
-    if (protocol && provider.protocol !== protocol) return false;
     if (status === 'active' && !provider.is_active) return false;
     if (status === 'disabled' && provider.is_active) return false;
     return true;
@@ -124,6 +124,7 @@ function renderTable() {
   }
 
   const totalPages = Math.ceil(filteredProviders.length / rowsPerPage);
+  if (currentPage > totalPages) currentPage = totalPages;
   const paginatedProviders = filteredProviders.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const table = document.createElement('table');
@@ -132,8 +133,8 @@ function renderTable() {
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">协议</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Endpoint</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">OpenAI Endpoint</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">Anthropic Endpoint</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
       </tr>
@@ -147,11 +148,11 @@ function renderTable() {
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.protocol}</td>
-      <td class="px-2 py-2 text-xs">${item.endpoint}</td>
+      <td class="px-2 py-2 text-xs">${item.openai_endpoint || '<span class="text-slate-300">—</span>'}</td>
+      <td class="px-2 py-2 text-xs">${item.anthropic_endpoint || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
-        <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
+        <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <form method="post" action="/admin/provider-models/${item.id}/delete" onsubmit="return confirm('确认禁用这个 Provider 吗？');">
           <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>
         </form>
@@ -187,6 +188,15 @@ function renderTable() {
   paginationContainer.appendChild(paginDiv);
 }
 
+function toggleCacheFieldsById(checkboxId, containerId, value) {
+  const checkbox = document.getElementById(checkboxId);
+  const container = document.getElementById(containerId);
+  if (checkbox && container) {
+    checkbox.checked = !!value;
+    container.classList.toggle('hidden', !value);
+  }
+}
+
 document.getElementById('search-btn').addEventListener('click', () => {
   currentPage = 1;
   renderTable();
@@ -194,7 +204,6 @@ document.getElementById('search-btn').addEventListener('click', () => {
 
 document.getElementById('reset-btn').addEventListener('click', () => {
   document.getElementById('search-name').value = '';
-  document.getElementById('search-protocol').value = '';
   document.getElementById('search-status').value = '';
   currentPage = 1;
   renderTable();
