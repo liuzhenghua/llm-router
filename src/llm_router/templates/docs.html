@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+{% block page_content %}
+<div class="mb-4">
+  <p class="text-xs uppercase tracking-[0.35em] text-sky-600">Documentation</p>
+  <h1 class="mt-1 text-2xl font-bold">接入文档</h1>
+</div>
+
+<div class="flex gap-8 items-start">
+  <!-- ── Main content ── -->
+  <article class="min-w-0 flex-1 space-y-12 text-sm leading-relaxed text-slate-700">
+
+    <!-- ════════════════════════════════════════════
+         SECTION 1 — API 接入文档
+    ═════════════════════════════════════════════ -->
+    <section id="api-integration">
+      <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-6">API 接入文档</h2>
+
+      <!-- OpenAI Chat Completions -->
+      <div id="openai-chat" class="mb-10">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — Chat Completions</h3>
+        <p class="mb-3 text-slate-600">
+          llm-router 完全兼容 OpenAI Chat Completions 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务即可使用任何支持 OpenAI 格式的客户端或 SDK。
+        </p>
+
+        <div class="mb-4">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Endpoint</p>
+          <div class="rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-emerald-400 overflow-x-auto">
+            POST {{ base_url }}/v1/chat/completions
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">认证</p>
+          <p class="text-slate-600 text-xs">在 <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">Authorization</code> 请求头中传入 API Key：</p>
+          <div class="mt-2 rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto">
+            Authorization: Bearer sk-xxxxxxxxxxxxxxxx
+          </div>
+        </div>
+
+        <!-- Tabbed examples -->
+        <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">示例代码</p>
+        <div class="code-tabs rounded-xl overflow-hidden" data-group="oai-example">
+          <div class="flex bg-slate-900 border-b border-slate-700 gap-0">
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-python" data-group="oai-example">Python</button>
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-curl" data-group="oai-example">cURL</button>
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-node" data-group="oai-example">Node.js</button>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="oai-python">
+            <span class="text-sky-400">from</span> openai <span class="text-sky-400">import</span> OpenAI<br><br>
+            client = OpenAI(<br>
+            &nbsp;&nbsp;base_url=<span class="text-emerald-400">"{{ base_url }}/v1"</span>,<br>
+            &nbsp;&nbsp;api_key=<span class="text-emerald-400">"sk-xxxxxxxxxxxxxxxx"</span>,<br>
+            )<br><br>
+            response = client.chat.completions.create(<br>
+            &nbsp;&nbsp;model=<span class="text-emerald-400">"your-logical-model"</span>,<br>
+            &nbsp;&nbsp;messages=[{<span class="text-emerald-400">"role"</span>: <span class="text-emerald-400">"user"</span>, <span class="text-emerald-400">"content"</span>: <span class="text-emerald-400">"Hello!"</span>}],<br>
+            )<br>
+            <span class="text-sky-400">print</span>(response.choices[<span class="text-amber-400">0</span>].message.content)
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="oai-curl">
+            curl {{ base_url }}/v1/chat/completions \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Authorization: Bearer sk-xxxxxxxxxxxxxxxx"</span> \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Content-Type: application/json"</span> \<br>
+            &nbsp;&nbsp;-d <span class="text-emerald-400">'{"model":"your-logical-model","messages":[{"role":"user","content":"Hello!"}]}'</span>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="oai-node">
+            <span class="text-sky-400">import</span> OpenAI <span class="text-sky-400">from</span> <span class="text-emerald-400">"openai"</span>;<br><br>
+            <span class="text-sky-400">const</span> client = <span class="text-sky-400">new</span> OpenAI({<br>
+            &nbsp;&nbsp;baseURL: <span class="text-emerald-400">"{{ base_url }}/v1"</span>,<br>
+            &nbsp;&nbsp;apiKey: <span class="text-emerald-400">"sk-xxxxxxxxxxxxxxxx"</span>,<br>
+            });<br><br>
+            <span class="text-sky-400">const</span> response = <span class="text-sky-400">await</span> client.chat.completions.create({<br>
+            &nbsp;&nbsp;model: <span class="text-emerald-400">"your-logical-model"</span>,<br>
+            &nbsp;&nbsp;messages: [{ role: <span class="text-emerald-400">"user"</span>, content: <span class="text-emerald-400">"Hello!"</span> }],<br>
+            });<br>
+            console.log(response.choices[<span class="text-amber-400">0</span>].message.content);
+          </div>
+        </div>
+      </div>
+
+      <!-- Anthropic Messages -->
+      <div id="anthropic-messages">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — Messages</h3>
+        <p class="mb-3 text-slate-600">
+          llm-router 同样兼容 Anthropic Messages 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务的 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/anthropic</code> 前缀即可。
+        </p>
+
+        <div class="mb-4">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Endpoint</p>
+          <div class="rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-emerald-400 overflow-x-auto">
+            POST {{ base_url }}/anthropic/v1/messages
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">认证</p>
+          <p class="text-slate-600 text-xs">在 <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">x-api-key</code> 请求头中传入 API Key：</p>
+          <div class="mt-2 rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto">
+            x-api-key: sk-xxxxxxxxxxxxxxxx<br>
+            anthropic-version: 2023-06-01
+          </div>
+        </div>
+
+        <!-- Tabbed examples -->
+        <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">示例代码</p>
+        <div class="code-tabs rounded-xl overflow-hidden" data-group="ant-example">
+          <div class="flex bg-slate-900 border-b border-slate-700 gap-0">
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-python" data-group="ant-example">Python</button>
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-curl" data-group="ant-example">cURL</button>
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-node" data-group="ant-example">Node.js</button>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="ant-python">
+            <span class="text-sky-400">import</span> anthropic<br><br>
+            client = anthropic.Anthropic(<br>
+            &nbsp;&nbsp;base_url=<span class="text-emerald-400">"{{ base_url }}/anthropic"</span>,<br>
+            &nbsp;&nbsp;api_key=<span class="text-emerald-400">"sk-xxxxxxxxxxxxxxxx"</span>,<br>
+            )<br><br>
+            message = client.messages.create(<br>
+            &nbsp;&nbsp;model=<span class="text-emerald-400">"your-logical-model"</span>,<br>
+            &nbsp;&nbsp;max_tokens=<span class="text-amber-400">1024</span>,<br>
+            &nbsp;&nbsp;messages=[{<span class="text-emerald-400">"role"</span>: <span class="text-emerald-400">"user"</span>, <span class="text-emerald-400">"content"</span>: <span class="text-emerald-400">"Hello!"</span>}],<br>
+            )<br>
+            <span class="text-sky-400">print</span>(message.content[<span class="text-amber-400">0</span>].text)
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="ant-curl">
+            curl {{ base_url }}/anthropic/v1/messages \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"x-api-key: sk-xxxxxxxxxxxxxxxx"</span> \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"anthropic-version: 2023-06-01"</span> \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Content-Type: application/json"</span> \<br>
+            &nbsp;&nbsp;-d <span class="text-emerald-400">'{"model":"your-logical-model","max_tokens":1024,"messages":[{"role":"user","content":"Hello!"}]}'</span>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="ant-node">
+            <span class="text-sky-400">import</span> Anthropic <span class="text-sky-400">from</span> <span class="text-emerald-400">"@anthropic-ai/sdk"</span>;<br><br>
+            <span class="text-sky-400">const</span> client = <span class="text-sky-400">new</span> Anthropic({<br>
+            &nbsp;&nbsp;baseURL: <span class="text-emerald-400">"{{ base_url }}/anthropic"</span>,<br>
+            &nbsp;&nbsp;apiKey: <span class="text-emerald-400">"sk-xxxxxxxxxxxxxxxx"</span>,<br>
+            });<br><br>
+            <span class="text-sky-400">const</span> message = <span class="text-sky-400">await</span> client.messages.create({<br>
+            &nbsp;&nbsp;model: <span class="text-emerald-400">"your-logical-model"</span>,<br>
+            &nbsp;&nbsp;max_tokens: <span class="text-amber-400">1024</span>,<br>
+            &nbsp;&nbsp;messages: [{ role: <span class="text-emerald-400">"user"</span>, content: <span class="text-emerald-400">"Hello!"</span> }],<br>
+            });<br>
+            console.log(message.content[<span class="text-amber-400">0</span>].text);
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════
+         SECTION 2 — 编程工具集成
+    ═════════════════════════════════════════════ -->
+    <section id="dev-tools">
+      <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-6">编程工具集成</h2>
+
+      <!-- Claude Code -->
+      <div id="claude-code">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">Claude Code</h3>
+        <p class="mb-3 text-slate-600">
+          通过环境变量将 Claude Code 的 API 请求代理到 llm-router，从而使用任意后端模型。
+          <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">ANTHROPIC_BASE_URL</code> 需指向本服务的 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/anthropic</code> 前缀。
+        </p>
+
+        <div class="mb-3">
+          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">环境变量配置</p>
+          <div class="rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6">
+            <span class="text-slate-400"># 将 base_url 替换为浏览器地址栏中显示的地址</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_BASE_URL</span>=<span class="text-emerald-400">{{ base_url }}/anthropic</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_AUTH_TOKEN</span>=<span class="text-emerald-400">${YOUR_MOONSHOT_API_KEY}</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_OPUS_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_SONNET_MODEL</span>=<span class="text-emerald-400">kimi-k2.5</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_HAIKU_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">CLAUDE_CODE_SUBAGENT_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+            <span class="text-sky-300">export</span> <span class="text-amber-300">ENABLE_TOOL_SEARCH</span>=<span class="text-emerald-400">false</span><br>
+            <span class="text-slate-400"># 启动 Claude Code</span><br>
+            claude
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          <span class="font-semibold">提示：</span>将 <code class="rounded bg-amber-100 px-1 font-mono">$&#123;YOUR_LOGIC_MODEL&#125;</code> 替换为在 <a href="/admin/logical-models" class="underline">Logical Models</a> 页面创建的逻辑模型名称；将 <code class="rounded bg-amber-100 px-1 font-mono">$&#123;YOUR_MOONSHOT_API_KEY&#125;</code> 替换为在 <a href="/admin/api-keys" class="underline">API Keys</a> 页面创建的密钥。
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════
+         SECTION 3 — 运维文档
+    ═════════════════════════════════════════════ -->
+    <section id="operations">
+      <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-6">运维文档</h2>
+
+      <!-- 操作指引 -->
+      <div id="ops-guide" class="mb-10">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">操作指引</h3>
+        <p class="mb-4 text-slate-600">按照以下步骤完成首次配置，即可开始通过 llm-router 路由 LLM 请求。</p>
+
+        <!-- Step 1 -->
+        <div class="mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">1</span>
+            <h4 class="font-semibold text-slate-800">创建 Provider（模型供应商）</h4>
+          </div>
+          <p class="ml-9 text-slate-600 text-xs leading-relaxed">
+            前往 <a href="/admin/providers" class="text-sky-600 underline">Providers</a> 页面，点击 <strong>新增 Provider</strong>。填写供应商名称、下游 API Key、模型名称及 Endpoint 地址，并配置 Token 单价。保存后该 Provider 将作为实际承接请求的底层模型节点。
+          </p>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">2</span>
+            <h4 class="font-semibold text-slate-800">创建逻辑模型并绑定路由</h4>
+          </div>
+          <p class="ml-9 text-slate-600 text-xs leading-relaxed">
+            前往 <a href="/admin/logical-models" class="text-sky-600 underline">Logical Models</a> 页面，点击 <strong>新增逻辑模型</strong>，填写对外暴露的模型名称（即客户端 <code class="rounded bg-slate-100 px-1 font-mono text-rose-600">model</code> 参数的值）。<br>
+            创建完成后，点击该逻辑模型行右侧的 <strong>路由</strong> 按钮，在弹出面板中添加一条或多条路由规则，将逻辑模型与已创建的 Provider 关联起来。
+          </p>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="mb-6">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-white">3</span>
+            <h4 class="font-semibold text-slate-800">创建 API Key 并授权模型</h4>
+          </div>
+          <p class="ml-9 text-slate-600 text-xs leading-relaxed">
+            前往 <a href="/admin/api-keys" class="text-sky-600 underline">API Keys</a> 页面，点击 <strong>新增 API Key</strong>。填写名称、初始余额及 QPS 限制。<br>
+            在 <strong>允许使用的模型</strong> 字段中，勾选或输入允许该 Key 访问的逻辑模型名称。保存后将显示完整密钥（仅展示一次），请妥善保存。
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs text-sky-800">
+          <span class="font-semibold">完成以上三步后</span>，即可使用生成的 API Key 通过 OpenAI 或 Anthropic 协议向 llm-router 发起请求，所有请求将根据路由规则被转发到对应的 Provider。
+        </div>
+      </div>
+
+      <!-- 路由规则 -->
+      <div id="routing-rules">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">路由规则</h3>
+        <p class="mb-4 text-slate-600">llm-router 支持三种路由策略，可在同一逻辑模型下组合使用。</p>
+
+        <div class="space-y-4">
+          <!-- Priority -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-base">⚡</span>
+              <div>
+                <h4 class="font-semibold text-slate-800 mb-1">优先级路由</h4>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  为每条路由设置 <code class="rounded bg-slate-100 px-1 font-mono text-rose-600">priority</code> 数值（越小越优先）。Router 会按优先级从低到高依次尝试，只有当高优先级节点不可用时才会 fallthrough 到下一个。
+                  适合 <strong>主备切换</strong> 场景：例如主节点 priority=1，备用节点 priority=2。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weight -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-base">⚖️</span>
+              <div>
+                <h4 class="font-semibold text-slate-800 mb-1">权重路由</h4>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  相同 <code class="rounded bg-slate-100 px-1 font-mono text-rose-600">priority</code> 的多条路由之间，按 <code class="rounded bg-slate-100 px-1 font-mono text-rose-600">weight</code> 比例进行加权随机分配。
+                  适合 <strong>流量分发</strong> 场景：例如两个 Provider 各 weight=50 则各承载 50% 流量。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fallback -->
+          <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="flex items-start gap-3">
+              <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-base">🛡️</span>
+              <div>
+                <h4 class="font-semibold text-slate-800 mb-1">后备路由（Fallback）</h4>
+                <p class="text-xs text-slate-600 leading-relaxed">
+                  勾选路由的 <code class="rounded bg-slate-100 px-1 font-mono text-rose-600">is_fallback</code> 标志后，该节点仅在所有非 fallback 节点均不可用时才会被选中。
+                  适合 <strong>兜底保障</strong> 场景：例如低成本模型作为兜底，确保服务不中断。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+          <span class="font-semibold text-slate-800">路由选择顺序：</span>
+          按 priority 升序分组 → 同组内按 weight 加权随机 → 组内全部失败则进入下一优先级组 → 所有非 fallback 组失败后尝试 fallback 节点。
+          当路由节点处于降级状态时（如连续超时），会被暂时从候选池中移除，并在一段时间后自动恢复。
+        </div>
+      </div>
+    </section>
+
+  </article>
+
+  <!-- ── Table of Contents — sticky right column ── -->
+  <!-- self-start + sticky top-5 on the aside itself ensures it stays visible while scrolling -->
+  <aside class="hidden xl:block w-52 shrink-0 sticky top-5 self-start">
+    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">目录</p>
+      <nav id="toc-nav" class="space-y-1 text-xs">
+        <a href="#api-integration" class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50">API 接入文档</a>
+        <a href="#openai-chat"      class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI Chat Completions</a>
+        <a href="#anthropic-messages" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Anthropic Messages</a>
+        <a href="#dev-tools"        class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50 mt-2">编程工具集成</a>
+        <a href="#claude-code"      class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Claude Code</a>
+        <a href="#operations"       class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50 mt-2">运维文档</a>
+        <a href="#ops-guide"        class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">操作指引</a>
+        <a href="#routing-rules"    class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">路由规则</a>
+      </nav>
+    </div>
+  </aside>
+</div>
+
+<script>
+  // ── Tab switcher ──────────────────────────────────────────────
+  (function () {
+    // Active tab style constants
+    var ACTIVE_BTN   = ['text-white', 'border-b-2', 'border-white'];
+    var INACTIVE_BTN = ['text-slate-300'];
+
+    function activateTab(group, tabId) {
+      // Update buttons
+      document.querySelectorAll('.tab-btn[data-group="' + group + '"]').forEach(function(btn) {
+        var isActive = btn.dataset.tab === tabId;
+        ACTIVE_BTN.forEach(function(c)   { btn.classList.toggle(c, isActive); });
+        INACTIVE_BTN.forEach(function(c) { btn.classList.toggle(c, !isActive); });
+      });
+      // Update panels — find all panels whose id belongs to this group
+      // Panels are siblings inside the same .code-tabs container
+      var container = document.querySelector('.code-tabs[data-group="' + group + '"]');
+      if (!container) return;
+      container.querySelectorAll('.tab-panel').forEach(function(panel) {
+        panel.classList.toggle('hidden', panel.id !== tabId);
+      });
+    }
+
+    // Init: activate first tab in each group, wire click handlers
+    document.querySelectorAll('.code-tabs').forEach(function(container) {
+      var group = container.dataset.group;
+      var buttons = container.querySelectorAll('.tab-btn');
+      buttons.forEach(function(btn, i) {
+        btn.addEventListener('click', function() { activateTab(group, btn.dataset.tab); });
+        if (i === 0) activateTab(group, btn.dataset.tab);  // activate first by default
+      });
+    });
+  })();
+
+  // ── TOC: highlight active section on scroll ───────────────────
+  (function () {
+    var sectionIds = ['api-integration','openai-chat','anthropic-messages','dev-tools','claude-code','operations','ops-guide','routing-rules'];
+    var headerIds  = new Set(['api-integration','dev-tools','operations']);
+    var tocLinks   = {};
+    sectionIds.forEach(function(id) {
+      var el = document.querySelector('#toc-nav a[href="#' + id + '"]');
+      if (el) tocLinks[id] = el;
+    });
+
+    function onScroll() {
+      var active = sectionIds[0];
+      sectionIds.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el && el.getBoundingClientRect().top <= 90) active = id;
+      });
+      Object.keys(tocLinks).forEach(function(id) {
+        var link = tocLinks[id];
+        var isActive  = id === active;
+        var isHeader  = headerIds.has(id);
+        link.classList.toggle('bg-slate-100',   isActive);
+        link.classList.toggle('text-slate-950',  isActive);
+        link.classList.toggle('font-semibold',   isActive || isHeader);
+        link.classList.toggle('text-slate-800',  !isActive && isHeader);
+        link.classList.toggle('text-slate-500',  !isActive && !isHeader);
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+{% endblock %}

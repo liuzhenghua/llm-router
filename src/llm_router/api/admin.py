@@ -902,3 +902,15 @@ async def billing_page(
         nav_active="billing",
         title="Billing",
     )
+
+
+@protected_router.get("/docs")
+async def docs_page(request: Request, _: None = Depends(require_admin)):
+    base_url = str(request.base_url).rstrip("/")
+    return _render_admin(
+        request,
+        "docs.html",
+        {"base_url": base_url},
+        nav_active="docs",
+        title="Docs",
+    )

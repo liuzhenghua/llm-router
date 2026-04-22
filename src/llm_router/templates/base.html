@@ -43,6 +43,7 @@
           ("providers", "/admin/providers", "Providers"),
           ("requests", "/admin/requests", "Request Logs"),
           ("billing", "/admin/billing", "Billing"),
+          ("docs", "/admin/docs", "Docs"),
         ] %}
         {% for key, href, label in nav_items %}
         <a href="{{ href }}" class="block rounded-2xl px-4 py-2.5 text-xs font-medium transition {{ 'bg-white text-slate-950 shadow-sm' if nav_active == key else 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">{{ label }}</a>
