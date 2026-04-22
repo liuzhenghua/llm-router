@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "aiosqlite>=0.21.0",
+    "alembic>=1.18.4",
     "asyncmy>=0.2.10",
     "cryptography>=45.0.0",
     "fastapi>=0.115.0",
@@ -29,6 +30,10 @@ llm-router = "llm_router.cli:main"
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
 build-backend = "uv_build"
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
 
 [dependency-groups]
 dev = [
