@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
-    JSON,
     Boolean,
     Date,
     DateTime,
@@ -17,8 +17,31 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
 
 from llm_router.core.database import Base, table_name
+
+
+class JsonString(TypeDecorator):
+    """Stores a JSON-serialisable value as TEXT.
+
+    This avoids any dependency on MySQL's native JSON type, making the schema
+    compatible with MySQL < 5.7.8, MariaDB, and SQLite without any code changes
+    in the rest of the application.
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return json.dumps(value, ensure_ascii=False)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return json.loads(value)
 
 
 def utcnow() -> datetime:
@@ -47,7 +70,7 @@ class ApiKey(Base, TimestampMixin):
     daily_spend_amount: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
     daily_spend_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     qps_limit: Mapped[int] = mapped_column(Integer, default=5)
-    allowed_logical_models_json: Mapped[list[str]] = mapped_column(JSON, default=list)
+    allowed_logical_models_json: Mapped[list[str]] = mapped_column(JsonString, default=list)
     request_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     response_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True)
