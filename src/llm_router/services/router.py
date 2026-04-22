@@ -108,6 +108,7 @@ async def resolve_request_context(
             logical_model_id=logical_model.id,
             raw_authorization=raw_api_key,
             headers=headers,
+            end_user=headers.get("x-end-user") or cached.end_user,
         )
         return api_key, logical_model, context
 
@@ -147,6 +148,7 @@ async def resolve_request_context(
             daily_spend_date=api_key.daily_spend_date.isoformat() if api_key.daily_spend_date else None,
             qps_limit=api_key.qps_limit,
             allowed_logical_models_json=api_key.allowed_logical_models_json or [],
+            end_user=api_key.end_user,
         )
         await dual_cache.set_apikey(key_hash, cached_api_key.to_dict())
 
@@ -163,6 +165,7 @@ async def resolve_request_context(
         logical_model_id=logical_model.id,
         raw_authorization=raw_api_key,
         headers=headers,
+        end_user=headers.get("x-end-user") or api_key.end_user,
     )
     return api_key, logical_model, context
 

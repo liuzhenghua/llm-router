@@ -46,6 +46,7 @@ class RequestContext:
     logical_model_id: int
     raw_authorization: str | None
     headers: dict[str, str] = field(default_factory=dict)
+    end_user: str | None = None
 
 
 @dataclass(slots=True)
@@ -72,6 +73,7 @@ class CachedApiKey:
     daily_spend_date: str | None  # ISO date string, e.g. "2025-01-15"
     qps_limit: int
     allowed_logical_models_json: list[str]  # JSON array stored as list
+    end_user: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -84,6 +86,7 @@ class CachedApiKey:
             "daily_spend_date": self.daily_spend_date,
             "qps_limit": self.qps_limit,
             "allowed_logical_models_json": self.allowed_logical_models_json,
+            "end_user": self.end_user,
         }
 
     @classmethod
@@ -98,6 +101,7 @@ class CachedApiKey:
             daily_spend_date=d.get("daily_spend_date"),
             qps_limit=d["qps_limit"],
             allowed_logical_models_json=d.get("allowed_logical_models_json") or [],
+            end_user=d.get("end_user"),
         )
 
 

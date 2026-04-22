@@ -180,6 +180,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
             "allowed_logical_models_json": key.allowed_logical_models_json,
             "request_content_logging_enabled": key.request_content_logging_enabled,
             "response_content_logging_enabled": key.response_content_logging_enabled,
+            "end_user": key.end_user or "",
         }
         for key in api_keys_result
     ]
@@ -276,6 +277,7 @@ async def create_api_key(
     daily_budget_limit: str = Form(default=""),
     qps_limit: int = Form(default=5),
     allowed_models: str = Form(default=""),
+    end_user: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -291,6 +293,7 @@ async def create_api_key(
             allowed_logical_models_json=allowed,
             request_content_logging_enabled=False,
             response_content_logging_enabled=False,
+            end_user=end_user.strip() or None,
         )
     )
     await session.commit()
@@ -309,6 +312,7 @@ async def update_api_key(
     allowed_models: str = Form(default=""),
     request_content_logging_enabled: bool = Form(default=False),
     response_content_logging_enabled: bool = Form(default=False),
+    end_user: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -322,6 +326,7 @@ async def update_api_key(
     api_key.allowed_logical_models_json = [item.strip() for item in allowed_models.split(",") if item.strip()]
     api_key.request_content_logging_enabled = request_content_logging_enabled
     api_key.response_content_logging_enabled = response_content_logging_enabled
+    api_key.end_user = end_user.strip() or None
     await session.commit()
     await _invalidate_apikey_cache(api_key)
     return JSONResponse({"ok": True, "id": api_key_id})
@@ -671,6 +676,7 @@ async def request_logs_page(
     started_before: datetime | None = Query(default=None),
     api_key_id: int | None = Query(default=None),
     provider_model_id: int | None = Query(default=None),
+    end_user: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     _: None = Depends(require_admin),
 ):
@@ -700,6 +706,9 @@ async def request_logs_page(
     if provider_model_id:
         stmt = stmt.where(RequestLog.provider_model_id == provider_model_id)
         count_stmt = count_stmt.where(RequestLog.provider_model_id == provider_model_id)
+    if end_user:
+        stmt = stmt.where(RequestLog.end_user.contains(end_user))
+        count_stmt = count_stmt.where(RequestLog.end_user.contains(end_user))
     total = (await session.execute(count_stmt)).scalar() or 0
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
@@ -729,6 +738,7 @@ async def request_logs_page(
             "provider_model_id": log.provider_model_id,
             "api_key_name": log.api_key.name if log.api_key else None,
             "provider_model_name": log.provider_model.name if log.provider_model else None,
+            "end_user": log.end_user or "",
             "usage_record": {
                 "prompt_tokens": log.usage_record.prompt_tokens,
                 "completion_tokens": log.usage_record.completion_tokens,
@@ -752,6 +762,7 @@ async def request_logs_page(
                 "started_before": started_before.strftime("%Y-%m-%dT%H:%M:%S") + "Z" if started_before else "",
                 "api_key_id": api_key_id or "",
                 "provider_model_id": provider_model_id or "",
+                "end_user": end_user or "",
             },
             "api_keys_list": [{"id": k.id, "name": k.name} for k in api_keys_list],
             "provider_models_list": [{"id": m.id, "name": m.name} for m in provider_models_list],

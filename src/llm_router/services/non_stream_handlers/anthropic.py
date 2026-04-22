@@ -106,6 +106,7 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
                     provider=provider,
                     started_at=started_at,
                     ended_at=utcnow(),
+                    end_user=context.end_user,
                 )
             )
 
@@ -136,6 +137,7 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
                     provider=provider,
                     started_at=started_at,
                     ended_at=utcnow(),
+                    end_user=context.end_user,
                 )
             )
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -203,4 +205,5 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
             ended_at=kwargs.get("ended_at"),
             usage=usage_data,
             provider_prices=prices_data,
+            end_user=kwargs.get("end_user"),
         )

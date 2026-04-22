@@ -60,6 +60,7 @@ class RequestFinalizationData:
     ended_at: datetime | None
     usage: UsageSnapshotData | None
     provider_prices: ProviderPricesData | None
+    end_user: str | None = None
 
 
 def _per_million_cost(tokens: int, unit_price: Decimal) -> Decimal:
@@ -87,6 +88,8 @@ async def _create_request_log_task(
         if data.upstream_request_id:
             existing.upstream_request_id = data.upstream_request_id
         existing.ended_at = data.ended_at
+        if data.end_user:
+            existing.end_user = data.end_user
         await session.flush()
         return existing
 
@@ -106,6 +109,7 @@ async def _create_request_log_task(
         error_message=data.error_message,
         started_at=data.started_at,
         ended_at=data.ended_at,
+        end_user=data.end_user,
     )
     session.add(request_log)
     await session.flush()

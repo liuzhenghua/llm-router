@@ -78,6 +78,7 @@
       </div>
       <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="request_content_logging_enabled" value="true">记录请求内容</label>
       <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="response_content_logging_enabled" value="true">记录响应内容</label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">保存</button>
     </form>
   </div>
@@ -128,6 +129,7 @@
           <input type="hidden" name="allowed_models" class="hidden-input" value="">
         </div>
       </div>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">创建 API Key</button>
     </form>
   </div>
@@ -388,6 +390,7 @@ function openEditModal(item) {
   form.querySelector('[name="qps_limit"]').value = item.qps_limit;
   form.querySelector('[name="request_content_logging_enabled"]').checked = item.request_content_logging_enabled;
   form.querySelector('[name="response_content_logging_enabled"]').checked = item.response_content_logging_enabled;
+  form.querySelector('[name="end_user"]').value = item.end_user || '';
 
   const models = item.allowed_logical_models_json || [];
 
@@ -422,6 +425,7 @@ document.getElementById('edit-api-key-form').addEventListener('submit', function
           allApiKeys[keyIndex].allowed_logical_models_json = data.get('allowed_models').split(',').filter(Boolean);
           allApiKeys[keyIndex].request_content_logging_enabled = data.get('request_content_logging_enabled') === 'true';
           allApiKeys[keyIndex].response_content_logging_enabled = data.get('response_content_logging_enabled') === 'true';
+          allApiKeys[keyIndex].end_user = data.get('end_user') || '';
         }
         renderTable();
         closeModal('edit-api-key-modal');

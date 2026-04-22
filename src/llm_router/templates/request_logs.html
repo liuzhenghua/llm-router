@@ -35,6 +35,10 @@
       {% endfor %}
     </select>
   </div>
+  <div class="min-w-[160px] flex-1">
+    <label class="block text-xs text-slate-500 mb-1">End User</label>
+    <input type="text" id="search-end-user" placeholder="搜索 End User..." value="{{ filters.end_user }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+  </div>
   <div class="min-w-[300px] flex-1">
     <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
     <div class="flex flex-col gap-1.5">
@@ -69,6 +73,7 @@
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Latency</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Provider Model</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">End User</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">费用</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap"></th>
       </tr>
@@ -98,6 +103,9 @@
         <td class="px-2 py-2 whitespace-nowrap text-xs">
           <div class="max-w-[120px] truncate" title="{{ log.provider_model_name or '-' }}">{{ log.provider_model_name | default('-') }}</div>
         </td>
+        <td class="px-2 py-2 whitespace-nowrap text-xs">
+          <div class="max-w-[120px] truncate" title="{{ log.end_user or '-' }}">{{ log.end_user | default('-') }}</div>
+        </td>
         <td class="px-2 py-2 whitespace-nowrap">
           {% if log.usage_record %}
           {{ "%.4f" | format(log.usage_record.cost_total) if log.usage_record.cost_total else 'N/A' }}
@@ -120,7 +128,7 @@
 
 
 {% macro build_query_string(page, filters) %}
-/admin/requests?page={{ page }}{% if filters.request_id %}&request_id={{ filters.request_id }}{% endif %}{% if filters.upstream_request_id %}&upstream_request_id={{ filters.upstream_request_id }}{% endif %}{% if filters.started_after %}&started_after={{ filters.started_after }}{% endif %}{% if filters.started_before %}&started_before={{ filters.started_before }}{% endif %}{% if filters.api_key_id %}&api_key_id={{ filters.api_key_id }}{% endif %}{% if filters.provider_model_id %}&provider_model_id={{ filters.provider_model_id }}{% endif %}
+/admin/requests?page={{ page }}{% if filters.request_id %}&request_id={{ filters.request_id }}{% endif %}{% if filters.upstream_request_id %}&upstream_request_id={{ filters.upstream_request_id }}{% endif %}{% if filters.started_after %}&started_after={{ filters.started_after }}{% endif %}{% if filters.started_before %}&started_before={{ filters.started_before }}{% endif %}{% if filters.api_key_id %}&api_key_id={{ filters.api_key_id }}{% endif %}{% if filters.provider_model_id %}&provider_model_id={{ filters.provider_model_id }}{% endif %}{% if filters.end_user %}&end_user={{ filters.end_user }}{% endif %}
 {% endmacro %}
 
 <div id="logs-pagination-container" class="mt-2 flex items-center justify-between">
@@ -180,6 +188,7 @@ function doSearch() {
   const startedBefore = localToUTC(document.getElementById('search-started-before').value);
   const apiKeyId = document.getElementById('search-api-key-id').value;
   const providerModelId = document.getElementById('search-provider-model-id').value;
+  const endUser = document.getElementById('search-end-user').value;
 
   const params = new URLSearchParams();
   if (requestId) params.append('request_id', requestId);
@@ -188,6 +197,7 @@ function doSearch() {
   if (startedBefore) params.append('started_before', startedBefore);
   if (apiKeyId) params.append('api_key_id', apiKeyId);
   if (providerModelId) params.append('provider_model_id', providerModelId);
+  if (endUser) params.append('end_user', endUser);
 
   window.location.href = `/admin/requests?${params.toString()}`;
 }

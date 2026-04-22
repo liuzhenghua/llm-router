@@ -50,6 +50,7 @@ class ApiKey(Base, TimestampMixin):
     allowed_logical_models_json: Mapped[list[str]] = mapped_column(JSON, default=list)
     request_content_logging_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     response_content_logging_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    end_user: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     request_logs: Mapped[list["RequestLog"]] = relationship(back_populates="api_key")
 
@@ -126,6 +127,7 @@ class RequestLog(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
 
     api_key: Mapped[ApiKey | None] = relationship(back_populates="request_logs")
