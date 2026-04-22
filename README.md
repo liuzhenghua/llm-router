@@ -244,8 +244,7 @@ llm-router/
     server/       # MySQL Compose + init.sql
   docs/
     architecture/ # Architecture documentation
-  migrations/     # Alembic migrations
-  tests/
+    tests/
 ```
 
 ---
