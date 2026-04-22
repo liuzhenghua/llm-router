@@ -82,9 +82,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     if settings.redis_enabled:
         # Redis 模式：初始化 Redis 缓存
         _redis_cache = RedisCache(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            db=settings.redis_db,
+            url=settings.redis_url,
             password=settings.redis_password,
             default_ttl=settings.default_redis_ttl,
         )

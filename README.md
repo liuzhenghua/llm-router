@@ -185,13 +185,15 @@ Key environment variables (see `.env.example` for the full list):
 
 | Variable | Default | Description |
 |---|---|---|
-| `USE_MYSQL` | `false` | Set to `true` to use MySQL instead of SQLite |
-| `REDIS_ENABLED` | `false` | Set to `true` to enable Redis cache, queue, and distributed lock |
 | `APP_ENCRYPTION_KEY` | — | Fernet key used to encrypt upstream provider API keys |
 | `SESSION_SECRET` | — | Secret for admin session cookies |
-| `DATABASE_URL` | — | Override SQLAlchemy DB URL directly (skips `USE_MYSQL` auto-build) |
-| `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_USER` / `MYSQL_PASSWORD` / `MYSQL_DATABASE` | — | MySQL connection settings (used when `USE_MYSQL=true`) |
-| `REDIS_HOST` / `REDIS_PORT` / `REDIS_DB` / `REDIS_PASSWORD` | — | Redis connection settings (used when `REDIS_ENABLED=true`) |
+| `SQLITE_PATH` | `data/llm_router.db` | SQLite file path (default storage) |
+| `USE_MYSQL` | `false` | Set to `true` to use MySQL instead of SQLite |
+| `MYSQL_URL` | `mysql://llm_router@mysql:3306/llm_router` | MySQL connection URL — format: `mysql://user@host:port/database` |
+| `MYSQL_PASSWORD` | `llm_router` | MySQL password |
+| `REDIS_ENABLED` | `false` | Set to `true` to enable Redis cache, queue, and distributed lock |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL — format: `redis://host:port/db` |
+| `REDIS_PASSWORD` | — | Redis password (optional) |
 | `TABLE_PREFIX` | `""` | Optional prefix for all table names, e.g. `lr_` → `lr_api_keys` |
 
 ---

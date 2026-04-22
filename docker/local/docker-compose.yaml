@@ -9,7 +9,7 @@ services:
       SESSION_SECRET: local-session-secret
       APP_ENCRYPTION_KEY: local-encryption-secret
       ADMIN_USERS_FILE: /app/data/admin_users.json
-      DATABASE_URL: sqlite+aiosqlite:////app/data/llm_router.db
+      SQLITE_PATH: /app/data/llm_router.db
     ports:
       - "8000:8000"
     volumes:

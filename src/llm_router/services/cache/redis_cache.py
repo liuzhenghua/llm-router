@@ -22,20 +22,13 @@ class RedisCache:
 
     def __init__(
         self,
-        host: str = "localhost",
-        port: int = 6379,
-        db: int = 0,
+        url: str = "redis://localhost:6379/0",
         password: str | None = None,
         default_ttl: int = 60,
     ):
         self._client: redis.Redis | None = None
-        self._config = {
-            "host": host,
-            "port": port,
-            "db": db,
-            "password": password,
-            "decode_responses": True,
-        }
+        self._url = url
+        self._password = password
         self._default_ttl = default_ttl
         self._available = False
 
@@ -44,7 +37,9 @@ class RedisCache:
         import redis.asyncio as redis
 
         try:
-            self._client = redis.Redis(**self._config)
+            self._client = redis.from_url(
+                self._url, password=self._password, decode_responses=True
+            )
             await self._client.ping()
             self._available = True
             logger.info("Redis cache connected")

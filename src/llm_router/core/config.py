@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlparse
 
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,10 +26,9 @@ class Settings(BaseSettings):
 
     # Set to True to enable Redis cache + Redis queue + distributed lock
     redis_enabled: bool = False
-    # Set to True to use MySQL instead of SQLite (only used when database_url is not set)
+    # Set to True to use MySQL instead of SQLite
     use_mysql: bool = False
 
-    database_url: str | None = None
     default_request_logging_enabled: bool = False
     default_response_logging_enabled: bool = False
 
@@ -37,16 +37,14 @@ class Settings(BaseSettings):
     app_encryption_key: str = "change-me-encryption-key"
 
     sqlite_path: Path = DATA_DIR / "llm_router.db"
-    mysql_host: str = "mysql"
-    mysql_port: int = 3306
-    mysql_user: str = "llm_router"
+    # MySQL connection (used when use_mysql=true)
+    # Format: mysql://user@host:port/database
+    mysql_url: str = "mysql://llm_router@mysql:3306/llm_router"
     mysql_password: str = "llm_router"
-    mysql_database: str = "llm_router"
 
-    # Redis 缓存配置（server 模式使用）
-    redis_host: str = "localhost"
-    redis_port: int = 6379
-    redis_db: int = 0
+    # Redis connection (used when redis_enabled=true)
+    # Format: redis://host:port/db
+    redis_url: str = "redis://localhost:6379/0"
     redis_password: str | None = None
 
     # 缓存 TTL 配置（秒）
@@ -65,13 +63,13 @@ class Settings(BaseSettings):
     @computed_field
     @property
     def effective_database_url(self) -> str:
-        if self.database_url:
-            return self.database_url
         if self.use_mysql:
-            return (
-                f"mysql+aiomysql://{self.mysql_user}:{self.mysql_password}"
-                f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
-            )
+            p = urlparse(self.mysql_url)
+            host = p.hostname or "mysql"
+            port = p.port or 3306
+            user = p.username or "llm_router"
+            db = p.path.lstrip("/") or "llm_router"
+            return f"mysql+aiomysql://{user}:{self.mysql_password}@{host}:{port}/{db}"
         return f"sqlite+aiosqlite:///{self.sqlite_path}"
 
 
