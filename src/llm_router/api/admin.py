@@ -130,10 +130,21 @@ def _render_admin(
 @public_router.get("/setup")
 async def setup_page(request: Request):
     session = request.state.db
-    if await _admin_user_service.has_any_user(session):
+    table_missing = await _admin_user_service.is_table_missing()
+    if not table_missing and await _admin_user_service.has_any_user(session):
         return _redirect("/admin/login")
+    create_sql_mysql = _admin_user_service.get_full_schema_sql(use_mysql=True) if table_missing else None
+    create_sql_sqlite = _admin_user_service.get_full_schema_sql(use_mysql=False) if table_missing else None
     return request.app.state.templates.TemplateResponse(
-        request, "setup.html", {"request": request, "error": None}
+        request,
+        "setup.html",
+        {
+            "request": request,
+            "error": None,
+            "table_missing": table_missing,
+            "create_sql_mysql": create_sql_mysql,
+            "create_sql_sqlite": create_sql_sqlite,
+        },
     )
 
 
@@ -145,6 +156,22 @@ async def setup_action(
     confirm_password: str = Form(...),
 ):
     session = request.state.db
+    table_missing = await _admin_user_service.is_table_missing()
+    if table_missing:
+        create_sql_mysql = _admin_user_service.get_full_schema_sql(use_mysql=True)
+        create_sql_sqlite = _admin_user_service.get_full_schema_sql(use_mysql=False)
+        return request.app.state.templates.TemplateResponse(
+            request,
+            "setup.html",
+            {
+                "request": request,
+                "error": "数据库表不存在，请先执行下方建表 SQL 后重试",
+                "table_missing": True,
+                "create_sql_mysql": create_sql_mysql,
+                "create_sql_sqlite": create_sql_sqlite,
+            },
+            status_code=400,
+        )
     if await _admin_user_service.has_any_user(session):
         return _redirect("/admin/login")
     if not username.strip():
