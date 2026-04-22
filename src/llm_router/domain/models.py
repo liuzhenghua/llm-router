@@ -48,8 +48,8 @@ class ApiKey(Base, TimestampMixin):
     daily_spend_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     qps_limit: Mapped[int] = mapped_column(Integer, default=5)
     allowed_logical_models_json: Mapped[list[str]] = mapped_column(JSON, default=list)
-    request_content_logging_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    response_content_logging_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    request_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
+    response_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     request_logs: Mapped[list["RequestLog"]] = relationship(back_populates="api_key")

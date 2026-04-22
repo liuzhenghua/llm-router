@@ -86,7 +86,7 @@
           <div class="max-w-[80px] truncate text-xs" title="{{ log.request_id }}">{{ log.request_id }}</div>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
-          <div class="max-w-[240px] truncate text-xs" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id | default('-') }}</div>
+          <div class="max-w-[280px] truncate text-xs" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id | default('-') }}</div>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
           {% if log.success %}

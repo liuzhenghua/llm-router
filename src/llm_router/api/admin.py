@@ -66,6 +66,15 @@ def _to_decimal(value: str) -> Decimal | None:
     return Decimal(stripped)
 
 
+def _parse_logging_flag(value: str) -> bool | None:
+    """Parse form logging flag: 'true' -> True, 'false' -> False, '' -> None (use global default)."""
+    if value == "true":
+        return True
+    elif value == "false":
+        return False
+    return None
+
+
 async def _invalidate_apikey_cache(api_key: ApiKey) -> None:
     """失效 ApiKey 的缓存"""
     dual_cache = get_dual_cache()
@@ -312,8 +321,8 @@ async def create_api_key(
             daily_budget_limit=_to_decimal(daily_budget_limit),
             qps_limit=qps_limit,
             allowed_logical_models_json=allowed,
-            request_content_logging_enabled=False,
-            response_content_logging_enabled=False,
+            request_content_logging_enabled=None,
+            response_content_logging_enabled=None,
             end_user=end_user.strip() or None,
         )
     )
@@ -331,8 +340,8 @@ async def update_api_key(
     daily_budget_limit: str = Form(default=""),
     qps_limit: int = Form(default=5),
     allowed_models: str = Form(default=""),
-    request_content_logging_enabled: bool = Form(default=False),
-    response_content_logging_enabled: bool = Form(default=False),
+    request_content_logging_enabled: str = Form(default=""),
+    response_content_logging_enabled: str = Form(default=""),
     end_user: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
@@ -345,8 +354,8 @@ async def update_api_key(
     api_key.daily_budget_limit = _to_decimal(daily_budget_limit)
     api_key.qps_limit = qps_limit
     api_key.allowed_logical_models_json = [item.strip() for item in allowed_models.split(",") if item.strip()]
-    api_key.request_content_logging_enabled = request_content_logging_enabled
-    api_key.response_content_logging_enabled = response_content_logging_enabled
+    api_key.request_content_logging_enabled = _parse_logging_flag(request_content_logging_enabled)
+    api_key.response_content_logging_enabled = _parse_logging_flag(response_content_logging_enabled)
     api_key.end_user = end_user.strip() or None
     await session.commit()
     await _invalidate_apikey_cache(api_key)
