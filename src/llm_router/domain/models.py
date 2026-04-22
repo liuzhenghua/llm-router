@@ -122,8 +122,6 @@ class RequestLog(Base):
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     success: Mapped[bool] = mapped_column(Boolean, default=False)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    request_body: Mapped[str | None] = mapped_column(Text, nullable=True)
-    response_body: Mapped[str | None] = mapped_column(Text, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -133,13 +131,25 @@ class RequestLog(Base):
     api_key: Mapped[ApiKey | None] = relationship(back_populates="request_logs")
     provider_model: Mapped["ProviderModel | None"] = relationship(foreign_keys=[provider_model_id])
     usage_record: Mapped["UsageRecord | None"] = relationship(back_populates="request_log", uselist=False)
+    body: Mapped["RequestLogBody | None"] = relationship(back_populates="request_log", uselist=False)
+
+
+class RequestLogBody(Base):
+    __tablename__ = "request_log_bodies"
+
+    request_log_id: Mapped[int] = mapped_column(
+        ForeignKey("request_logs.id", ondelete="CASCADE"), primary_key=True
+    )
+    request_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    response_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    request_log: Mapped[RequestLog] = relationship(back_populates="body")
 
 
 class UsageRecord(Base):
     __tablename__ = "usage_records"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    request_log_id: Mapped[int] = mapped_column(ForeignKey("request_logs.id", ondelete="CASCADE"), unique=True)
+    request_log_id: Mapped[int] = mapped_column(ForeignKey("request_logs.id", ondelete="CASCADE"), primary_key=True)
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_read_tokens: Mapped[int] = mapped_column(Integer, default=0)
@@ -156,7 +166,6 @@ class UsageRecord(Base):
     cost_total: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     currency: Mapped[str] = mapped_column(String(8), default="USD")
     billing_date: Mapped[date] = mapped_column(Date, default=date.today)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
 
     request_log: Mapped[RequestLog] = relationship(back_populates="usage_record")
 

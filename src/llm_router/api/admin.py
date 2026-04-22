@@ -141,7 +141,11 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
     api_keys = (await session.execute(select(ApiKey).order_by(ApiKey.id.desc()))).scalars().all()
     logical_models = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
     provider_models = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
-    recent_logs = (await session.execute(select(RequestLog).order_by(desc(RequestLog.id)).limit(8))).scalars().all()
+    recent_logs = (await session.execute(
+        select(RequestLog)
+        .order_by(desc(RequestLog.id))
+        .limit(8)
+    )).scalars().all()
     ledgers = (await session.execute(select(BalanceLedger).order_by(desc(BalanceLedger.id)).limit(8))).scalars().all()
     daily_summaries = (await session.execute(select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(8))).scalars().all()
     total_balance = sum((Decimal(item.balance) for item in api_keys), Decimal("0"))
@@ -701,7 +705,11 @@ async def request_logs_page(
     per_page = settings.admin_page_size
     stmt = (
         select(RequestLog)
-        .options(selectinload(RequestLog.usage_record), selectinload(RequestLog.api_key), selectinload(RequestLog.provider_model))
+        .options(
+            selectinload(RequestLog.usage_record),
+            selectinload(RequestLog.api_key),
+            selectinload(RequestLog.provider_model),
+        )
         .order_by(desc(RequestLog.id))
     )
     count_stmt = select(func.count()).select_from(RequestLog)
@@ -799,6 +807,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
                 selectinload(RequestLog.usage_record),
                 selectinload(RequestLog.api_key),
                 selectinload(RequestLog.provider_model),
+                selectinload(RequestLog.body),
             ).where(RequestLog.id == request_log_id)
         )
     ).scalar_one_or_none()
@@ -827,8 +836,8 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "latency_ms": log.latency_ms,
         "upstream_request_id": log.upstream_request_id,
         "created_at": log.created_at,
-        "request_body": log.request_body,
-        "response_body": log.response_body,
+        "request_body": log.body.request_body if log.body else None,
+        "response_body": log.body.response_body if log.body else None,
         "error_message": log.error_message,
         "call_type": log.call_type,
         "api_key_id": log.api_key_id,
@@ -869,7 +878,7 @@ async def billing_page(
     usage_stmt = (
         select(UsageRecord)
         .options(selectinload(UsageRecord.request_log))
-        .order_by(desc(UsageRecord.id))
+        .order_by(desc(UsageRecord.request_log_id))
         .limit(100)
     )
     summary_stmt = select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(100)

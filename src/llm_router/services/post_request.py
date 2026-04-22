@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from llm_router.core.database import SessionLocal
 from llm_router.domain.enums import ChangeType
-from llm_router.domain.models import ApiKey, BalanceLedger, DailyUsageSummary, RequestLog, UsageRecord
+from llm_router.domain.models import ApiKey, BalanceLedger, DailyUsageSummary, RequestLog, RequestLogBody, UsageRecord
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,6 @@ async def _create_request_log_task(
         existing.status_code = data.status_code
         existing.success = data.success
         existing.latency_ms = data.latency_ms
-        existing.response_body = data.response_body
         existing.error_message = data.error_message
         existing.call_type = data.call_type
         # upstream_request_id 可能在重试成功时才获取到
@@ -91,6 +90,18 @@ async def _create_request_log_task(
         if data.end_user:
             existing.end_user = data.end_user
         await session.flush()
+        # 更新或补充 body 记录
+        if data.response_body is not None:
+            body_stmt = select(RequestLogBody).where(RequestLogBody.request_log_id == existing.id)
+            body_record = (await session.execute(body_stmt)).scalar_one_or_none()
+            if body_record:
+                body_record.response_body = data.response_body
+            else:
+                session.add(RequestLogBody(
+                    request_log_id=existing.id,
+                    request_body=data.request_body,
+                    response_body=data.response_body,
+                ))
         return existing
 
     request_log = RequestLog(
@@ -104,8 +115,6 @@ async def _create_request_log_task(
         status_code=data.status_code,
         success=data.success,
         latency_ms=data.latency_ms,
-        request_body=data.request_body,
-        response_body=data.response_body,
         error_message=data.error_message,
         started_at=data.started_at,
         ended_at=data.ended_at,
@@ -113,6 +122,12 @@ async def _create_request_log_task(
     )
     session.add(request_log)
     await session.flush()
+    if data.request_body is not None or data.response_body is not None:
+        session.add(RequestLogBody(
+            request_log_id=request_log.id,
+            request_body=data.request_body,
+            response_body=data.response_body,
+        ))
     return request_log
 
 
