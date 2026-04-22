@@ -17,10 +17,18 @@ from llm_router.services.non_stream_handlers import (
     AnthropicNonStreamHandler,
     OpenAINonStreamHandler,
 )
+from llm_router.services.non_stream_handlers.cross_protocol import (
+    AnthropicOverOpenAINonStreamHandler,
+    OpenAIOverAnthropicNonStreamHandler,
+)
 from llm_router.services.router import resolve_provider_candidates, resolve_request_context, weighted_random_select
 from llm_router.services.streaming_handlers import (
     AnthropicStreamingHandler,
     OpenAIStreamingHandler,
+)
+from llm_router.services.streaming_handlers.cross_protocol import (
+    AnthropicOverOpenAIStreamingHandler,
+    OpenAIOverAnthropicStreamingHandler,
 )
 
 
@@ -83,9 +91,15 @@ async def handle_proxy_request(
             try:
                 if context.stream:
                     if context.protocol == ProviderProtocol.OPENAI:
-                        handler = OpenAIStreamingHandler()
+                        if current_provider.upstream_protocol == ProviderProtocol.OPENAI:
+                            handler = OpenAIStreamingHandler()
+                        else:
+                            handler = OpenAIOverAnthropicStreamingHandler()
                     else:
-                        handler = AnthropicStreamingHandler()
+                        if current_provider.upstream_protocol == ProviderProtocol.ANTHROPIC:
+                            handler = AnthropicStreamingHandler()
+                        else:
+                            handler = AnthropicOverOpenAIStreamingHandler()
                     return await handler.proxy(
                         session,
                         api_key=api_key,
@@ -95,9 +109,15 @@ async def handle_proxy_request(
                     )
                 else:
                     if context.protocol == ProviderProtocol.OPENAI:
-                        handler = OpenAINonStreamHandler()
+                        if current_provider.upstream_protocol == ProviderProtocol.OPENAI:
+                            handler = OpenAINonStreamHandler()
+                        else:
+                            handler = OpenAIOverAnthropicNonStreamHandler()
                     else:
-                        handler = AnthropicNonStreamHandler()
+                        if current_provider.upstream_protocol == ProviderProtocol.ANTHROPIC:
+                            handler = AnthropicNonStreamHandler()
+                        else:
+                            handler = AnthropicOverOpenAINonStreamHandler()
                     return await handler.proxy(
                         session,
                         api_key=api_key,

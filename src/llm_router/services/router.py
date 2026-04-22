@@ -270,9 +270,8 @@ async def resolve_provider_candidates(
             if not provider.is_active:
                 continue
 
-            # Check if provider has an endpoint for the requested protocol
-            _ep = provider.openai_endpoint if protocol == ProviderProtocol.OPENAI else provider.anthropic_endpoint
-            if not _ep:
+            # Include provider if it has at least one endpoint (may need protocol conversion)
+            if not provider.openai_endpoint and not provider.anthropic_endpoint:
                 continue
 
             # 构建缓存数据
@@ -340,8 +339,19 @@ async def resolve_provider_candidates(
         if not provider.is_active:
             continue
 
-        # Resolve endpoint for requested protocol
-        resolved_endpoint = provider.openai_endpoint if protocol == ProviderProtocol.OPENAI else provider.anthropic_endpoint
+        # Resolve endpoint for requested protocol; fall back to other protocol if needed
+        if protocol == ProviderProtocol.OPENAI:
+            resolved_endpoint = provider.openai_endpoint
+            upstream_protocol = ProviderProtocol.OPENAI
+            if not resolved_endpoint:
+                resolved_endpoint = provider.anthropic_endpoint
+                upstream_protocol = ProviderProtocol.ANTHROPIC
+        else:
+            resolved_endpoint = provider.anthropic_endpoint
+            upstream_protocol = ProviderProtocol.ANTHROPIC
+            if not resolved_endpoint:
+                resolved_endpoint = provider.openai_endpoint
+                upstream_protocol = ProviderProtocol.OPENAI
         if not resolved_endpoint:
             continue
 
@@ -349,6 +359,7 @@ async def resolve_provider_candidates(
             id=provider.id,
             name=provider.name,
             protocol=protocol,
+            upstream_protocol=upstream_protocol,
             endpoint=resolved_endpoint,
             api_key=encryptor.decrypt(provider.encrypted_api_key),
             upstream_model_name=provider.upstream_model_name,

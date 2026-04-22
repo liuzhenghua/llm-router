@@ -21,6 +21,7 @@ class RoutedProvider:
     id: int
     name: str
     protocol: ProviderProtocol
+    upstream_protocol: ProviderProtocol  # actual protocol used to call the upstream endpoint
     endpoint: str
     api_key: str
     upstream_model_name: str
