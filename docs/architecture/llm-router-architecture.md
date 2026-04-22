@@ -2,31 +2,99 @@
 
 ## Overview
 
-`llm-router` 是一个基于 Python 的 LLM 转发网关，面向两类场景：
+`llm-router` is a lightweight, self-hosted LLM gateway built with Python. It supports two deployment scenarios:
 
-- `local`：单机部署，使用 SQLite，强调低启动成本
-- `server`：多实例部署，使用 MySQL，强调共享状态与集中管理
+- `local`: Single-node deployment using SQLite, zero external dependencies
+- `server`: Multi-instance deployment using MySQL + Redis, designed for shared state and centralized management
 
-系统对外提供兼容：
+The gateway exposes drop-in compatible endpoints:
 
 - OpenAI `POST /v1/chat/completions`
-- Anthropic `POST /v1/messages`
+- Anthropic `POST /anthropic/v1/messages`
 
-系统对内提供：
+Internal capabilities:
 
-- 逻辑模型到下游模型的路由
-- API Key 级别的余额、日限额、QPS 与模型授权控制
-- 请求级 token 用量与费用记录
-- 请求/响应内容的可选审计记录
-- 管理后台、账本和请求日志查询
+- Logical model to downstream provider routing with priority and weighted fallback
+- API Key-level balance, daily budget, QPS, and model access control
+- Per-request token usage and cost recording
+- Optional per-key request/response content audit logging
+- Admin panel, ledger, and request log queries
+- **Cross-protocol conversion** — an OpenAI client request can be routed to an Anthropic backend provider, and vice versa
+
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph Clients
+        CA[OpenAI SDK / App]
+        CB[Anthropic SDK / App]
+    end
+
+    subgraph Gateway
+        API[API Layer
+POST /v1/chat/completions
+POST /anthropic/v1/messages]
+        AUTH[Auth & Quota
+API Key · Balance · QPS · Model ACL]
+        ROUTER[Route Selector
+Priority Groups · Weighted Random · Degraded Filter]
+        CONV[Protocol Converter
+OpenAI ↔ Anthropic]
+        HANDLER[Request Handler
+Streaming / Non-Streaming]
+        BILLING[Billing
+Cost Compute · SpendQueue · Ledger]
+    end
+
+    subgraph Cache
+        MEM[In-Memory LRU]
+        REDIS[Redis Cache
+optional]
+        DEG[Degraded Route Cache]
+    end
+
+    subgraph Storage
+        DB[(SQLite / MySQL
+Logs · Billing · Config)]
+    end
+
+    subgraph Upstream Providers
+        P1[Provider A
+openai endpoint]
+        P2[Provider B
+anthropic endpoint]
+        PN[Provider N
+custom endpoint]
+    end
+
+    CA -->|Bearer token| API
+    CB -->|Bearer token| API
+    API --> AUTH
+    AUTH -->|cache-first| MEM
+    MEM -->|miss| REDIS
+    REDIS -->|miss| DB
+    AUTH --> ROUTER
+    ROUTER -->|filter degraded| DEG
+    ROUTER --> CONV
+    CONV --> HANDLER
+    HANDLER --> P1
+    HANDLER --> P2
+    HANDLER --> PN
+    HANDLER --> BILLING
+    BILLING --> DB
+    BILLING -->|spend delta| REDIS
+    HANDLER -->|response| API
+    API -->|SSE / JSON| CA
+    API -->|streaming / JSON| CB
+```
 
 ## Core Concepts
 
 ### Logical Model
 
-逻辑模型是网关对外暴露的模型名称。调用方只感知逻辑模型，不直接感知具体下游厂商或部署。
+The model name exposed to callers. Clients only ever see the logical model name; the actual downstream provider is transparent.
 
-示例：
+Examples:
 
 - `gpt-4o`
 - `claude-sonnet`
@@ -34,226 +102,314 @@
 
 ### Provider Model
 
-下游模型配置描述一个可实际请求的上游模型实例，包含：
+A concrete upstream endpoint configuration, including:
 
-- provider 类型：`openai` 或 `anthropic`
-- 协议类型：`openai` 或 `anthropic`
-- 上游 endpoint
-- 上游 model 名称
-- 加密保存的上游 API Key
-- 每百万 token 单价
-- prompt cache 支持能力
-- 超时、启停状态
+- Dual endpoint support: `openai_endpoint` and/or `anthropic_endpoint` (each optional; at least one required)
+- Upstream model name
+- Encrypted upstream API key
+- Per-million-token pricing: `input_token_price`, `output_token_price`, `cache_read_token_price`, `cache_write_token_price`
+- Prompt cache support flag
+- Timeout and active status
 
 ### Route
 
-路由将一个逻辑模型映射到一个或多个 provider model。当前路由依据优先级顺序选择下游，并在失败时按顺序尝试后备路由。
+A mapping from a logical model to one or more provider models. Each route entry carries:
+
+- `priority` — lower value = higher priority; providers are grouped by priority
+- `weight` — within the same priority group, traffic is distributed proportionally by weight
+- `is_fallback` — fallback routes are only tried after all main-group routes fail
 
 ## Protocol Boundary
 
-系统当前采用同协议转发模型：
+The system supports **cross-protocol routing**:
 
-- OpenAI 入口路由到 OpenAI 协议的 provider
-- Anthropic 入口路由到 Anthropic 协议的 provider
+- An OpenAI client request can be routed to a provider with only an Anthropic endpoint (converted via `protocol_converter`)
+- An Anthropic client request can be routed to a provider with only an OpenAI endpoint (converted vice versa)
+- Same-protocol forwarding remains the default when the matching endpoint is available
 
-当前并不做跨协议语义转换。也就是说，OpenAI 请求不会自动转换成 Anthropic 请求格式，反之亦然。
+The router resolves the upstream protocol at request time by inspecting which endpoint is available on the selected provider. There are four handler combinations:
+
+| Client Protocol | Upstream Protocol | Handler |
+|---|---|---|
+| OpenAI | OpenAI | `OpenAINonStream/StreamingHandler` |
+| OpenAI | Anthropic | `OpenAIOverAnthropicNonStream/StreamingHandler` |
+| Anthropic | Anthropic | `AnthropicNonStream/StreamingHandler` |
+| Anthropic | OpenAI | `AnthropicOverOpenAINonStream/StreamingHandler` |
 
 ## Runtime Modes
 
 ### Local Mode
 
-`local` 模式面向开发、自托管和低成本单机部署。
+Designed for development, self-hosting, and low-cost single-node deployment.
 
-特点：
-
-- SQLite 作为默认存储
-- 数据文件落在本地目录
-- 无外部基础设施要求
-- 启动路径简单
+- SQLite (`aiosqlite`) as default storage
+- In-memory LRU cache only (no Redis)
+- No external infrastructure required
+- `redis_enabled = False`, `use_mysql = False`
 
 ### Server Mode
 
-`server` 模式面向多实例部署。
+Designed for multi-instance deployment.
 
-特点：
-
-- MySQL 作为共享数据库
-- 适合多个应用实例共享 API Key、路由、账本与日志
-- 便于集中管理和运维
+- MySQL (`asyncmy`) as shared database
+- Redis for distributed cache and spend queue
+- `redis_enabled = True`, `use_mysql = True`
+- Redis is always optional — if unreachable, the gateway gracefully falls back to in-memory cache
 
 ## Request Lifecycle
 
-一次请求在系统中的标准处理过程如下：
+A standard request flow through the system:
 
-1. 接收 OpenAI 或 Anthropic 协议请求
-2. 从请求头中解析 API Key
-3. 校验 API Key 状态、余额、日限额、QPS 和模型访问权限
-4. 依据逻辑模型查询可用路由
-5. 选出符合协议要求的 provider model
-6. 将请求转发到上游 endpoint
-7. 解析上游 usage 信息
-8. 按价格快照计算费用
-9. 写入请求日志、用量记录、账本和日报汇总
-10. 将响应按原协议返回给调用方
+1. Receive OpenAI or Anthropic protocol request
+2. Extract API key from `Authorization: Bearer` header
+3. Validate API key status, balance, daily budget, QPS, and model access (cache-first)
+4. Look up available routes for the logical model (cache-first, degraded-route-filtered)
+5. Select a provider via weighted random within the highest-priority group
+6. Resolve upstream protocol; apply cross-protocol conversion if needed
+7. Forward request to upstream endpoint
+8. Parse upstream usage (prompt/completion/cache/reasoning tokens)
+9. Compute costs at price snapshot; deduct balance via async spend queue
+10. Write request log, usage record, ledger entry, and daily summary
+11. Return response to caller in the original client protocol format
 
-在上游失败时，系统会按路由优先级尝试后续 provider；若全部失败，则记录失败请求。
+On upstream failure:
+
+- **429 / 403**: Route is immediately marked `quota_exhausted` in the degraded cache; move to next priority group without retry
+- **Other 4xx**: Return error immediately, no retry
+- **5xx**: Increment fail count; if threshold exceeded, mark route `unavailable`; retry within group up to `MAX_RETRY_PER_GROUP = 3` times
+
+After all main groups are exhausted, fallback groups are tried with the same logic.
+
+## Routing Strategy
+
+### Priority Groups
+
+Routes are partitioned into main groups and fallback groups, then sorted by priority (ascending). The gateway traverses groups in order:
+
+```
+Main group priority=1 → Main group priority=2 → ... → Fallback group priority=1 → ...
+```
+
+### Weighted Random Selection
+
+Within a priority group, providers with `weight > 0` are selected via weighted random:
+
+```python
+r = random.randint(0, total_weight - 1)
+# cumulative scan to pick winner
+```
+
+Providers with `weight = 0` are excluded from routing.
+
+### Degraded Route Cache
+
+Failed routes are tracked in a `DegradedRouteCache` (backed by `DualCache`). Degraded routes are excluded from candidate selection until their TTL expires or a recovery background task clears them.
+
+Degraded states:
+
+- `quota_exhausted` — 429/403 from upstream
+- `unavailable` — repeated 5xx failures exceeding threshold
 
 ## Streaming
 
-系统支持 OpenAI SSE 流式响应和 Anthropic streaming。
+The gateway supports OpenAI SSE streaming and Anthropic streaming.
 
-流式处理遵循以下原则：
+Streaming principles:
 
-- 保持上游事件格式尽量透明
-- OpenAI 流式请求自动附加 `stream_options.include_usage=true`，以便在流结束时获取 usage
-- Anthropic 流式 usage 依赖上游事件中的 usage 字段
-- 流结束后统一落库账单与日志
-- 流中断时记录失败请求，并保留已知错误上下文
+- Upstream event format is forwarded as transparently as possible
+- OpenAI streaming requests automatically append `stream_options.include_usage=true` to obtain usage at stream end
+- Anthropic streaming usage is extracted from upstream `message_delta` / `message_stop` events
+- Billing and logging are written after the stream completes
+- On stream interruption, a failed request log is recorded with available error context
+
+## Dual Cache Architecture
+
+The cache layer is a two-tier `DualCache`: `InMemoryCache` (always on) + `RedisCache` (server mode only).
+
+```
+Read: In-Memory → Redis (with backfill) → Database
+Write: In-Memory + Redis (dual-write, Redis gated by is_available)
+Invalidate: In-Memory + Redis (on every admin mutation)
+```
+
+### Cached Entities
+
+| Cache Key Pattern | Content |
+|---|---|
+| `apikey:hash:{key_hash}` | API key metadata (status, balance, limits, allowed models) |
+| `apikey:id:{id}` | Same, keyed by ID |
+| `route:logical:{logical_model_id}` | Route list for a logical model |
+| `provider:id:{id}` | Provider configuration (encrypted API key, pricing, endpoints) |
+| `route:degraded:{route_id}` | Degraded state for a specific route |
+| `route:degraded:set` | Set of all currently degraded route IDs |
+
+All Redis keys are prefixed with `llm_router:cache:`.
+
+### TTL Configuration
+
+| Cache Layer | Default TTL |
+|---|---|
+| In-Memory | 60 seconds |
+| Redis | 3600 seconds |
 
 ## Billing Model
 
-系统采用按请求计费模型，定价口径为每百万 token 单价。
+Cost is computed per-request using per-million-token pricing:
 
-计算公式：
+```
+non_cache_prompt_tokens = prompt_tokens - cache_read_tokens - cache_write_tokens
+input_cost   = non_cache_prompt_tokens / 1_000_000 * input_token_price
+output_cost  = completion_tokens       / 1_000_000 * output_token_price
+cache_read_cost  = cache_read_tokens   / 1_000_000 * cache_read_token_price
+cache_write_cost = cache_write_tokens  / 1_000_000 * cache_write_token_price
+total_cost = input_cost + output_cost + cache_read_cost + cache_write_cost
+```
 
-- `input_cost = (prompt_tokens - cache_read_tokens - cache_write_tokens) / 1_000_000 * input_token_price`
-- `output_cost = completion_tokens / 1_000_000 * output_token_price`
-- `cache_read_cost = cache_read_tokens / 1_000_000 * cache_read_token_price`
-- `cache_write_cost = cache_write_tokens / 1_000_000 * cache_write_token_price`
+Notes:
 
-说明：
-- `prompt_tokens` 包含 `cache_read_tokens` 和 `cache_write_tokens`，因此需减去后避免重复计费
-- `reasoning_tokens`（思考 tokens）包含在 `completion_tokens` 中，用于单独统计，不单独计费
-- 费用在请求发生时按价格快照记录，因此后续改价不会影响历史账单
+- `prompt_tokens` includes `cache_read_tokens` and `cache_write_tokens`; they are subtracted to avoid double-billing
+- `reasoning_tokens` (for models like o1) are included in `completion_tokens` — tracked separately but not separately priced
+- Prices are snapshotted at request time; subsequent price changes do not affect historical records
+
+### Async Spend Queue
+
+Balance deductions use a `SpendQueue` to avoid concurrent write conflicts in multi-instance deployments. Each request pushes a `SpendDelta` to the queue; a background worker flushes the queue to the database at a configurable interval (`spend_queue_flush_interval`, default 30 s). `UsageRecord`, `BalanceLedger`, and `DailyUsageSummary` are still written immediately.
 
 ## Quota and Access Control
 
-每个 API Key 可以独立配置：
+Each API key can independently configure:
 
-- 当前余额
-- 每日费用上限
-- QPS 限制
-- 可访问逻辑模型列表
-- 请求内容日志开关
-- 响应内容日志开关
-- 启用或禁用状态
+- Current balance
+- Daily spend cap (`daily_budget_limit`) — resets automatically each day
+- QPS limit
+- Allowed logical model list
+- Request content logging toggle
+- Response content logging toggle
+- Enabled/disabled status
 
-其中：
+Enforcement:
 
-- 余额不足会直接拒绝请求
-- 当日累计费用超限会拒绝请求
-- QPS 超限会返回限流错误
+- Balance ≤ 0 → 402 Payment Required
+- Daily budget exceeded → 402 Payment Required
+- QPS exceeded → 429 Too Many Requests
+- Model not in allowed list → 403 Forbidden
 
 ## Persistence Model
 
-系统当前持久化以下核心实体：
-
 ### `api_keys`
 
-保存 API Key 的哈希、额度配置、限流配置和日志策略。
+Stores API key hash, balance, quota configuration, rate limit, and logging policy.
 
 ### `logical_models`
 
-保存对外暴露的逻辑模型名称与状态。
+Stores logical model name, description, routing strategy, and active status.
 
 ### `provider_models`
 
-保存下游 provider 的 endpoint、协议、上游模型名、价格和加密密钥。
+Stores upstream provider endpoints (OpenAI and/or Anthropic), encrypted API key, pricing, cache support, and timeout.
 
 ### `logical_model_routes`
 
-保存逻辑模型与 provider model 的映射、优先级、权重和后备标记。
+Stores the mapping between logical models and provider models, including priority, weight, fallback flag, and route status.
 
 ### `request_logs`
 
-保存每次请求的协议、状态码、延迟、错误信息及可选的请求/响应内容。
+Stores per-request metadata: protocol, call type, status code, latency, upstream request ID, error message, timestamps, and end-user identifier.
+
+### `request_log_bodies`
+
+Optional separate table for request/response content. Only populated when content logging is enabled for the API key. Stored separately to keep `request_logs` lightweight.
 
 ### `usage_records`
 
-保存每次请求的 token 用量、价格快照和费用拆分。
+Stores token usage breakdown (prompt, completion, cache_read, cache_write, reasoning), price snapshots, and cost breakdown per request.
 
 ### `balance_ledgers`
 
-保存充值、扣费、调整和退款等余额流水。
+Immutable transaction log for all balance changes (topup, charge, adjust, refund) with before/after snapshots.
 
 ### `daily_usage_summaries`
 
-保存按 API Key 聚合的日请求量、token 用量和费用。
+Per API key daily aggregates: request count, token counts, and total cost.
 
 ## Security Model
 
-系统中的密钥与认证边界如下：
+| Secret | Storage |
+|---|---|
+| Caller API key | SHA-256 hash only; plaintext never stored |
+| Upstream provider API key | Fernet-encrypted at rest |
+| Admin passwords | Hashed; stored in `admin_users.json` |
+| Admin session | Signed session cookie (`SESSION_SECRET`) |
 
-- 调用方 API Key 只保存哈希，不保存明文
-- 上游 provider API Key 使用应用级加密密文保存
-- 管理后台采用独立管理员用户文件
-- 管理员密码仅保存哈希
-- 后台登录态通过 session cookie 维护
+Required configuration:
 
-加密与会话安全依赖以下配置：
+- `APP_ENCRYPTION_KEY` — Fernet key for upstream API key encryption
+- `SESSION_SECRET` — Secret for admin session cookies
 
-- `APP_ENCRYPTION_KEY`
-- `SESSION_SECRET`
+## API Endpoints
+
+| Method | Path | Protocol | Streaming |
+|---|---|---|---|
+| `GET` | `/v1/models` | OpenAI | — |
+| `POST` | `/v1/chat/completions` | OpenAI | SSE |
+| `POST` | `/anthropic/v1/messages` | Anthropic | streaming |
 
 ## Admin Surface
 
-管理后台提供：
+- Admin login (session-based)
+- API Key: create, edit, top-up, disable
+- Logical Model: create, edit
+- Provider: create, edit, disable
+- Route: create, edit, delete
+- Request logs: list with filters, detail view
+- Billing: ledger, usage records, daily summaries
 
-- 管理员登录
-- API Key 创建、编辑、充值与禁用
-- 逻辑模型创建与编辑
-- Provider 创建、编辑与禁用
-- Route 创建、编辑与删除
-- 请求日志列表与详情
-- 账本、用量记录与日报查看
-
-默认情况下，请求内容和响应内容不落库，仅记录元数据；可按 API Key 单独开启。
+Request and response content are not stored by default; they can be enabled per API key.
 
 ## Deployment Layout
-
-项目当前采用 `src` 布局，核心目录如下：
 
 ```text
 llm-router/
   src/llm_router/
-    api/
-    core/
-    domain/
+    api/           # FastAPI route handlers (openai, anthropic, admin)
+    core/          # Config, database, security
+    domain/        # ORM models, schemas, enums
     services/
-    templates/
-  docs/architecture/
-    llm-router-architecture.md
+      cache/       # DualCache, InMemoryCache, RedisCache, DegradedRouteCache, SpendQueue
+      non_stream_handlers/   # Non-streaming proxy handlers (native + cross-protocol)
+      streaming_handlers/    # Streaming proxy handlers (native + cross-protocol)
+      gateway.py             # Request orchestration and retry logic
+      router.py              # Route resolution and weighted selection
+      protocol_converter.py  # Bidirectional OpenAI ↔ Anthropic conversion
+      billing.py             # Cost computation and recording
+    templates/     # Jinja2 admin UI templates
   docker/
-    local/
-      docker-compose.yaml
-      data/
-    server/
-      docker-compose.yaml
-      init.sql
-      data/
+    local/         # SQLite Compose (zero dependencies)
+    server/        # MySQL + Redis Compose + init.sql
+  migrations/      # Alembic migration scripts
   tests/
   Dockerfile
 ```
 
-Docker 部署结构分为两套：
+## Current Capabilities
 
-- `docker/local`：SQLite 本地部署
-- `docker/server`：MySQL 部署，包含数据库初始化脚本
-
-## Current Boundaries
-
-当前系统边界如下：
-
-- 支持 OpenAI 与 Anthropic 两种协议入口
-- 支持非流式和流式转发
-- 支持同协议路由，不支持跨协议转换
-- 支持基于优先级的路由与故障切换
-- 支持后台管理与基础运维能力
-
-尚未覆盖的能力包括：
-
-- Redis 分布式限流
-- 跨协议请求转换
-- 更复杂的智能路由策略
-- 多租户与细粒度权限系统
-- 复杂报表与离线分析链路
+| Capability | Status |
+|---|---|
+| OpenAI `POST /v1/chat/completions` | Supported |
+| Anthropic `POST /anthropic/v1/messages` | Supported |
+| Non-streaming forwarding | Supported |
+| Streaming forwarding (SSE / Anthropic) | Supported |
+| Same-protocol routing | Supported |
+| Cross-protocol routing (OpenAI ↔ Anthropic) | Supported |
+| Priority-based routing with fallback | Supported |
+| Weighted random traffic distribution | Supported |
+| Degraded route detection and recovery | Supported |
+| Per-key balance, daily budget, QPS control | Supported |
+| Prompt cache billing (read + write) | Supported |
+| Reasoning token tracking | Supported |
+| Async spend queue for concurrent balance updates | Supported |
+| Two-tier cache (In-Memory + Redis) | Supported |
+| Optional table prefix | Supported |
+| Redis distributed rate limiting | Not yet |
+| Multi-tenant / fine-grained RBAC | Not yet |
+| Advanced analytics / offline reporting | Not yet |

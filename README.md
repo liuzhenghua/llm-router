@@ -1,8 +1,15 @@
 # LLM Router
 
-> A lightweight, self-hosted LLM gateway — route OpenAI and Anthropic API calls through logical models with per-key billing, rate limiting, and a built-in admin panel.
+> A lightweight yet production-ready LLM gateway — start with a single `uv run` and SQLite, scale to MySQL + Redis without changing a line of application code.
 
 **Drop-in compatible** with the OpenAI and Anthropic API. Point your existing SDK at `http://your-host/v1` and it just works.
+
+| | Local mode | Server mode |
+|---|---|---|
+| Storage | SQLite (file, zero setup) | MySQL (shared across instances) |
+| Cache | In-memory LRU | In-memory LRU + Redis |
+| Deployment | Single process | Multi-instance / containerized |
+| Dependencies | None | MySQL + Redis |
 
 ---
 
@@ -32,7 +39,7 @@
 - **Prompt cache awareness** — handles `cache_read_tokens` and `cache_write_tokens` so cached tokens are never double-billed
 - **Streaming support** — transparent SSE pass-through for both OpenAI and Anthropic streaming
 - **Audit logging** — optional per-key request/response content capture; metadata always recorded
-- **Two deployment modes** — `local` (SQLite, zero dependencies) or `server` (MySQL + Redis)
+- **Two deployment modes** — `local` (SQLite + in-memory cache, zero external dependencies) for instant startup; `server` (MySQL + Redis) for multi-instance, production-scale deployments — same codebase, just flip `APP_MODE`
 - **Built-in admin panel** — manage keys, providers, routes, and view logs and billing without any extra tooling
 
 ---
