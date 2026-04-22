@@ -28,6 +28,11 @@ async def init_db() -> None:
         await conn.run_sync(Base.metadata.create_all)
 
 
+def table_name(name: str) -> str:
+    """Return the table name with the configured prefix applied."""
+    return f"{settings.table_prefix}{name}"
+
+
 async def get_db() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
         yield session

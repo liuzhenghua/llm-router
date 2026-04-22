@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     # Admin 列表每页数量
     admin_page_size: int = 10
 
+    # Optional table name prefix, e.g. "lr_" → lr_api_keys, lr_request_logs, ...
+    table_prefix: str = ""
+
     @computed_field
     @property
     def effective_database_url(self) -> str:

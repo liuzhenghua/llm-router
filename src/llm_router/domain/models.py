@@ -18,7 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from llm_router.core.database import Base
+from llm_router.core.database import Base, table_name
 
 
 def utcnow() -> datetime:
@@ -36,7 +36,7 @@ class TimestampMixin:
 
 
 class ApiKey(Base, TimestampMixin):
-    __tablename__ = "api_keys"
+    __tablename__ = table_name("api_keys")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
@@ -56,7 +56,7 @@ class ApiKey(Base, TimestampMixin):
 
 
 class LogicalModel(Base, TimestampMixin):
-    __tablename__ = "logical_models"
+    __tablename__ = table_name("logical_models")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
@@ -68,7 +68,7 @@ class LogicalModel(Base, TimestampMixin):
 
 
 class ProviderModel(Base, TimestampMixin):
-    __tablename__ = "provider_models"
+    __tablename__ = table_name("provider_models")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
@@ -88,14 +88,14 @@ class ProviderModel(Base, TimestampMixin):
 
 
 class LogicalModelRoute(Base):
-    __tablename__ = "logical_model_routes"
+    __tablename__ = table_name("logical_model_routes")
     __table_args__ = (
         UniqueConstraint("logical_model_id", "provider_model_id", name="uq_logical_provider_route"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    logical_model_id: Mapped[int] = mapped_column(ForeignKey("logical_models.id", ondelete="CASCADE"))
-    provider_model_id: Mapped[int] = mapped_column(ForeignKey("provider_models.id", ondelete="CASCADE"))
+    logical_model_id: Mapped[int] = mapped_column(ForeignKey(table_name("logical_models") + ".id", ondelete="CASCADE"))
+    provider_model_id: Mapped[int] = mapped_column(ForeignKey(table_name("provider_models") + ".id", ondelete="CASCADE"))
     # 优先级：数值越小越优先，按 priority 分组后按权重分配流量
     priority: Mapped[int] = mapped_column(Integer, default=100)
     # 权重：同组内按权重加权随机分配流量，weight=0 表示不参与路由
@@ -109,13 +109,13 @@ class LogicalModelRoute(Base):
 
 
 class RequestLog(Base):
-    __tablename__ = "request_logs"
+    __tablename__ = table_name("request_logs")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    api_key_id: Mapped[int | None] = mapped_column(ForeignKey("api_keys.id"), nullable=True)
-    logical_model_id: Mapped[int | None] = mapped_column(ForeignKey("logical_models.id"), nullable=True)
-    provider_model_id: Mapped[int | None] = mapped_column(ForeignKey("provider_models.id"), nullable=True)
+    api_key_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("api_keys") + ".id"), nullable=True)
+    logical_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("logical_models") + ".id"), nullable=True)
+    provider_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("provider_models") + ".id"), nullable=True)
     protocol: Mapped[str] = mapped_column(String(32))
     call_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     upstream_request_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
@@ -135,10 +135,10 @@ class RequestLog(Base):
 
 
 class RequestLogBody(Base):
-    __tablename__ = "request_log_bodies"
+    __tablename__ = table_name("request_log_bodies")
 
     request_log_id: Mapped[int] = mapped_column(
-        ForeignKey("request_logs.id", ondelete="CASCADE"), primary_key=True
+        ForeignKey(table_name("request_logs") + ".id", ondelete="CASCADE"), primary_key=True
     )
     request_body: Mapped[str | None] = mapped_column(Text, nullable=True)
     response_body: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -147,9 +147,9 @@ class RequestLogBody(Base):
 
 
 class UsageRecord(Base):
-    __tablename__ = "usage_records"
+    __tablename__ = table_name("usage_records")
 
-    request_log_id: Mapped[int] = mapped_column(ForeignKey("request_logs.id", ondelete="CASCADE"), primary_key=True)
+    request_log_id: Mapped[int] = mapped_column(ForeignKey(table_name("request_logs") + ".id", ondelete="CASCADE"), primary_key=True)
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_read_tokens: Mapped[int] = mapped_column(Integer, default=0)
@@ -171,10 +171,10 @@ class UsageRecord(Base):
 
 
 class BalanceLedger(Base):
-    __tablename__ = "balance_ledgers"
+    __tablename__ = table_name("balance_ledgers")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    api_key_id: Mapped[int] = mapped_column(ForeignKey("api_keys.id", ondelete="CASCADE"))
+    api_key_id: Mapped[int] = mapped_column(ForeignKey(table_name("api_keys") + ".id", ondelete="CASCADE"))
     change_type: Mapped[str] = mapped_column(String(32))
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
     balance_before: Mapped[Decimal] = mapped_column(Numeric(18, 8))
@@ -186,13 +186,13 @@ class BalanceLedger(Base):
 
 
 class DailyUsageSummary(Base):
-    __tablename__ = "daily_usage_summaries"
+    __tablename__ = table_name("daily_usage_summaries")
     __table_args__ = (
         UniqueConstraint("api_key_id", "summary_date", name="uq_api_key_summary_date"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    api_key_id: Mapped[int] = mapped_column(ForeignKey("api_keys.id", ondelete="CASCADE"))
+    api_key_id: Mapped[int] = mapped_column(ForeignKey(table_name("api_keys") + ".id", ondelete="CASCADE"))
     summary_date: Mapped[date] = mapped_column(Date, default=date.today)
     request_count: Mapped[int] = mapped_column(Integer, default=0)
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)

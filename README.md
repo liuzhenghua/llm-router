@@ -1,96 +1,255 @@
-# llm-router
+# LLM Router
 
-一个基于 Python + `uv` 的 LLM 转发路由网关，支持：
+> A lightweight, self-hosted LLM gateway — route OpenAI and Anthropic API calls through logical models with per-key billing, rate limiting, and a built-in admin panel.
 
-- `local` 模式：SQLite，单机低成本启动
-- `server` 模式：MySQL，面向多实例部署
-- OpenAI `POST /v1/chat/completions`
-- Anthropic `POST /v1/messages`
-- 逻辑模型到下游 provider 路由
-- API Key 余额、按天限额、QPS 控制
-- token 用量与费用记录
-- Provider 定价按“每百万 token 单价”配置
-- 请求/响应内容可选记录，默认关闭
-- 管理后台登录与基础配置页面
+**Drop-in compatible** with the OpenAI and Anthropic API. Point your existing SDK at `http://your-host/v1` and it just works.
 
-## 目录
+---
 
-- 架构设计：[llm-router-architecture.md](docs/architecture/llm-router-architecture.md)
-- Compose:
-  - [docker/local/docker-compose.yaml](docker/local/docker-compose.yaml)
-  - [docker/server/docker-compose.yaml](docker/server/docker-compose.yaml)
+## Screenshots
 
-## 项目结构
+### Dashboard — real-time overview of requests, balance, and daily spend
 
-- `src/llm_router`：应用代码，包含 API、核心配置、领域模型、服务和后台模板
-- `docs/architecture`：架构与设计说明
-- `docker/local`：SQLite 本地部署 Compose 和本地数据目录
-- `docker/server`：MySQL 部署 Compose、初始化 SQL 和运行数据目录
-- `tests`：基础测试
+![dashboard](/docs/screenshots/dashboard.png)
 
-## 本地启动
+### Logical Models & Routes — map a model name to one or more backend providers with priority fallback
 
-1. 安装依赖
+![routes](/docs/screenshots/routes.png)
+
+### Request Detail — per-request token breakdown, cost split, latency, and optional full content log
+
+![request detail](/docs/screenshots/request_details.png)
+
+---
+
+## Features
+
+- **Protocol compatibility** — serves OpenAI `POST /v1/chat/completions` and Anthropic `POST /v1/messages`
+- **Logical model routing** — expose a stable model name (e.g. `gpt-4o`) and route it to any number of real backend providers
+- **Priority fallback** — if the top-priority provider fails, the gateway automatically tries the next one
+- **Per-key quota control** — balance, daily spend cap, QPS limit, and allowed-model list per API key
+- **Accurate billing** — per-request cost breakdown: input, output, cache-read, and cache-write, priced at creation time so history is never affected by price changes
+- **Prompt cache awareness** — handles `cache_read_tokens` and `cache_write_tokens` so cached tokens are never double-billed
+- **Streaming support** — transparent SSE pass-through for both OpenAI and Anthropic streaming
+- **Audit logging** — optional per-key request/response content capture; metadata always recorded
+- **Two deployment modes** — `local` (SQLite, zero dependencies) or `server` (MySQL + Redis)
+- **Built-in admin panel** — manage keys, providers, routes, and view logs and billing without any extra tooling
+
+---
+
+## Architecture
+
+### System Overview
+
+```mermaid
+graph TB
+    ClientA[OpenAI SDK / App] -->|POST /v1/chat/completions| GW[llm-router Gateway]
+    ClientB[Anthropic SDK / App] -->|POST /v1/messages| GW
+
+    GW --> Auth[API Key Validation\nBalance · Daily Limit · QPS]
+    Auth --> Router[Route Selector\nPriority · Protocol Filter]
+
+    Router --> P1[Provider 1\nopenai protocol]
+    Router --> P2[Provider 2\nanthropic protocol]
+    Router --> P3[Provider N\ncustom endpoint]
+
+    GW --> Cache[Dual Cache\nIn-Memory LRU + Redis]
+    GW --> DB[(SQLite / MySQL\nLogs · Billing · Config)]
+```
+
+### Request Lifecycle
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant G as Gateway
+    participant A as Auth & Quota
+    participant R as Router
+    participant P as Upstream Provider
+    participant DB as Database
+
+    C->>G: API request (OpenAI or Anthropic format)
+    G->>A: Validate API Key (cache-first)
+    A->>A: Check balance, daily limit, QPS, model access
+    G->>R: Lookup routes for logical model
+    R->>P: Forward to highest-priority provider
+    alt success
+        P-->>G: Response / SSE stream
+        G->>DB: Write request log + usage record + billing
+        G-->>C: Return response
+    else provider failure
+        R->>P: Retry next provider by priority
+        P-->>G: Response or final failure
+        G->>DB: Write failed request log
+        G-->>C: Return error
+    end
+```
+
+### Dual Cache (In-Memory + Redis)
+
+```mermaid
+graph LR
+    Request --> L1[In-Memory LRU]
+    L1 -->|miss| L2[Redis Cache]
+    L2 -->|miss| DB[(Database)]
+    L2 -->|hit + backfill| L1
+    DB -->|result| L2
+    DB -->|result| L1
+```
+
+The cache stores API key metadata and route configurations. Redis is optional — if unreachable, the gateway falls back to in-memory transparently.
+
+---
+
+## Quick Start
+
+### 1. Install dependencies
 
 ```bash
 uv sync
 ```
 
-2. 复制环境变量
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
+# Edit .env — set APP_ENCRYPTION_KEY and SESSION_SECRET at minimum
 ```
 
-3. 初始化管理员
+### 3. Create an admin account
 
 ```bash
 uv run llm-router init-admin --username admin --password your-password
 ```
 
-4. 启动服务
+### 4. Start the server
 
 ```bash
 uv run uvicorn llm_router.main:app --reload
 ```
 
-也可以直接运行模块，适合本地打断点调试：
+For breakpoint debugging:
 
 ```bash
 uv run python -m llm_router.main
 ```
 
-5. 打开后台
+### 5. Open the admin panel
 
-- [http://127.0.0.1:8000/admin/login](http://127.0.0.1:8000/admin/login)
+[http://127.0.0.1:8000/admin/login](http://127.0.0.1:8000/admin/login)
+
+---
 
 ## Docker
 
-本地 SQLite 模式：
+### Local mode (SQLite — zero dependencies)
 
 ```bash
 cd docker/local
 docker compose up --build
 ```
 
-MySQL server 模式：
+Then create an admin account:
+
+```bash
+docker compose exec llm-router uv run llm-router init-admin --username admin --password your-password
+```
+
+### Server mode (MySQL + Redis)
 
 ```bash
 cd docker/server
 docker compose up --build
 ```
 
-## 当前实现说明
+Then create an admin account:
 
-- 流式响应第一版已支持 OpenAI SSE 与 Anthropic streaming 透传
-- OpenAI 流式请求会自动附加 `stream_options.include_usage=true` 以便获取 usage
-- Anthropic 流式 usage 依赖上游事件中返回的 usage 字段
-- 当前路由选择按优先级进行，并过滤协议类型
-- Provider 单价字段使用“每百万 token 单价”，费用按 `tokens / 1_000_000 * price` 计算
-- 后台已支持手动充值、Provider 单价查看、请求日志筛选和最近账本/日报汇总查看
+```bash
+docker compose exec llm-router uv run llm-router init-admin --username admin --password your-password
+```
 
-## Debug
+> Tables are created automatically on first startup via `Base.metadata.create_all`. No manual migration step needed.
 
-- 命令行调试：`uv run python -m llm_router.main`
-- 断点调试时，入口函数是 [main.py](/Users/liuzhenghua/Projects/llm-router/src/llm_router/main.py:1) 里的 `main()`
-- 如果你想要自动重载，继续用 `uv run uvicorn llm_router.main:app --reload`
+---
+
+## Configuration
+
+Key environment variables (see `.env.example` for the full list):
+
+| Variable | Description |
+|---|---|
+| `APP_MODE` | `local` (SQLite) or `server` (MySQL) |
+| `APP_ENCRYPTION_KEY` | Fernet key used to encrypt upstream provider API keys |
+| `SESSION_SECRET` | Secret for admin session cookies |
+| `DATABASE_URL` | SQLAlchemy DB URL (auto-set in Docker Compose) |
+| `REDIS_URL` | Redis URL — optional, only used in `server` mode |
+| `TABLE_PREFIX` | Optional prefix for all table names, e.g. `lr_` → `lr_api_keys` |
+| `LOG_LEVEL` | Logging verbosity |
+
+---
+
+## Core Concepts
+
+### Logical Model
+
+The model name your clients send (e.g. `gpt-4o`, `claude-sonnet`, `my-internal-model`). Clients never need to know which actual provider is behind it.
+
+### Provider Model
+
+A concrete upstream endpoint — provider type, protocol (`openai` or `anthropic`), model name, API key, and per-million-token pricing.
+
+### Route
+
+A mapping from a logical model to one or more provider models, each with a priority. The gateway selects by priority and falls back automatically on failure.
+
+---
+
+## API Compatibility
+
+| Endpoint | Protocol | Streaming |
+|---|---|---|
+| `POST /v1/chat/completions` | OpenAI | ✅ SSE |
+| `POST /v1/messages` | Anthropic | ✅ streaming |
+
+Usage with the OpenAI Python SDK:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://your-host/v1",
+    api_key="your-llm-router-key",
+)
+
+response = client.chat.completions.create(
+    model="gpt-4o",   # your logical model name
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+---
+
+## Project Structure
+
+```
+llm-router/
+  src/llm_router/
+    api/          # FastAPI route handlers (openai, anthropic, admin)
+    core/         # Config, database, security
+    domain/       # ORM models, schemas, enums
+    services/     # Gateway, router, billing, cache, streaming handlers
+    templates/    # Jinja2 admin UI templates
+  docker/
+    local/        # SQLite Compose
+    server/       # MySQL Compose + init.sql
+  docs/
+    architecture/ # Architecture documentation
+  migrations/     # Alembic migrations
+  tests/
+```
+
+---
+
+## License
+
+MIT
