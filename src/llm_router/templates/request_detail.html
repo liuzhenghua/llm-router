@@ -1,65 +1,149 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-8 flex items-center justify-between">
-  <div>
+
+<!-- ── Header ── -->
+<div class="mb-6 flex items-start justify-between gap-4">
+  <div class="min-w-0">
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">请求详情</p>
-    <h1 class="mt-2 text-2xl font-bold">{{ log.request_id }}</h1>
-    <p class="mt-2 text-xs text-slate-500">协议={{ log.protocol }} | 状态码={{ log.status_code }} | 是否成功={{ log.success }}</p>
+    <h1 class="mt-1 truncate text-xl font-bold text-slate-900">{{ log.request_id }}</h1>
+    <div class="mt-2 flex flex-wrap gap-2">
+      {% if log.success %}
+      <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">成功</span>
+      {% else %}
+      <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">失败</span>
+      {% endif %}
+      <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ log.status_code }}</span>
+      <span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">{{ log.protocol or "-" }}</span>
+      {% if log.latency_ms %}
+      <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ log.latency_ms }} ms</span>
+      {% endif %}
+      <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">{{ log.created_at }}</span>
+    </div>
   </div>
-  <a href="/admin/requests" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回请求列表</a>
+  <a href="/admin/requests" class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回列表</a>
 </div>
 
-<div class="grid gap-6 lg:grid-cols-2">
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">基础信息</h2>
-    <div class="mt-4 space-y-2 text-sm text-slate-600">
-      <div>API Key: {{ log.api_key_name or "-" }}</div>
-      <div>逻辑模型: {{ log.logical_model_name or "-" }}</div>
-      <div>供应商模型: {{ log.provider_model_name or "-" }}</div>
-      <div>请求协议: {{ log.protocol or "-" }}</div>
-      <div>请求类型: {{ log.call_type or "-" }}</div>
-      <div>供应商协议: {{ log.provider_model_protocol or "-" }}</div>
-      <div>上游请求 ID: {{ log.upstream_request_id or "-" }}</div>
-      <div>延迟(ms): {{ log.latency_ms or "-" }}</div>
-      <div>创建时间: {{ log.created_at }}</div>
+<!-- ── Body: left info panel + right code tabs ── -->
+<div class="flex gap-6 items-start">
+
+  <!-- Left: metadata + usage -->
+  <div class="w-64 shrink-0 space-y-4">
+
+    <!-- 基础信息 -->
+    <div class="rounded-2xl bg-white p-4 shadow-sm">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">基础信息</p>
+      <dl class="space-y-2">
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">API Key</dt>
+          <dd class="truncate text-xs font-medium text-slate-800">{{ log.api_key_name or "-" }}</dd>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">逻辑模型</dt>
+          <dd class="truncate text-xs font-medium text-slate-800">{{ log.logical_model_name or "-" }}</dd>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">供应商模型</dt>
+          <dd class="truncate text-xs font-medium text-slate-800">{{ log.provider_model_name or "-" }}</dd>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">请求类型</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.call_type or "-" }}</dd>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">供应商协议</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.provider_model_protocol or "-" }}</dd>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">上游请求 ID</dt>
+          <dd class="truncate text-xs font-medium text-slate-800">{{ log.upstream_request_id or "-" }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- 用量与费用 -->
+    <div class="rounded-2xl bg-white p-4 shadow-sm">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">用量与费用</p>
+      {% if log.usage_record %}
+      <dl class="space-y-2">
+        <div class="flex justify-between">
+          <dt class="text-xs text-slate-400">输入</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.prompt_tokens }} tok</dd>
+        </div>
+        <div class="flex justify-between">
+          <dt class="text-xs text-slate-400">输出</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.completion_tokens }} tok</dd>
+        </div>
+        {% if log.usage_record.reasoning_tokens %}
+        <div class="flex justify-between">
+          <dt class="text-xs text-slate-400">思考</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.reasoning_tokens }} tok</dd>
+        </div>
+        {% endif %}
+        {% if log.usage_record.cache_read_tokens %}
+        <div class="flex justify-between">
+          <dt class="text-xs text-slate-400">缓存读取</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.cache_read_tokens }} tok</dd>
+        </div>
+        {% endif %}
+        {% if log.usage_record.cache_write_tokens %}
+        <div class="flex justify-between">
+          <dt class="text-xs text-slate-400">缓存写入</dt>
+          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.cache_write_tokens }} tok</dd>
+        </div>
+        {% endif %}
+        <div class="border-t border-slate-100 pt-2 space-y-1.5">
+          <div class="flex justify-between">
+            <dt class="text-xs text-slate-400">输入成本</dt>
+            <dd class="text-xs text-slate-800">{{ log.usage_record.cost_input|format_decimal }}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-xs text-slate-400">输出成本</dt>
+            <dd class="text-xs text-slate-800">{{ log.usage_record.cost_output|format_decimal }}</dd>
+          </div>
+          {% if log.usage_record.cost_cache_read %}
+          <div class="flex justify-between">
+            <dt class="text-xs text-slate-400">缓存读成本</dt>
+            <dd class="text-xs text-slate-800">{{ log.usage_record.cost_cache_read|format_decimal }}</dd>
+          </div>
+          {% endif %}
+          {% if log.usage_record.cost_cache_write %}
+          <div class="flex justify-between">
+            <dt class="text-xs text-slate-400">缓存写成本</dt>
+            <dd class="text-xs text-slate-800">{{ log.usage_record.cost_cache_write|format_decimal }}</dd>
+          </div>
+          {% endif %}
+          <div class="flex justify-between border-t border-slate-100 pt-1.5">
+            <dt class="text-xs font-semibold text-slate-700">总成本</dt>
+            <dd class="text-xs font-semibold text-slate-900">{{ log.usage_record.cost_total|format_decimal }}</dd>
+          </div>
+        </div>
+      </dl>
+      {% else %}
+      <p class="text-xs text-slate-400">暂无用量记录</p>
+      {% endif %}
     </div>
   </div>
 
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <h2 class="text-xl font-semibold">用量与费用</h2>
-    {% if log.usage_record %}
-    <div class="mt-4 space-y-2 text-sm text-slate-600">
-      <div>输入 Tokens: {{ log.usage_record.prompt_tokens }}</div>
-      <div>输出 Tokens: {{ log.usage_record.completion_tokens }}</div>
-      <div>思考 Tokens: {{ log.usage_record.reasoning_tokens }}</div>
-      <div>缓存读取 Tokens: {{ log.usage_record.cache_read_tokens }}</div>
-      <div>缓存写入 Tokens: {{ log.usage_record.cache_write_tokens }}</div>
-      <div>输入成本: {{ log.usage_record.cost_input|format_decimal }}</div>
-      <div>输出成本: {{ log.usage_record.cost_output|format_decimal }}</div>
-      <div>缓存读取成本: {{ log.usage_record.cost_cache_read|format_decimal }}</div>
-      <div>缓存写入成本: {{ log.usage_record.cost_cache_write|format_decimal }}</div>
-      <div class="font-semibold text-slate-900">总成本: {{ log.usage_record.cost_total|format_decimal }}</div>
+  <!-- Right: tabbed request / response -->
+  <div class="min-w-0 flex-1">
+    <div class="code-tabs rounded-xl overflow-hidden" data-group="req-res">
+      <div class="flex items-center bg-slate-900 border-b border-slate-700">
+        <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="req-body-panel" data-group="req-res">请求体</button>
+        <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="res-body-panel" data-group="req-res">响应体 / 错误</button>
+        <button class="copy-btn ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="req-res">
+          <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </button>
+      </div>
+      <div class="tab-panel hidden" id="req-body-panel">
+        <pre id="request-body-pre" class="overflow-x-auto overflow-y-auto max-h-[70vh] bg-slate-950 p-4 text-xs text-slate-100">{{ log.request_body or "未记录请求内容" }}</pre>
+      </div>
+      <div class="tab-panel hidden" id="res-body-panel">
+        <pre id="response-body-pre" class="overflow-x-auto overflow-y-auto max-h-[70vh] bg-slate-950 p-4 text-xs text-slate-100">{{ log.response_body or log.error_message or "未记录响应内容" }}</pre>
+      </div>
     </div>
-    {% else %}
-    <p class="mt-4 text-sm text-slate-500">暂无用量记录。</p>
-    {% endif %}
   </div>
 
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold">请求体</h2>
-      <button onclick="copyPre('request-body-pre', this)" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">复制</button>
-    </div>
-    <pre id="request-body-pre" class="mt-4 overflow-x-auto overflow-y-auto max-h-96 rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.request_body or "未记录请求内容" }}</pre>
-  </div>
-
-  <div class="rounded-3xl bg-white p-6 shadow-sm">
-    <div class="flex items-center justify-between">
-      <h2 class="text-xl font-semibold">响应体 / 错误</h2>
-      <button onclick="copyPre('response-body-pre', this)" class="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition">复制</button>
-    </div>
-    <pre id="response-body-pre" class="mt-4 overflow-x-auto overflow-y-auto max-h-96 rounded-2xl bg-slate-950 p-4 text-xs text-slate-100">{{ log.response_body or log.error_message or "未记录响应内容" }}</pre>
-  </div>
 </div>
 
 <script>
@@ -82,22 +166,52 @@ document.addEventListener('DOMContentLoaded', () => {
   formatJsonInPre('request-body-pre');
   formatJsonInPre('response-body-pre');
 
-  window.copyPre = function(elementId, btn) {
-    const pre = document.getElementById(elementId);
-    if (!pre) return;
-    navigator.clipboard.writeText(pre.textContent).then(() => {
-      const original = btn.textContent;
-      btn.textContent = '已复制!';
-      btn.disabled = true;
-      setTimeout(() => {
-        btn.textContent = original;
-        btn.disabled = false;
-      }, 2000);
-    }).catch(() => {
-      btn.textContent = '失败';
-      setTimeout(() => { btn.textContent = '复制'; }, 2000);
+  // ── Tab switcher ──────────────────────────────────────────────
+  const ACTIVE_BTN   = ['text-white', 'border-b-2', 'border-white'];
+  const INACTIVE_BTN = ['text-slate-300'];
+
+  function activateTab(group, tabId) {
+    document.querySelectorAll('.tab-btn[data-group="' + group + '"]').forEach(btn => {
+      const isActive = btn.dataset.tab === tabId;
+      ACTIVE_BTN.forEach(c   => btn.classList.toggle(c, isActive));
+      INACTIVE_BTN.forEach(c => btn.classList.toggle(c, !isActive));
     });
-  };
+    const container = document.querySelector('.code-tabs[data-group="' + group + '"]');
+    if (!container) return;
+    container.querySelectorAll('.tab-panel').forEach(panel => {
+      panel.classList.toggle('hidden', panel.id !== tabId);
+    });
+  }
+
+  document.querySelectorAll('.code-tabs').forEach(container => {
+    const group = container.dataset.group;
+    const buttons = container.querySelectorAll('.tab-btn');
+    buttons.forEach((btn, i) => {
+      btn.addEventListener('click', () => activateTab(group, btn.dataset.tab));
+      if (i === 0) activateTab(group, btn.dataset.tab);
+    });
+  });
+
+  // ── Copy button ───────────────────────────────────────────────
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = btn.dataset.group;
+      const container = document.querySelector('.code-tabs[data-group="' + group + '"]');
+      const activePanel = container && container.querySelector('.tab-panel:not(.hidden)');
+      if (!activePanel) return;
+      const text = (activePanel.innerText || activePanel.textContent || '').trim();
+      navigator.clipboard.writeText(text).then(() => {
+        const copyIcon  = btn.querySelector('.copy-icon');
+        const checkIcon = btn.querySelector('.check-icon');
+        copyIcon.classList.add('hidden');
+        checkIcon.classList.remove('hidden');
+        setTimeout(() => {
+          copyIcon.classList.remove('hidden');
+          checkIcon.classList.add('hidden');
+        }, 1800);
+      });
+    });
+  });
 });
 </script>
 {% endblock %}

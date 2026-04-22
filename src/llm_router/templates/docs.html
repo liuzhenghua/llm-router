@@ -187,18 +187,27 @@
 
         <div class="mb-3">
           <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">环境变量配置</p>
-          <div class="rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6">
-            <span class="text-slate-400"># 将 base_url 替换为浏览器地址栏中显示的地址</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_BASE_URL</span>=<span class="text-emerald-400">{{ base_url }}/anthropic</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_AUTH_TOKEN</span>=<span class="text-emerald-400">${YOUR_MOONSHOT_API_KEY}</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_OPUS_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_SONNET_MODEL</span>=<span class="text-emerald-400">kimi-k2.5</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_HAIKU_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">CLAUDE_CODE_SUBAGENT_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-            <span class="text-sky-300">export</span> <span class="text-amber-300">ENABLE_TOOL_SEARCH</span>=<span class="text-emerald-400">false</span><br>
-            <span class="text-slate-400"># 启动 Claude Code</span><br>
-            claude
+          <div class="rounded-xl overflow-hidden">
+            <div class="flex items-center bg-slate-900 border-b border-slate-700 px-2 py-1">
+              <span class="px-2 py-1 text-xs font-medium text-slate-400">Shell</span>
+              <button class="copy-btn-block ml-auto mr-1 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-block="claude-code-env">
+                <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </button>
+            </div>
+            <div id="claude-code-env" class="bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6">
+              <span class="text-slate-400"># 将 base_url 替换为浏览器地址栏中显示的地址</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_BASE_URL</span>=<span class="text-emerald-400">{{ base_url }}/anthropic</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_AUTH_TOKEN</span>=<span class="text-emerald-400">${YOUR_MOONSHOT_API_KEY}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_OPUS_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_SONNET_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_HAIKU_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">CLAUDE_CODE_SUBAGENT_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ENABLE_TOOL_SEARCH</span>=<span class="text-emerald-400">false</span><br>
+              <span class="text-slate-400"># 启动 Claude Code</span><br>
+              claude
+            </div>
           </div>
         </div>
 
@@ -371,7 +380,27 @@
       });
     });
 
-    // Copy button
+    // Copy button — block variant (single code block, no tabs)
+    document.querySelectorAll('.copy-btn-block').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var blockId = btn.dataset.block;
+        var block = blockId && document.getElementById(blockId);
+        if (!block) return;
+        var text = (block.innerText || block.textContent || '').trim();
+        navigator.clipboard.writeText(text).then(function() {
+          var copyIcon  = btn.querySelector('.copy-icon');
+          var checkIcon = btn.querySelector('.check-icon');
+          copyIcon.classList.add('hidden');
+          checkIcon.classList.remove('hidden');
+          setTimeout(function() {
+            copyIcon.classList.remove('hidden');
+            checkIcon.classList.add('hidden');
+          }, 1800);
+        });
+      });
+    });
+
+    // Copy button — tab groups
     document.querySelectorAll('.copy-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var group = btn.dataset.group;
