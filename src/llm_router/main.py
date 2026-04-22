@@ -75,7 +75,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # === 初始化缓存组件 ===
     in_memory_cache = InMemoryCache(
         max_size=10000,
-        default_ttl=settings.cache_ttl,
+        default_ttl=settings.default_in_memory_ttl,
     )
 
     redis_client = None
@@ -86,7 +86,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             port=settings.redis_port,
             db=settings.redis_db,
             password=settings.redis_password,
-            default_ttl=settings.cache_ttl,
+            default_ttl=settings.default_redis_ttl,
         )
         await _redis_cache.connect()
         redis_client = _redis_cache._client  # 用于 spend_queue 和 lock_manager
@@ -96,9 +96,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         settings=settings,
         in_memory_cache=in_memory_cache,
         redis_cache=_redis_cache,
-        api_key_ttl=settings.cache_api_key_ttl,
-        route_ttl=settings.cache_route_ttl,
-        provider_ttl=settings.cache_provider_ttl,
+        in_memory_ttl=settings.default_in_memory_ttl,
+        redis_ttl=settings.default_redis_ttl,
     )
     set_dual_cache(_dual_cache)
 

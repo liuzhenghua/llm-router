@@ -52,10 +52,8 @@ class Settings(BaseSettings):
     redis_password: str | None = None
 
     # 缓存 TTL 配置（秒）
-    cache_ttl: int = 60
-    cache_api_key_ttl: int = 60
-    cache_route_ttl: int = 60
-    cache_provider_ttl: int = 60
+    default_in_memory_ttl: int = 60    # 内存缓存 TTL
+    default_redis_ttl: int = 3600      # Redis 缓存 TTL
 
     # 增量队列刷新间隔（秒）
     spend_queue_flush_interval: int = 30
