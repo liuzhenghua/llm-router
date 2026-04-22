@@ -146,6 +146,7 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
     daily_summaries = (await session.execute(select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(8))).scalars().all()
     total_balance = sum((Decimal(item.balance) for item in api_keys), Decimal("0"))
     total_daily_spend = sum((Decimal(item.daily_spend_amount) for item in api_keys), Decimal("0"))
+    api_key_name_map = {key.id: key.name for key in api_keys}
     return _render_admin(
         request,
         "dashboard.html",
@@ -154,8 +155,24 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
             "logical_models": logical_models,
             "provider_models": provider_models,
             "recent_logs": recent_logs,
-            "ledgers": ledgers,
-            "daily_summaries": daily_summaries,
+            "ledgers": [
+                {
+                    "change_type": item.change_type,
+                    "amount": item.amount,
+                    "api_key_id": item.api_key_id,
+                    "api_key_name": api_key_name_map.get(item.api_key_id, f"#{item.api_key_id}"),
+                }
+                for item in ledgers
+            ],
+            "daily_summaries": [
+                {
+                    "summary_date": item.summary_date,
+                    "api_key_id": item.api_key_id,
+                    "api_key_name": api_key_name_map.get(item.api_key_id, f"#{item.api_key_id}"),
+                    "cost_total": item.cost_total,
+                }
+                for item in daily_summaries
+            ],
             "total_balance": total_balance,
             "total_daily_spend": total_daily_spend,
         },
@@ -860,12 +877,15 @@ async def billing_page(
         summary_stmt = summary_stmt.where(DailyUsageSummary.api_key_id == api_key_id)
         usage_stmt = usage_stmt.join(RequestLog, UsageRecord.request_log_id == RequestLog.id).where(RequestLog.api_key_id == api_key_id)
 
+    api_key_map = {key.id: key.name for key in api_keys_result}
+
     ledgers_result = (await session.execute(ledger_stmt)).scalars().all()
     ledgers = [
         {
             "change_type": item.change_type,
             "amount": str(item.amount),
             "api_key_id": item.api_key_id,
+            "api_key_name": api_key_map.get(item.api_key_id, f"#{item.api_key_id}"),
             "balance_before": str(item.balance_before),
             "balance_after": str(item.balance_after),
             "remark": item.remark,
@@ -890,6 +910,7 @@ async def billing_page(
     summaries = [
         {
             "api_key_id": item.api_key_id,
+            "api_key_name": api_key_map.get(item.api_key_id, f"#{item.api_key_id}"),
             "summary_date": item.summary_date.isoformat(),
             "request_count": item.request_count,
             "cost_total": str(item.cost_total),

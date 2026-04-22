@@ -121,7 +121,7 @@
               {% endif %}
             </td>
             <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">{{ "%.4f"|format(item.amount) }}</td>
-            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_id }}</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_name }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -148,7 +148,7 @@
           {% for item in daily_summaries %}
           <tr class="bg-white border-b">
             <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">{{ item.summary_date }}</td>
-            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_id }}</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_name }}</td>
             <td class="px-2 py-2 text-xs whitespace-nowrap">{{ "%.4f"|format(item.cost_total) }}</td>
           </tr>
           {% endfor %}

@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tableContainerId: 'ledgers-table-container',
     paginationContainerId: 'ledgers-pagination-container',
     noDataText: '没有找到相关账本。',
-    headers: ['类型', '金额', 'API Key ID', '变动前', '变动后', '备注'],
+    headers: ['类型', '金额', 'API Key', '变动前', '变动后', '备注'],
     filterFn: (item, term) => {
       const changeType = document.getElementById('ledgers-change-type').value;
       if (changeType && item.change_type !== changeType) return false;
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
           : `<span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">${item.change_type}</span>`
       }</td>
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.amount}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_id}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_name || item.api_key_id}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance_before}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance_after}</td>
       <td class="px-2 py-2 text-xs">${item.remark || '-'}</td>
@@ -209,10 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
     tableContainerId: 'summaries-table-container',
     paginationContainerId: 'summaries-pagination-container',
     noDataText: '没有找到相关日报。',
-    headers: ['API Key ID', '日期', '请求数', '总费用', 'Tokens (P/C/R)'],
-    filterFn: (item, term) => String(item.api_key_id).includes(term) || item.summary_date.includes(term),
+    headers: ['API Key', '日期', '请求数', '总费用', 'Tokens (P/C/R)'],
+    filterFn: (item, term) => (item.api_key_name || String(item.api_key_id)).toLowerCase().includes(term) || item.summary_date.includes(term),
     rowFn: item => `
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_id}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_name || item.api_key_id}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.summary_date}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.request_count}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.cost_total}</td>
