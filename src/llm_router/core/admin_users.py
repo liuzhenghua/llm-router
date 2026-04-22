@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import func, inspect, select
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.schema import CreateTable
+from sqlalchemy.schema import CreateTable, CreateIndex
 
 from llm_router.core.security import hash_password, verify_password
 from llm_router.domain.models import AdminUser
@@ -77,4 +77,10 @@ class AdminUserService:
         for table in Base.metadata.sorted_tables:
             ddl = str(CreateTable(table).compile(dialect=d)).strip()
             parts.append(ddl + ";")
+            # CreateTable only emits PRIMARY KEY and UNIQUE inline; emit
+            # separate CREATE INDEX statements for every non-unique index.
+            for index in sorted(table.indexes, key=lambda i: i.name or ""):
+                if not index.unique:
+                    idx_ddl = str(CreateIndex(index).compile(dialect=d)).strip()
+                    parts.append(idx_ddl + ";")
         return "\n\n".join(parts)
