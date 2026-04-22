@@ -37,16 +37,16 @@ class SpendDeltaQueue:
     2. server 模式：Redis ZSET 队列，批量消费
     """
 
-    def __init__(self, is_server_mode: bool, redis_client: redis.Redis | None = None):
-        self._is_server_mode = is_server_mode
+    def __init__(self, redis_enabled: bool, redis_client: redis.Redis | None = None):
+        self._redis_enabled = redis_enabled
         self._redis = redis_client
         self._local_queue: asyncio.Queue[SpendDelta] | None = None
-        if not is_server_mode:
+        if not redis_enabled:
             self._local_queue = asyncio.Queue()
 
     async def push(self, delta: SpendDelta) -> None:
         """推入增量"""
-        if self._is_server_mode and self._redis:
+        if self._redis_enabled and self._redis:
             # Redis ZSET: score=timestamp, member=json
             member = json.dumps({
                 "api_key_id": delta.api_key_id,
@@ -63,7 +63,7 @@ class SpendDeltaQueue:
         """批量取出增量"""
         deltas: list[SpendDelta] = []
 
-        if self._is_server_mode and self._redis:
+        if self._redis_enabled and self._redis:
             # 取出最早的 N 条
             members = await self._redis.zrange(QUEUE_KEY, 0, batch_size - 1)
             for member in members:
@@ -91,7 +91,7 @@ class SpendDeltaQueue:
 
     async def size(self) -> int:
         """队列大小"""
-        if self._is_server_mode and self._redis:
+        if self._redis_enabled and self._redis:
             return await self._redis.zcard(QUEUE_KEY)
         elif self._local_queue:
             return self._local_queue.qsize()

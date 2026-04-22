@@ -4,7 +4,6 @@ services:
       context: ../..
       dockerfile: Dockerfile
     environment:
-      APP_MODE: local
       HOST: 0.0.0.0
       PORT: 8000
       SESSION_SECRET: local-session-secret

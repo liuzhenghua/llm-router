@@ -19,7 +19,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from llm_router.api import admin, anthropic, openai
 from llm_router.core.admin_users import AdminUserStore
-from llm_router.core.config import AppMode, get_settings
+from llm_router.core.config import get_settings
 from llm_router.core.database import SessionLocal, init_db
 from llm_router.services.cache.db_writer import DbSpendWriter, set_db_writer
 from llm_router.services.cache.dual_cache import DualCache, set_dual_cache
@@ -79,8 +79,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     )
 
     redis_client = None
-    if settings.app_mode == AppMode.SERVER:
-        # Server 模式：初始化 Redis 缓存
+    if settings.redis_enabled:
+        # Redis 模式：初始化 Redis 缓存
         _redis_cache = RedisCache(
             host=settings.redis_host,
             port=settings.redis_port,
@@ -103,13 +103,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
     # 初始化增量队列
     _spend_queue = SpendDeltaQueue(
-        is_server_mode=settings.app_mode == AppMode.SERVER,
+        redis_enabled=settings.redis_enabled,
         redis_client=redis_client,
     )
     set_spend_queue(_spend_queue)
 
-    # 初始化 Redis 锁管理器（server 模式）
-    if settings.app_mode == AppMode.SERVER and redis_client:
+    # 初始化 Redis 锁管理器
+    if settings.redis_enabled and redis_client:
         lock_manager = RedisLockManager(redis_client)
         set_lock_manager(lock_manager)
 
@@ -117,7 +117,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     _db_writer = DbSpendWriter(
         spend_queue=_spend_queue,
         redis_client=redis_client,
-        is_server_mode=settings.app_mode == AppMode.SERVER,
+        redis_enabled=settings.redis_enabled,
         flush_interval=settings.spend_queue_flush_interval,
     )
     set_db_writer(_db_writer)
@@ -130,7 +130,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     )
     logger.info("Degraded route recovery task started")
 
-    logger.info(f"Cache system initialized (mode: {settings.app_mode.value})")
+    logger.info(f"Cache system initialized (redis_enabled={settings.redis_enabled}, use_mysql={settings.use_mysql})")
 
     yield
 
@@ -179,7 +179,7 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz")
     async def healthz():
-        return {"status": "ok", "mode": settings.app_mode}
+        return {"status": "ok", "redis_enabled": settings.redis_enabled, "use_mysql": settings.use_mysql}
 
     @app.get("/")
     async def root():

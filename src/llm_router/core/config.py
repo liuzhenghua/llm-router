@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
@@ -12,11 +11,6 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 DATA_DIR = BASE_DIR / "data"
 
 
-class AppMode(StrEnum):
-    LOCAL = "local"
-    SERVER = "server"
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),
@@ -25,10 +19,14 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "llm-router"
-    app_mode: AppMode = AppMode.LOCAL
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
+
+    # Set to True to enable Redis cache + Redis queue + distributed lock
+    redis_enabled: bool = False
+    # Set to True to use MySQL instead of SQLite (only used when database_url is not set)
+    use_mysql: bool = False
 
     database_url: str | None = None
     default_request_logging_enabled: bool = False
@@ -66,7 +64,7 @@ class Settings(BaseSettings):
     def effective_database_url(self) -> str:
         if self.database_url:
             return self.database_url
-        if self.app_mode == AppMode.SERVER:
+        if self.use_mysql:
             return (
                 f"mysql+asyncmy://{self.mysql_user}:{self.mysql_password}"
                 f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"

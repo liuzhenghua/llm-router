@@ -32,7 +32,8 @@ services:
       - mysql
       - redis
     environment:
-      APP_MODE: server
+      REDIS_ENABLED: "true"
+      USE_MYSQL: "true"
       HOST: 0.0.0.0
       PORT: 8000
       SESSION_SECRET: server-session-secret

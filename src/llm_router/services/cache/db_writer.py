@@ -31,8 +31,8 @@ class DbSpendWriter:
     DB 消费写入器：定期从增量队列消费并写入 DB
 
     设计要点：
-    1. server 模式：使用 Redis 分布式锁，确保只有一个 Pod 执行
-    2. local 模式：直接定时写入
+    1. redis 模式：使用 Redis 分布式锁，确保只有一个 Pod 执行
+    2. 本地模式：直接定时写入
     3. 使用 SQLAlchemy UPDATE ... SET balance = balance + delta（原子操作）
     """
 
@@ -40,12 +40,12 @@ class DbSpendWriter:
         self,
         spend_queue: SpendDeltaQueue,
         redis_client: redis.Redis | None = None,
-        is_server_mode: bool = False,
+        redis_enabled: bool = False,
         flush_interval: int = 30,
     ):
         self._queue = spend_queue
         self._redis = redis_client
-        self._is_server_mode = is_server_mode
+        self._redis_enabled = redis_enabled
         self._flush_interval = flush_interval
         self._lock_manager = RedisLockManager(redis_client) if redis_client else None
         self._task: asyncio.Task | None = None
@@ -81,8 +81,8 @@ class DbSpendWriter:
 
     async def _flush(self) -> None:
         """执行一次刷新"""
-        # server 模式：先抢锁
-        if self._is_server_mode and self._lock_manager:
+        # redis 模式：先抢锁
+        if self._redis_enabled and self._lock_manager:
             acquired = await self._lock_manager.acquire(LOCK_KEY, ttl=LOCK_TTL)
             if not acquired:
                 logger.debug("Lock not acquired, skipping this flush cycle")
@@ -105,7 +105,7 @@ class DbSpendWriter:
                 logger.info(f"Flushed {total_processed} spend deltas to DB")
 
         finally:
-            if self._is_server_mode and self._lock_manager:
+            if self._redis_enabled and self._lock_manager:
                 await self._lock_manager.release(LOCK_KEY)
                 logger.debug("Released db_writer lock")
 

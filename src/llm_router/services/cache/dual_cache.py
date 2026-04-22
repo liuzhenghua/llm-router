@@ -4,7 +4,6 @@ import logging
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from llm_router.core.config import AppMode
 from llm_router.services.cache.in_memory_cache import InMemoryCache
 from llm_router.services.cache.redis_cache import RedisCache
 from llm_router.services.cache.serializer import CacheSerializer
@@ -45,10 +44,6 @@ class DualCache:
         self._serializer = CacheSerializer()
         self._in_memory_ttl = in_memory_ttl
         self._redis_ttl = redis_ttl
-
-    @property
-    def is_server_mode(self) -> bool:
-        return self._settings.app_mode == AppMode.SERVER
 
     # ==================== ApiKey 操作 ====================
 
