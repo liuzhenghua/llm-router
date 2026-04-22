@@ -15,6 +15,50 @@
     <section id="api-integration">
       <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2 mb-6">API 接入文档</h2>
 
+      <!-- 请求头 -->
+      <div id="request-headers" class="mb-10">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">请求头</h3>
+        <p class="mb-4 text-slate-600">所有接口均使用相同的请求头规范，认证方式统一为 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">Authorization: Bearer</code>。</p>
+        <div class="overflow-x-auto rounded-2xl bg-white shadow-sm">
+          <table class="w-full text-sm text-left text-slate-500">
+            <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+              <tr>
+                <th scope="col" class="px-3 py-3 whitespace-nowrap">Header</th>
+                <th scope="col" class="px-3 py-3 whitespace-nowrap">必填</th>
+                <th scope="col" class="px-3 py-3">说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="bg-white border-b">
+                <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">Authorization</code></td>
+                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">必填</span></td>
+                <td class="px-3 py-2 text-xs">格式为 <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">Bearer &lt;api-key&gt;</code>，使用在 API Keys 页面创建的密钥。</td>
+              </tr>
+              <tr class="bg-white border-b">
+                <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">x-request-id</code></td>
+                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs">自定义请求 ID，用于全链路追踪。若不传，网关会自动生成并在响应头中返回。</td>
+              </tr>
+              <tr class="bg-white border-b">
+                <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">x-end-user</code></td>
+                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs">终端用户标识，用于请求日志归因。可传入用户 ID 或会话 ID 便于后续审计。</td>
+              </tr>
+              <tr class="bg-white border-b">
+                <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">anthropic-version</code></td>
+                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs">仅 Anthropic 协议有效，默认 <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">2023-06-01</code>，会透传至上游。</td>
+              </tr>
+              <tr class="bg-white">
+                <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">anthropic-beta</code></td>
+                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs">仅 Anthropic 协议有效，用于开启 Beta 功能，有值时透传至上游。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- OpenAI Chat Completions -->
       <div id="openai-chat" class="mb-10">
         <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — Chat Completions</h3>
@@ -22,28 +66,19 @@
           llm-router 完全兼容 OpenAI Chat Completions 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务即可使用任何支持 OpenAI 格式的客户端或 SDK。
         </p>
 
-        <div class="mb-4">
-          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Endpoint</p>
-          <div class="rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-emerald-400 overflow-x-auto">
-            POST {{ base_url }}/v1/chat/completions
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">认证</p>
-          <p class="text-slate-600 text-xs">在 <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">Authorization</code> 请求头中传入 API Key：</p>
-          <div class="mt-2 rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto">
-            Authorization: Bearer sk-xxxxxxxxxxxxxxxx
-          </div>
-        </div>
+        <p class="mb-3 text-xs text-slate-500"><span class="font-semibold text-slate-700">Endpoint:</span> <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">POST {{ base_url }}/v1/chat/completions</code></p>
 
         <!-- Tabbed examples -->
         <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">示例代码</p>
         <div class="code-tabs rounded-xl overflow-hidden" data-group="oai-example">
-          <div class="flex bg-slate-900 border-b border-slate-700 gap-0">
+          <div class="flex items-center bg-slate-900 border-b border-slate-700">
             <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-python" data-group="oai-example">Python</button>
             <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-curl" data-group="oai-example">cURL</button>
             <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-node" data-group="oai-example">Node.js</button>
+            <button class="copy-btn ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="oai-example">
+              <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </button>
           </div>
           <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="oai-python">
             <span class="text-sky-400">from</span> openai <span class="text-sky-400">import</span> OpenAI<br><br>
@@ -85,29 +120,19 @@
           llm-router 同样兼容 Anthropic Messages 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务的 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/anthropic</code> 前缀即可。
         </p>
 
-        <div class="mb-4">
-          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">Endpoint</p>
-          <div class="rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-emerald-400 overflow-x-auto">
-            POST {{ base_url }}/anthropic/v1/messages
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">认证</p>
-          <p class="text-slate-600 text-xs">在 <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">x-api-key</code> 请求头中传入 API Key：</p>
-          <div class="mt-2 rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto">
-            x-api-key: sk-xxxxxxxxxxxxxxxx<br>
-            anthropic-version: 2023-06-01
-          </div>
-        </div>
+        <p class="mb-3 text-xs text-slate-500"><span class="font-semibold text-slate-700">Endpoint:</span> <code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">POST {{ base_url }}/anthropic/v1/messages</code></p>
 
         <!-- Tabbed examples -->
         <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">示例代码</p>
         <div class="code-tabs rounded-xl overflow-hidden" data-group="ant-example">
-          <div class="flex bg-slate-900 border-b border-slate-700 gap-0">
+          <div class="flex items-center bg-slate-900 border-b border-slate-700">
             <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-python" data-group="ant-example">Python</button>
             <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-curl" data-group="ant-example">cURL</button>
             <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-node" data-group="ant-example">Node.js</button>
+            <button class="copy-btn ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="ant-example">
+              <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </button>
           </div>
           <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="ant-python">
             <span class="text-sky-400">import</span> anthropic<br><br>
@@ -300,6 +325,7 @@
       <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">目录</p>
       <nav id="toc-nav" class="space-y-1 text-xs">
         <a href="#api-integration" class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50">API 接入文档</a>
+        <a href="#request-headers"  class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">请求头</a>
         <a href="#openai-chat"      class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI Chat Completions</a>
         <a href="#anthropic-messages" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Anthropic Messages</a>
         <a href="#dev-tools"        class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50 mt-2">编程工具集成</a>
@@ -344,11 +370,32 @@
         if (i === 0) activateTab(group, btn.dataset.tab);  // activate first by default
       });
     });
+
+    // Copy button
+    document.querySelectorAll('.copy-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var group = btn.dataset.group;
+        var container = document.querySelector('.code-tabs[data-group="' + group + '"]');
+        var activePanel = container && container.querySelector('.tab-panel:not(.hidden)');
+        if (!activePanel) return;
+        var text = (activePanel.innerText || activePanel.textContent || '').trim();
+        navigator.clipboard.writeText(text).then(function() {
+          var copyIcon  = btn.querySelector('.copy-icon');
+          var checkIcon = btn.querySelector('.check-icon');
+          copyIcon.classList.add('hidden');
+          checkIcon.classList.remove('hidden');
+          setTimeout(function() {
+            copyIcon.classList.remove('hidden');
+            checkIcon.classList.add('hidden');
+          }, 1800);
+        });
+      });
+    });
   })();
 
   // ── TOC: highlight active section on scroll ───────────────────
   (function () {
-    var sectionIds = ['api-integration','openai-chat','anthropic-messages','dev-tools','claude-code','operations','ops-guide','routing-rules'];
+    var sectionIds = ['api-integration','request-headers','openai-chat','anthropic-messages','dev-tools','claude-code','operations','ops-guide','routing-rules'];
     var headerIds  = new Set(['api-integration','dev-tools','operations']);
     var tocLinks   = {};
     sectionIds.forEach(function(id) {
