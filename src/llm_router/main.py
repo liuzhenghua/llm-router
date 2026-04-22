@@ -21,6 +21,7 @@ from llm_router.api import admin, anthropic, openai
 from llm_router.core.admin_users import AdminUserStore
 from llm_router.core.config import get_settings
 from llm_router.core.database import SessionLocal, init_db
+from llm_router.core.logging_config import setup_logging
 from llm_router.services.cache.db_writer import DbSpendWriter, set_db_writer
 from llm_router.services.cache.dual_cache import DualCache, set_dual_cache
 from llm_router.services.cache.in_memory_cache import InMemoryCache
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 BASE_PATH = Path(__file__).resolve().parent
 settings = get_settings()
+setup_logging(settings.log_dir, settings.log_level)
 
 # Global cache components
 _dual_cache: DualCache | None = None

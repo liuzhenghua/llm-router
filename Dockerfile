@@ -40,5 +40,6 @@ RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000
 ENV TZ=UTC
+ENV LOG_DIR=/app/logs
 
 ENTRYPOINT ["/entrypoint.sh"]

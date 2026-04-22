@@ -10,6 +10,11 @@ services:
       APP_ENCRYPTION_KEY: local-encryption-secret
       ADMIN_USERS_FILE: /app/data/admin_users.json
       SQLITE_PATH: /app/data/llm_router.db
+    sysctls:
+      net.ipv4.tcp_keepalive_time: 180
+      net.ipv4.tcp_keepalive_intvl: 60
+      net.ipv4.tcp_keepalive_probes: 3
+      net.ipv4.tcp_retries2: 5
     ports:
       - "8000:8000"
     volumes:

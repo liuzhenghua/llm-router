@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     # Admin 列表每页数量
     admin_page_size: int = 10
 
+    # Logging
+    log_level: str = "INFO"
+    log_dir: Path = DATA_DIR / "logs"
+
     # Optional table name prefix, e.g. "lr_" → lr_api_keys, lr_request_logs, ...
     table_prefix: str = ""
 
