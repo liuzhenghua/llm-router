@@ -71,7 +71,14 @@ def _format_datetime(value: str | None) -> str:
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     global _dual_cache, _spend_queue, _db_writer, _redis_cache
 
-    await init_db()
+    try:
+        await init_db()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "init_db() failed — tables may already exist or the DB user lacks DDL privileges. "
+            "Continuing startup. Error: %s",
+            exc,
+        )
 
     # === 初始化缓存组件 ===
     in_memory_cache = InMemoryCache(
