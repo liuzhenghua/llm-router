@@ -1,87 +1,161 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-4">
+<div class="mb-6">
   <p class="text-xs uppercase tracking-[0.35em] text-sky-600">Dashboard</p>
   <h1 class="mt-1 text-2xl font-bold">系统概览</h1>
 </div>
 
-<div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-  <div class="rounded-2xl bg-white p-4 shadow-sm"><div class="text-xs text-slate-500">API Keys</div><div class="mt-2 text-2xl font-bold">{{ api_keys|length }}</div></div>
-  <div class="rounded-2xl bg-white p-4 shadow-sm"><div class="text-xs text-slate-500">Logical Models</div><div class="mt-2 text-2xl font-bold">{{ logical_models|length }}</div></div>
-  <div class="rounded-2xl bg-white p-4 shadow-sm"><div class="text-xs text-slate-500">Providers</div><div class="mt-2 text-2xl font-bold">{{ provider_models|length }}</div></div>
-  <div class="rounded-2xl bg-white p-4 shadow-sm"><div class="text-xs text-slate-500">Total Balance</div><div class="mt-2 text-2xl font-bold">{{ "%.2f"|format(total_balance) }}</div></div>
-  <div class="rounded-2xl bg-white p-4 shadow-sm"><div class="text-xs text-slate-500">Today's Spend</div><div class="mt-2 text-2xl font-bold">{{ "%.2f"|format(total_daily_spend) }}</div></div>
+<!-- ── Stat cards ── -->
+<div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+  <div class="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+      <svg class="h-4 w-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs text-slate-500">API Keys</div>
+      <div class="mt-0.5 text-xl font-bold text-slate-900">{{ api_keys|length }}</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50">
+      <svg class="h-4 w-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs text-slate-500">Logical Models</div>
+      <div class="mt-0.5 text-xl font-bold text-slate-900">{{ logical_models|length }}</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50">
+      <svg class="h-4 w-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg>
+    </div>
+    <div>
+      <div class="text-xs text-slate-500">Providers</div>
+      <div class="mt-0.5 text-xl font-bold text-slate-900">{{ provider_models|length }}</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+      <svg class="h-4 w-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div>
+      <div class="text-xs text-slate-500">Total Balance</div>
+      <div class="mt-0.5 text-xl font-bold text-slate-900">{{ "%.4f"|format(total_balance) }}</div>
+    </div>
+  </div>
+  <div class="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50">
+      <svg class="h-4 w-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+    </div>
+    <div>
+      <div class="text-xs text-slate-500">Today's Spend</div>
+      <div class="mt-0.5 text-xl font-bold text-slate-900">{{ "%.4f"|format(total_daily_spend) }}</div>
+    </div>
+  </div>
 </div>
 
-<div class="mt-6 grid gap-6 xl:grid-cols-3">
+<!-- ── Recent panels ── -->
+<div class="grid gap-6 xl:grid-cols-3">
+
+  <!-- 最近请求 -->
   <section class="rounded-2xl bg-white p-4 shadow-sm">
-    <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-semibold">最近请求</h2><a href="/admin/requests" class="text-xs text-sky-600">查看全部</a></div>
-    <div class="overflow-x-auto">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-800">最近请求</h2>
+      <a href="/admin/requests" class="text-xs text-sky-600 hover:underline">查看全部</a>
+    </div>
+    <div class="overflow-x-auto rounded-xl bg-white shadow-sm">
       <table class="w-full text-sm text-left text-slate-500">
         <thead class="text-xs text-slate-700 uppercase bg-slate-50">
           <tr>
-            <th scope="col" class="px-4 py-2">Request ID</th>
-            <th scope="col" class="px-4 py-2">Status</th>
-            <th scope="col" class="px-4 py-2">Latency</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Request ID</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Status</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Latency</th>
           </tr>
         </thead>
         <tbody>
           {% for item in recent_logs %}
           <tr class="bg-white border-b">
-            <td class="px-4 py-2 font-medium text-slate-900"><a href="/admin/requests/{{ item.id }}" class="hover:underline">{{ item.request_id[:16] }}...</a></td>
-            <td class="px-4 py-2">{{ item.status_code }}</td>
-            <td class="px-4 py-2">{{ item.latency_ms or "-" }}ms</td>
+            <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">
+              <a href="/admin/requests/{{ item.id }}" class="hover:underline">{{ item.request_id[:14] }}…</a>
+            </td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">
+              {% if item.status_code and item.status_code < 300 %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">{{ item.status_code }}</span>
+              {% else %}
+              <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">{{ item.status_code }}</span>
+              {% endif %}
+            </td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.latency_ms or "-" }} ms</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </section>
+
+  <!-- 最近账本 -->
   <section class="rounded-2xl bg-white p-4 shadow-sm">
-    <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-semibold">最近账本</h2><a href="/admin/billing" class="text-xs text-sky-600">查看全部</a></div>
-    <div class="overflow-x-auto">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-800">最近账本</h2>
+      <a href="/admin/billing" class="text-xs text-sky-600 hover:underline">查看全部</a>
+    </div>
+    <div class="overflow-x-auto rounded-xl bg-white shadow-sm">
       <table class="w-full text-sm text-left text-slate-500">
         <thead class="text-xs text-slate-700 uppercase bg-slate-50">
           <tr>
-            <th scope="col" class="px-4 py-2">Type</th>
-            <th scope="col" class="px-4 py-2">Amount</th>
-            <th scope="col" class="px-4 py-2">API Key ID</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Type</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Amount</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
           </tr>
         </thead>
         <tbody>
           {% for item in ledgers %}
           <tr class="bg-white border-b">
-            <td class="px-4 py-2 font-medium text-slate-900">{{ item.change_type }}</td>
-            <td class="px-4 py-2">{{ "%.2f"|format(item.amount) }}</td>
-            <td class="px-4 py-2">{{ item.api_key_id }}</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">
+              {% if item.change_type == 'topup' %}
+              <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">topup</span>
+              {% elif item.change_type == 'charge' %}
+              <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">charge</span>
+              {% else %}
+              <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{{ item.change_type }}</span>
+              {% endif %}
+            </td>
+            <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">{{ "%.4f"|format(item.amount) }}</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_id }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </section>
+
+  <!-- 最近日报 -->
   <section class="rounded-2xl bg-white p-4 shadow-sm">
-    <div class="mb-3 flex items-center justify-between"><h2 class="text-lg font-semibold">最近日报</h2><a href="/admin/billing" class="text-xs text-sky-600">查看全部</a></div>
-    <div class="overflow-x-auto">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-sm font-semibold text-slate-800">最近日报</h2>
+      <a href="/admin/billing" class="text-xs text-sky-600 hover:underline">查看全部</a>
+    </div>
+    <div class="overflow-x-auto rounded-xl bg-white shadow-sm">
       <table class="w-full text-sm text-left text-slate-500">
         <thead class="text-xs text-slate-700 uppercase bg-slate-50">
           <tr>
-            <th scope="col" class="px-4 py-2">Date</th>
-            <th scope="col" class="px-4 py-2">API Key ID</th>
-            <th scope="col" class="px-4 py-2">Cost</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Date</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
+            <th scope="col" class="px-2 py-3 whitespace-nowrap">Cost</th>
           </tr>
         </thead>
         <tbody>
           {% for item in daily_summaries %}
           <tr class="bg-white border-b">
-            <td class="px-4 py-2 font-medium text-slate-900">{{ item.summary_date }}</td>
-            <td class="px-4 py-2">{{ item.api_key_id }}</td>
-            <td class="px-4 py-2">{{ "%.2f"|format(item.cost_total) }}</td>
+            <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">{{ item.summary_date }}</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_id }}</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">{{ "%.4f"|format(item.cost_total) }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
   </section>
+
 </div>
 {% endblock %}

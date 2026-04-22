@@ -1,37 +1,43 @@
 {% extends "base.html" %}
 {% block page_content %}
-<div class="mb-4 flex items-center justify-between">
+<div class="mb-6 flex items-center justify-between">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Billing</p>
     <h1 class="mt-1 text-2xl font-bold">账单与账本</h1>
   </div>
-  <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
 </div>
 
-<div class="mb-4 rounded-2xl bg-white p-4 shadow-sm">
-  <form method="get" action="/admin/billing" class="flex flex-wrap items-center gap-3">
-    <select name="api_key_id" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm">
-      <option value="">全部 API Key</option>
-      {% for api_key in api_keys %}
-      <option value="{{ api_key.id }}" {% if selected_api_key_id == api_key.id %}selected{% endif %}>{{ api_key.name }}</option>
-      {% endfor %}
-    </select>
-    <button class="rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-medium text-white">筛选</button>
+<!-- ── API Key filter ── -->
+<div class="mb-6 rounded-2xl bg-white p-4 shadow-sm">
+  <form method="get" action="/admin/billing" class="flex flex-wrap items-end gap-3">
+    <div>
+      <label class="mb-1 block text-xs text-slate-500">API Key</label>
+      <select name="api_key_id" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+        <option value="">全部 API Key</option>
+        {% for api_key in api_keys %}
+        <option value="{{ api_key.id }}" {% if selected_api_key_id == api_key.id %}selected{% endif %}>{{ api_key.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">筛选</button>
+    {% if selected_api_key_id %}
+    <a href="/admin/billing" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">重置</a>
+    {% endif %}
   </form>
 </div>
 
-<div class="grid gap-6 xl:grid-cols-1">
+<div class="space-y-6">
+
+  <!-- 账本 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <h2 class="text-lg font-semibold">最近账本</h2>
-    <div class="mb-2 mt-2 flex flex-wrap gap-2 items-end">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">账本流水</p>
+    <div class="mb-3 flex flex-wrap gap-2 items-end">
       <div class="min-w-[160px] flex-1">
-        <label class="block text-xs text-slate-500 mb-1">备注</label>
         <input type="text" id="ledgers-search" placeholder="搜索备注..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       </div>
-      <div class="shrink-0 w-[130px]">
-        <label class="block text-xs text-slate-500 mb-1">变动类型</label>
-        <select id="ledgers-change-type" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-          <option value="">全部</option>
+      <div class="shrink-0">
+        <select id="ledgers-change-type" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+          <option value="">全部类型</option>
           <option value="topup">充値 (topup)</option>
           <option value="charge">扣费 (charge)</option>
           <option value="adjust">调整 (adjust)</option>
@@ -44,26 +50,29 @@
       </div>
     </div>
     <div id="ledgers-table-container" class="overflow-x-auto"></div>
-    <div id="ledgers-pagination-container" class="mt-2 flex items-center justify-between"></div>
+    <div id="ledgers-pagination-container" class="mt-3 flex items-center justify-between"></div>
   </div>
 
+  <!-- 费用记录 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <h2 class="text-lg font-semibold">最近费用记录</h2>
-    <div class="mb-2 mt-2">
-      <input type="text" id="usage-search" placeholder="搜索费用记录..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">请求费用记录</p>
+    <div class="mb-3">
+      <input type="text" id="usage-search" placeholder="搜索 Request ID..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="usage-table-container" class="overflow-x-auto"></div>
-    <div id="usage-pagination-container" class="mt-2 flex items-center justify-between"></div>
+    <div id="usage-pagination-container" class="mt-3 flex items-center justify-between"></div>
   </div>
 
+  <!-- 日报 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <h2 class="text-lg font-semibold">最近日报</h2>
-    <div class="mb-2 mt-2">
-      <input type="text" id="summaries-search" placeholder="搜索日报..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">每日费用日报</p>
+    <div class="mb-3">
+      <input type="text" id="summaries-search" placeholder="搜索日期或 API Key..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="summaries-table-container" class="overflow-x-auto"></div>
-    <div id="summaries-pagination-container" class="mt-2 flex items-center justify-between"></div>
+    <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between"></div>
   </div>
+
 </div>
 
 <script>
@@ -151,8 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
       return !term || item.change_type.toLowerCase().includes(term) || (item.remark && item.remark.toLowerCase().includes(term));
     },
     rowFn: item => `
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.change_type}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.amount}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${
+        item.change_type === 'topup'
+          ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">topup</span>'
+          : item.change_type === 'charge'
+          ? '<span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">charge</span>'
+          : `<span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">${item.change_type}</span>`
+      }</td>
+      <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.amount}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_id}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance_before}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance_after}</td>
