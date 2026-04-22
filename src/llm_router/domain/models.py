@@ -73,7 +73,7 @@ class ApiKey(Base, TimestampMixin):
     allowed_logical_models_json: Mapped[list[str]] = mapped_column(JsonString, default=list)
     request_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     response_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
-    end_user: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
 
     request_logs: Mapped[list["RequestLog"]] = relationship(back_populates="api_key")
 
@@ -136,14 +136,14 @@ class RequestLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    api_key_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("api_keys") + ".id"), nullable=True)
-    logical_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("logical_models") + ".id"), nullable=True)
-    provider_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("provider_models") + ".id"), nullable=True)
+    api_key_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("api_keys") + ".id"), nullable=True, index=True)
+    logical_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("logical_models") + ".id"), nullable=True, index=True)
+    provider_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("provider_models") + ".id"), nullable=True, index=True)
     protocol: Mapped[str] = mapped_column(String(32))
     call_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     upstream_request_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    success: Mapped[bool] = mapped_column(Boolean, default=False)
+    success: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
@@ -188,7 +188,7 @@ class UsageRecord(Base):
     cost_cache_write: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     cost_total: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     currency: Mapped[str] = mapped_column(String(8), default="USD")
-    billing_date: Mapped[date] = mapped_column(Date, default=date.today)
+    billing_date: Mapped[date] = mapped_column(Date, default=date.today, index=True)
 
     request_log: Mapped[RequestLog] = relationship(back_populates="usage_record")
 
@@ -197,7 +197,7 @@ class BalanceLedger(Base):
     __tablename__ = table_name("balance_ledgers")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    api_key_id: Mapped[int] = mapped_column(ForeignKey(table_name("api_keys") + ".id", ondelete="CASCADE"))
+    api_key_id: Mapped[int] = mapped_column(ForeignKey(table_name("api_keys") + ".id", ondelete="CASCADE"), index=True)
     change_type: Mapped[str] = mapped_column(String(32))
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
     balance_before: Mapped[Decimal] = mapped_column(Numeric(18, 8))
@@ -205,7 +205,7 @@ class BalanceLedger(Base):
     reference_type: Mapped[str] = mapped_column(String(32))
     reference_id: Mapped[str] = mapped_column(String(64))
     remark: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now(), index=True)
 
 
 class DailyUsageSummary(Base):
