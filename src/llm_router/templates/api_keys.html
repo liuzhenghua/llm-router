@@ -29,6 +29,10 @@
     <label class="block text-xs text-slate-500 mb-1">名称</label>
     <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
+  <div class="min-w-[150px] flex-1">
+    <label class="block text-xs text-slate-500 mb-1">用户 (End User)</label>
+    <input type="text" id="search-user" placeholder="搜索用户..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+  </div>
   <div class="shrink-0 w-[130px]">
     <label class="block text-xs text-slate-500 mb-1">状态</label>
     <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
@@ -147,6 +151,21 @@
   </div>
 </dialog>
 
+<!-- Reveal Key Modal -->
+<dialog id="reveal-key-modal" class="w-full max-w-xl rounded-2xl p-0 backdrop:bg-slate-950/50">
+  <div class="rounded-2xl bg-white p-6">
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
+      <h3 class="text-lg font-semibold text-slate-800">查看 API Key</h3>
+      <button type="button" onclick="closeModal('reveal-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
+    </div>
+    <div class="mb-2 text-xs text-slate-500">请注意保持此 Key 的机密，不要泄露给无关人员。</div>
+    <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <code id="reveal-key-value" class="flex-1 break-all text-sm font-semibold text-slate-800 select-all"></code>
+      <button type="button" onclick="copyRevealedKey()" class="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs hover:bg-slate-100">复制</button>
+    </div>
+  </div>
+</dialog>
+
 <script>
 let allApiKeys = {{ api_keys|tojson }};
 let currentPage = 1;
@@ -156,14 +175,16 @@ function getFilters() {
   return {
     name: document.getElementById('search-name').value.trim().toLowerCase(),
     status: document.getElementById('search-status').value,
+    user: document.getElementById('search-user').value.trim().toLowerCase(),
   };
 }
 
 function renderTable() {
-  const { name, status } = getFilters();
+  const { name, status, user } = getFilters();
   const filteredKeys = allApiKeys.filter(key => {
     if (name && !key.name.toLowerCase().includes(name)) return false;
     if (status && key.status !== status) return false;
+    if (user && !(key.end_user || '').toLowerCase().includes(user)) return false;
     return true;
   });
 
@@ -186,6 +207,7 @@ function renderTable() {
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">用户</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">余额</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">今日消费</th>
@@ -202,6 +224,7 @@ function renderTable() {
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap text-slate-500">${item.end_user || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.status === 'active' ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.balance}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.daily_spend_amount}</td>
@@ -209,6 +232,7 @@ function renderTable() {
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='openEditModal(${JSON.stringify(item)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
         <button type="button" onclick='openTopupModal(${JSON.stringify(item)})' class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">充值</button>
+        ${item.has_key ? `<button type="button" onclick="revealKey(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">查看 Key</button>` : ''}
         ${item.status === 'active' ? `<button type="button" onclick="disableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>` : `<button type="button" onclick="enableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">启用</button>`}
         <button type="button" onclick="destroyApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs text-rose-800">删除</button>
       </div></td>
@@ -251,11 +275,16 @@ document.getElementById('search-btn').addEventListener('click', () => {
 document.getElementById('reset-btn').addEventListener('click', () => {
   document.getElementById('search-name').value = '';
   document.getElementById('search-status').value = '';
+  document.getElementById('search-user').value = '';
   currentPage = 1;
   renderTable();
 });
 
 document.getElementById('search-name').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { currentPage = 1; renderTable(); }
+});
+
+document.getElementById('search-user').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') { currentPage = 1; renderTable(); }
 });
 
@@ -529,6 +558,30 @@ function destroyApiKey(id, name) {
       }
     })
     .catch(() => showToast('网络错误，请重试', 'error'));
+}
+
+// ---- Reveal API Key ----
+function revealKey(id) {
+  const modal = document.getElementById('reveal-key-modal');
+  const display = document.getElementById('reveal-key-value');
+  display.textContent = '载入中...';
+  openModal('reveal-key-modal');
+  fetch('/admin/api-keys/' + id + '/reveal')
+    .then(res => res.json())
+    .then(result => {
+      if (result.ok) {
+        display.textContent = result.key;
+      } else {
+        display.textContent = result.error || '获取失败';
+      }
+    })
+    .catch(() => { display.textContent = '网络错误，请重试'; });
+}
+
+function copyRevealedKey() {
+  const text = document.getElementById('reveal-key-value').textContent;
+  if (!text || text === '载入中...') return;
+  navigator.clipboard.writeText(text).then(() => showToast('已复制到剪贴板')).catch(() => showToast('复制失败', 'error'));
 }
 
 // ---- Init create modal selector ----

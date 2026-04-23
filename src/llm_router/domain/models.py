@@ -64,6 +64,7 @@ class ApiKey(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True)
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    encrypted_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="active", index=True)
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
     daily_budget_limit: Mapped[Decimal | None] = mapped_column(Numeric(18, 6), nullable=True)

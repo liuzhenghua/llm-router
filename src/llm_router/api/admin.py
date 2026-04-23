@@ -288,6 +288,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
             "request_content_logging_enabled": key.request_content_logging_enabled,
             "response_content_logging_enabled": key.response_content_logging_enabled,
             "end_user": key.end_user or "",
+            "has_key": key.encrypted_key is not None,
         }
         for key in api_keys_result
     ]
@@ -394,6 +395,7 @@ async def create_api_key(
         ApiKey(
             name=name,
             key_hash=hash_api_key(raw_key),
+            encrypted_key=encryptor.encrypt(raw_key),
             balance=balance,
             daily_budget_limit=_to_decimal(daily_budget_limit),
             qps_limit=qps_limit,
@@ -406,6 +408,22 @@ async def create_api_key(
     await session.commit()
     request.session["new_api_key"] = raw_key
     return _redirect_back(request, "/admin/api-keys")
+
+
+@protected_router.get("/api-keys/{api_key_id}/reveal")
+async def reveal_api_key(request: Request, api_key_id: int, _: None = Depends(require_admin)):
+    """Decrypt and return the plaintext API key."""
+    session = request.state.db
+    api_key = await session.get(ApiKey, api_key_id)
+    if api_key is None:
+        return JSONResponse({"ok": False, "error": "API Key 不存在"}, status_code=404)
+    if not api_key.encrypted_key:
+        return JSONResponse({"ok": False, "error": "此 Key 创建于加密存储功能启用前，无法还原明文"}, status_code=404)
+    try:
+        raw_key = encryptor.decrypt(api_key.encrypted_key)
+        return JSONResponse({"ok": True, "key": raw_key})
+    except ValueError:
+        return JSONResponse({"ok": False, "error": "解密失败"}, status_code=500)
 
 
 @protected_router.post("/api-keys/{api_key_id}")

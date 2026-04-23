@@ -222,6 +222,59 @@ Key classes:
 
 ---
 
+## Database Migrations (`migrations/`)
+
+Schema changes are **never** embedded in Python code. Every schema change must be written as a SQL file under `migrations/`.
+
+### File naming
+
+```
+migrations/
+  sqlite/
+    YYYY_MM.sql    # SQLite variant
+  mysql/
+    YYYY_MM.sql    # MySQL variant
+```
+
+Always create both files. Split the SQL when syntax differs between SQLite and MySQL.
+
+### File header (required)
+
+Every migration file **must** start with the following header block. Replace `{YYYY_MM}` and fill in the description.
+
+```sql
+-- Migration: {YYYY_MM}
+-- Description: <one-line summary of what this migration does>
+--
+-- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "llm_router_"),
+-- !! replace every occurrence of "llm_router_" in this file with your prefix
+-- !! before running. Example: s/llm_router_/myprefix_/g
+--
+-- Apply (SQLite):
+--   sqlite3 data/llm_router.db < migrations/sqlite/{YYYY_MM}.sql
+--
+-- Apply (MySQL):
+--   mysql -u llm_router -p llm_router < migrations/mysql/{YYYY_MM}.sql
+```
+
+### SQLite vs MySQL differences to watch for
+
+| Operation | SQLite | MySQL |
+|-----------|--------|-------|
+| Add column | `ALTER TABLE t ADD COLUMN c TEXT` | `ALTER TABLE t ADD COLUMN c LONGTEXT` |
+| Rename column | not supported < 3.25; use `CREATE TABLE … AS SELECT` | `ALTER TABLE t RENAME COLUMN old TO new` |
+| Boolean | `INTEGER` (0/1) | `TINYINT(1)` |
+| Large text | `TEXT` | `LONGTEXT` |
+
+### Rules
+
+- **Never** run `ALTER TABLE` or schema changes from Python application code.
+- **Never** rely on SQLAlchemy `create_all()` to add new columns — it only creates missing tables.
+- Each migration file is **append-only**: once committed, do not edit it. Add a new file for follow-up fixes.
+- Keep migrations idempotent where possible (e.g. `ADD COLUMN IF NOT EXISTS` on MySQL 8+).
+
+---
+
 ## General Conventions
 
 - All admin pages extend `base.html` and fill the `page_content` block.

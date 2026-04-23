@@ -73,22 +73,22 @@
           <dt class="text-xs text-slate-400">输入</dt>
           <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.prompt_tokens }} tok</dd>
         </div>
+        {% if log.usage_record.reasoning_tokens %}
+        <div class="flex justify-between pl-3">
+          <dt class="text-xs text-slate-400">↳ 思考</dt>
+          <dd class="text-xs text-slate-600">{{ log.usage_record.reasoning_tokens }} tok</dd>
+        </div>
+        {% endif %}
+        {% if log.usage_record.cache_read_tokens %}
+        <div class="flex justify-between pl-3">
+          <dt class="text-xs text-slate-400">↳ 已缓存</dt>
+          <dd class="text-xs text-slate-600">{{ log.usage_record.cache_read_tokens }} tok</dd>
+        </div>
+        {% endif %}
         <div class="flex justify-between">
           <dt class="text-xs text-slate-400">输出</dt>
           <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.completion_tokens }} tok</dd>
         </div>
-        {% if log.usage_record.reasoning_tokens %}
-        <div class="flex justify-between">
-          <dt class="text-xs text-slate-400">思考</dt>
-          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.reasoning_tokens }} tok</dd>
-        </div>
-        {% endif %}
-        {% if log.usage_record.cache_read_tokens %}
-        <div class="flex justify-between">
-          <dt class="text-xs text-slate-400">缓存读取</dt>
-          <dd class="text-xs font-medium text-slate-800">{{ log.usage_record.cache_read_tokens }} tok</dd>
-        </div>
-        {% endif %}
         {% if log.usage_record.cache_write_tokens %}
         <div class="flex justify-between">
           <dt class="text-xs text-slate-400">缓存写入</dt>
