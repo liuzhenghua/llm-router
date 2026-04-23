@@ -24,11 +24,6 @@ class Settings(BaseSettings):
     port: int = 8000
     debug: bool = False
 
-    # Set to True to enable Redis cache + Redis queue + distributed lock
-    redis_enabled: bool = False
-    # Set to True to use MySQL instead of SQLite
-    use_mysql: bool = False
-
     default_request_logging_enabled: bool = False
     default_response_logging_enabled: bool = False
 
@@ -37,14 +32,14 @@ class Settings(BaseSettings):
     app_encryption_key: str = "change-me-encryption-key"
 
     sqlite_path: Path = DATA_DIR / "llm_router.db"
-    # MySQL connection (used when use_mysql=true)
+    # MySQL connection — set MYSQL_URL to switch from SQLite to MySQL
     # Format: mysql://user@host:port/database
-    mysql_url: str = "mysql://llm_router@mysql:3306/llm_router"
+    mysql_url: str = ""
     mysql_password: str = "llm_router"
 
-    # Redis connection (used when redis_enabled=true)
+    # Redis connection — set REDIS_URL to enable Redis cache, queue, and distributed lock
     # Format: redis://host:port/db
-    redis_url: str = "redis://localhost:6379/0"
+    redis_url: str = ""
     redis_password: str | None = None
 
     # 缓存 TTL 配置（秒）
@@ -63,6 +58,16 @@ class Settings(BaseSettings):
 
     # Optional table name prefix, e.g. "lr_" → lr_api_keys, lr_request_logs, ...
     table_prefix: str = ""
+
+    @computed_field
+    @property
+    def use_mysql(self) -> bool:
+        return bool(self.mysql_url)
+
+    @computed_field
+    @property
+    def redis_enabled(self) -> bool:
+        return bool(self.redis_url)
 
     @computed_field
     @property

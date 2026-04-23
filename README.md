@@ -39,7 +39,7 @@
 - **Prompt cache awareness** — handles `cache_read_tokens` and `cache_write_tokens` so cached tokens are never double-billed
 - **Streaming support** — transparent SSE pass-through for both OpenAI and Anthropic streaming
 - **Audit logging** — optional per-key request/response content capture; metadata always recorded
-- **Flexible deployment** — defaults to SQLite + in-memory cache with zero external dependencies; enable MySQL (`USE_MYSQL=true`) and/or Redis (`REDIS_ENABLED=true`) independently to scale to multi-instance, production deployments — same codebase, no code changes required
+- **Flexible deployment** — defaults to SQLite + in-memory cache with zero external dependencies; set `MYSQL_URL` and/or `REDIS_URL` to scale to multi-instance, production deployments — same codebase, no code changes required
 - **Built-in admin panel** — manage keys, providers, routes, and view logs and billing without any extra tooling
 
 ---
@@ -183,18 +183,15 @@ docker compose exec llm-router uv run llm-router init-admin --username admin --p
 
 Key environment variables (see `.env.example` for the full list):
 
-| Variable | Default | Description |
+| Variable | Required | Description |
 |---|---|---|
-| `APP_ENCRYPTION_KEY` | — | Fernet key used to encrypt upstream provider API keys |
-| `SESSION_SECRET` | — | Secret for admin session cookies |
-| `SQLITE_PATH` | `data/llm_router.db` | SQLite file path (default storage) |
-| `USE_MYSQL` | `false` | Set to `true` to use MySQL instead of SQLite |
-| `MYSQL_URL` | `mysql://llm_router@mysql:3306/llm_router` | MySQL connection URL — format: `mysql://user@host:port/database` |
-| `MYSQL_PASSWORD` | `llm_router` | MySQL password |
-| `REDIS_ENABLED` | `false` | Set to `true` to enable Redis cache, queue, and distributed lock |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL — format: `redis://host:port/db` |
-| `REDIS_PASSWORD` | — | Redis password (optional) |
-| `TABLE_PREFIX` | `""` | Optional prefix for all table names, e.g. `lr_` → `lr_api_keys` |
+| `APP_ENCRYPTION_KEY` | Yes | Fernet key used to encrypt upstream provider API keys |
+| `SESSION_SECRET` | Yes | Secret for admin session cookies |
+| `MYSQL_URL` | No | Set to enable MySQL — format: `mysql://user@host:port/database` |
+| `MYSQL_PASSWORD` | No | MySQL password |
+| `REDIS_URL` | No | Set to enable Redis cache, queue, and distributed lock — format: `redis://host:port/db` |
+| `REDIS_PASSWORD` | No | Redis password |
+| `TABLE_PREFIX` | No | Optional prefix for all table names, e.g. `lr_` → `lr_api_keys` |
 
 ---
 
