@@ -153,9 +153,7 @@ function renderTable() {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
-        <form method="post" action="/admin/provider-models/${item.id}/delete" onsubmit="return confirm('确认禁用这个 Provider 吗？');">
-          <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>
-        </form>
+        <button type="button" onclick="deleteProvider(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
       </div></td>
     `;
     tbody.appendChild(tr);
@@ -186,6 +184,24 @@ function renderTable() {
   paginDiv.appendChild(nextButton);
 
   paginationContainer.appendChild(paginDiv);
+}
+
+function deleteProvider(id, name) {
+  if (!confirm('确认删除 Provider「' + name + '」吗？\n\n该 Provider 将被软删除（保留历史数据），关联路由需提前手动删除。')) return;
+  fetch('/admin/provider-models/' + id + '/delete', { method: 'POST' })
+    .then(res => res.json())
+    .then(result => {
+      if (result.ok) {
+        allProviders = allProviders.filter(p => p.id !== id);
+        const totalPages = Math.ceil(allProviders.length / rowsPerPage);
+        if (currentPage > 1 && currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        renderTable();
+        showToast('「' + name + '」 已删除');
+      } else {
+        showToast(result.error || '删除失败', 'error');
+      }
+    })
+    .catch(() => showToast('网络错误，请重试', 'error'));
 }
 
 function toggleCacheFieldsById(checkboxId, containerId, value) {

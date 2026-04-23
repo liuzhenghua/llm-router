@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, datetime as dt_datetime
 from decimal import Decimal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import desc, func, or_, select, update
+from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from llm_router.core.admin_users import AdminUserService
@@ -224,9 +224,9 @@ async def logout(request: Request):
 @protected_router.get("")
 async def dashboard(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    api_keys = (await session.execute(select(ApiKey).order_by(ApiKey.id.desc()))).scalars().all()
-    logical_models = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
-    provider_models = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    api_keys = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.id.desc()))).scalars().all()
+    logical_models = (await session.execute(select(LogicalModel).where(LogicalModel.deleted_at.is_(None)).order_by(LogicalModel.name.asc()))).scalars().all()
+    provider_models = (await session.execute(select(ProviderModel).where(ProviderModel.deleted_at.is_(None)).order_by(ProviderModel.name.asc()))).scalars().all()
     recent_logs = (await session.execute(
         select(RequestLog)
         .order_by(desc(RequestLog.id))
@@ -274,7 +274,7 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
 @protected_router.get("/api-keys")
 async def api_keys_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    api_keys_result = (await session.execute(select(ApiKey).order_by(ApiKey.id.desc()))).scalars().all()
+    api_keys_result = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.id.desc()))).scalars().all()
     api_keys = [
         {
             "id": key.id,
@@ -306,7 +306,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
 @protected_router.get("/logical-models")
 async def logical_models_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    logical_models_result = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
+    logical_models_result = (await session.execute(select(LogicalModel).where(LogicalModel.deleted_at.is_(None)).order_by(LogicalModel.name.asc()))).scalars().all()
     logical_models = [
         {
             "id": model.id,
@@ -329,7 +329,7 @@ async def logical_models_page(request: Request, _: None = Depends(require_admin)
         }
         for route in routes_result
     ]
-    provider_models_result = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    provider_models_result = (await session.execute(select(ProviderModel).where(ProviderModel.deleted_at.is_(None)).order_by(ProviderModel.name.asc()))).scalars().all()
     provider_models = [{"id": pm.id, "name": pm.name} for pm in provider_models_result]
     return _render_admin(
         request,
@@ -347,7 +347,7 @@ async def logical_models_page(request: Request, _: None = Depends(require_admin)
 @protected_router.get("/providers")
 async def providers_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
-    provider_models_result = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    provider_models_result = (await session.execute(select(ProviderModel).where(ProviderModel.deleted_at.is_(None)).order_by(ProviderModel.name.asc()))).scalars().all()
     provider_models = [
         {
             "id": pm.id,
@@ -512,17 +512,16 @@ async def enable_api_key(request: Request, api_key_id: int, _: None = Depends(re
 
 @protected_router.post("/api-keys/{api_key_id}/destroy")
 async def destroy_api_key(request: Request, api_key_id: int, _: None = Depends(require_admin)):
-    """永久删除 API Key 及其关联数据"""
+    """软删除 API Key（保留数据，标记 deleted_at，status 置为 deleted）"""
     session = request.state.db
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
         return JSONResponse({"ok": False, "error": "API Key 不存在"}, status_code=404)
-    # 先失效缓存
+    # 先失效缓存，确保该 Key 立即失效
     await _invalidate_apikey_cache(api_key)
-    # 将 RequestLog 中的 api_key_id 置为 NULL（FK nullable，无 CASCADE）
-    await session.execute(update(RequestLog).where(RequestLog.api_key_id == api_key_id).values(api_key_id=None))
-    # 删除 API Key（BalanceLedger / DailyUsageSummary 有 ondelete=CASCADE）
-    await session.delete(api_key)
+    # 软删除：打上时间戳，同时将 status 置为 deleted 防止缓存中残留的条目鉴权通过
+    api_key.deleted_at = dt_datetime.utcnow()
+    api_key.status = "deleted"
     await session.commit()
     return JSONResponse({"ok": True})
 
@@ -538,6 +537,31 @@ async def create_logical_model(
     session.add(LogicalModel(name=name, description=description or None))
     await session.commit()
     return _redirect_back(request, "/admin/logical-models")
+
+
+@protected_router.post("/logical-models/{logical_model_id}/delete")
+async def delete_logical_model(request: Request, logical_model_id: int, _: None = Depends(require_admin)):
+    """软删除逻辑模型。若还有关联路由则拒绝，要求用户先手动删除所有路由。"""
+    session = request.state.db
+    logical_model = await session.get(LogicalModel, logical_model_id)
+    if logical_model is None:
+        return JSONResponse({"ok": False, "error": "逻辑模型不存在"}, status_code=404)
+    # 检查是否还有路由
+    route_count = (
+        await session.execute(
+            select(func.count()).select_from(LogicalModelRoute).where(LogicalModelRoute.logical_model_id == logical_model_id)
+        )
+    ).scalar() or 0
+    if route_count > 0:
+        return JSONResponse(
+            {"ok": False, "error": f"请先手动删除该逻辑模型下的所有路由（当前还有 {route_count} 条）"},
+            status_code=400,
+        )
+    logical_model.deleted_at = dt_datetime.utcnow()
+    logical_model.is_active = False
+    await session.commit()
+    await _invalidate_route_cache(logical_model_id)
+    return JSONResponse({"ok": True})
 
 
 @protected_router.post("/logical-models/{logical_model_id}")
@@ -646,13 +670,16 @@ async def update_provider_model(
 
 @protected_router.post("/provider-models/{provider_model_id}/delete")
 async def delete_provider_model(request: Request, provider_model_id: int, _: None = Depends(require_admin)):
+    """软删除 Provider（保留数据，标记 deleted_at，is_active 置为 False）"""
     session = request.state.db
     provider_model = await session.get(ProviderModel, provider_model_id)
-    if provider_model is not None:
-        provider_model.is_active = False
-        await session.commit()
-        await _invalidate_provider_cache(provider_model_id)
-    return _redirect_back(request, "/admin/providers")
+    if provider_model is None:
+        return JSONResponse({"ok": False, "error": "Provider 不存在"}, status_code=404)
+    provider_model.deleted_at = dt_datetime.utcnow()
+    provider_model.is_active = False
+    await session.commit()
+    await _invalidate_provider_cache(provider_model_id)
+    return JSONResponse({"ok": True})
 
 
 @protected_router.post("/routes")
@@ -877,8 +904,8 @@ async def request_logs_page(
         }
         for log in logs_result
     ]
-    api_keys_list = (await session.execute(select(ApiKey).order_by(ApiKey.name.asc()))).scalars().all()
-    provider_models_list = (await session.execute(select(ProviderModel).order_by(ProviderModel.name.asc()))).scalars().all()
+    api_keys_list = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.name.asc()))).scalars().all()
+    provider_models_list = (await session.execute(select(ProviderModel).where(ProviderModel.deleted_at.is_(None)).order_by(ProviderModel.name.asc()))).scalars().all()
     return _render_admin(
         request,
         "request_logs.html",
@@ -975,7 +1002,7 @@ async def billing_page(
     _: None = Depends(require_admin),
 ):
     session = request.state.db
-    api_keys_result = (await session.execute(select(ApiKey).order_by(ApiKey.name.asc()))).scalars().all()
+    api_keys_result = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.name.asc()))).scalars().all()
     api_keys = [{"id": key.id, "name": key.name} for key in api_keys_result]
     
     ledger_stmt = select(BalanceLedger).order_by(desc(BalanceLedger.id)).limit(100)
@@ -1060,3 +1087,86 @@ async def docs_page(request: Request, _: None = Depends(require_admin)):
         nav_active="docs",
         title="Docs",
     )
+
+
+@protected_router.get("/api-debug")
+async def api_debug_page(request: Request, _: None = Depends(require_admin)):
+    session = request.state.db
+    api_keys_result = (await session.execute(select(ApiKey).where(ApiKey.status == "active").order_by(ApiKey.name.asc()))).scalars().all()
+    api_keys = [
+        {"id": key.id, "name": key.name}
+        for key in api_keys_result
+    ]
+    return _render_admin(
+        request,
+        "api_debug.html",
+        {
+            "api_keys": api_keys,
+            "default_openai_payload": "{\n  \"model\": \"gpt-3.5-turbo\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"stream\": false\n}",
+            "default_anthropic_payload": "{\n  \"model\": \"claude-3-sonnet-20240229\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"temperature\": 0.7,\n  \"stream\": false\n}",
+        },
+        nav_active="api_debug",
+        title="API Debug",
+    )
+
+
+@protected_router.post("/api-debug/execute")
+async def api_debug_execute(
+    request: Request,
+    api_key_id: int = Form(...),
+    api_type: str = Form(...),
+    payload: str = Form(...),
+    _: None = Depends(require_admin),
+):
+    import json
+    from llm_router.domain.enums import ProviderProtocol
+    from llm_router.services.gateway import handle_proxy_request
+    from llm_router.core.security import Encryptor
+    from llm_router.core.config import get_settings
+    
+    session = request.state.db
+    settings = get_settings()
+    encryptor = Encryptor(settings.app_encryption_key)
+    
+    # Get API key
+    api_key = await session.get(ApiKey, api_key_id)
+    if not api_key or api_key.status != "active":
+        return JSONResponse({"ok": False, "error": "Invalid API key"}, status_code=400)
+    
+    # Get raw API key
+    if not api_key.encrypted_key:
+        return JSONResponse({"ok": False, "error": "API key not available"}, status_code=400)
+    try:
+        raw_api_key = encryptor.decrypt(api_key.encrypted_key)
+    except ValueError:
+        return JSONResponse({"ok": False, "error": "Failed to decrypt API key"}, status_code=500)
+    
+    # Parse payload
+    try:
+        parsed_payload = json.loads(payload)
+    except json.JSONDecodeError:
+        return JSONResponse({"ok": False, "error": "Invalid JSON payload"}, status_code=400)
+    
+    # Set protocol based on API type
+    if api_type == "openai_chat":
+        protocol = ProviderProtocol.OPENAI
+        request_path = "/chat/completions"
+    elif api_type == "anthropic_chat":
+        protocol = ProviderProtocol.ANTHROPIC
+        request_path = "/v1/messages"
+    else:
+        return JSONResponse({"ok": False, "error": "Invalid API type"}, status_code=400)
+    
+    # Handle request
+    try:
+        response = await handle_proxy_request(
+            session,
+            protocol=protocol,
+            payload=parsed_payload,
+            raw_api_key=raw_api_key,
+            headers={"Content-Type": "application/json"},
+            request_path=request_path,
+        )
+        return response
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)

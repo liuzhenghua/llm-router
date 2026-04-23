@@ -543,7 +543,7 @@ function enableApiKey(id, name) {
 
 // ---- Destroy (hard delete) API Key ----
 function destroyApiKey(id, name) {
-  if (!confirm('确认永久删除 「' + name + '」 吗？\n\n此操作不可撤销，相关日志记录将保留但与该 Key 解除关联！')) return;
+  if (!confirm('确认删除 「' + name + '」 吗？\n\n该 API Key 将被软删除（保留历史账单和日志），立即失效无法继续使用。')) return;
   fetch('/admin/api-keys/' + id + '/destroy', { method: 'POST' })
     .then(res => res.json())
     .then(result => {

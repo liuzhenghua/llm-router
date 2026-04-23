@@ -8,7 +8,6 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
-    ForeignKey,
     Integer,
     Numeric,
     String,
@@ -75,8 +74,14 @@ class ApiKey(Base, TimestampMixin):
     request_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     response_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
-    request_logs: Mapped[list["RequestLog"]] = relationship(back_populates="api_key")
+    request_logs: Mapped[list["RequestLog"]] = relationship(
+        "RequestLog",
+        primaryjoin="ApiKey.id == RequestLog.api_key_id",
+        foreign_keys="[RequestLog.api_key_id]",
+        back_populates="api_key",
+    )
 
 
 class LogicalModel(Base, TimestampMixin):
@@ -87,8 +92,14 @@ class LogicalModel(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     routing_strategy: Mapped[str] = mapped_column(String(32), default="priority")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
-    routes: Mapped[list["LogicalModelRoute"]] = relationship(back_populates="logical_model")
+    routes: Mapped[list["LogicalModelRoute"]] = relationship(
+        "LogicalModelRoute",
+        primaryjoin="LogicalModel.id == LogicalModelRoute.logical_model_id",
+        foreign_keys="[LogicalModelRoute.logical_model_id]",
+        back_populates="logical_model",
+    )
 
 
 class ProviderModel(Base, TimestampMixin):
@@ -107,8 +118,14 @@ class ProviderModel(Base, TimestampMixin):
     cache_write_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     timeout_seconds: Mapped[int] = mapped_column(Integer, default=120)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
-    routes: Mapped[list["LogicalModelRoute"]] = relationship(back_populates="provider_model")
+    routes: Mapped[list["LogicalModelRoute"]] = relationship(
+        "LogicalModelRoute",
+        primaryjoin="ProviderModel.id == LogicalModelRoute.provider_model_id",
+        foreign_keys="[LogicalModelRoute.provider_model_id]",
+        back_populates="provider_model",
+    )
 
 
 class LogicalModelRoute(Base):
@@ -118,8 +135,8 @@ class LogicalModelRoute(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    logical_model_id: Mapped[int] = mapped_column(ForeignKey(table_name("logical_models") + ".id", ondelete="CASCADE"))
-    provider_model_id: Mapped[int] = mapped_column(ForeignKey(table_name("provider_models") + ".id", ondelete="CASCADE"))
+    logical_model_id: Mapped[int] = mapped_column(Integer, index=True)
+    provider_model_id: Mapped[int] = mapped_column(Integer, index=True)
     # 优先级：数值越小越优先，按 priority 分组后按权重分配流量
     priority: Mapped[int] = mapped_column(Integer, default=100)
     # 权重：同组内按权重加权随机分配流量，weight=0 表示不参与路由
@@ -128,8 +145,18 @@ class LogicalModelRoute(Base):
     is_fallback: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(16), default="active")
 
-    logical_model: Mapped[LogicalModel] = relationship(back_populates="routes")
-    provider_model: Mapped[ProviderModel] = relationship(back_populates="routes")
+    logical_model: Mapped["LogicalModel"] = relationship(
+        "LogicalModel",
+        primaryjoin="LogicalModelRoute.logical_model_id == LogicalModel.id",
+        foreign_keys="[LogicalModelRoute.logical_model_id]",
+        back_populates="routes",
+    )
+    provider_model: Mapped["ProviderModel"] = relationship(
+        "ProviderModel",
+        primaryjoin="LogicalModelRoute.provider_model_id == ProviderModel.id",
+        foreign_keys="[LogicalModelRoute.provider_model_id]",
+        back_populates="routes",
+    )
 
 
 class RequestLog(Base):
@@ -137,9 +164,9 @@ class RequestLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    api_key_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("api_keys") + ".id"), nullable=True, index=True)
-    logical_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("logical_models") + ".id"), nullable=True, index=True)
-    provider_model_id: Mapped[int | None] = mapped_column(ForeignKey(table_name("provider_models") + ".id"), nullable=True, index=True)
+    api_key_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    logical_model_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    provider_model_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     protocol: Mapped[str] = mapped_column(String(32))
     call_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     upstream_request_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
@@ -152,28 +179,52 @@ class RequestLog(Base):
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
 
-    api_key: Mapped[ApiKey | None] = relationship(back_populates="request_logs")
-    provider_model: Mapped["ProviderModel | None"] = relationship(foreign_keys=[provider_model_id])
-    usage_record: Mapped["UsageRecord | None"] = relationship(back_populates="request_log", uselist=False)
-    body: Mapped["RequestLogBody | None"] = relationship(back_populates="request_log", uselist=False)
+    api_key: Mapped["ApiKey | None"] = relationship(
+        "ApiKey",
+        primaryjoin="RequestLog.api_key_id == ApiKey.id",
+        foreign_keys="[RequestLog.api_key_id]",
+        back_populates="request_logs",
+    )
+    provider_model: Mapped["ProviderModel | None"] = relationship(
+        "ProviderModel",
+        primaryjoin="RequestLog.provider_model_id == ProviderModel.id",
+        foreign_keys="[RequestLog.provider_model_id]",
+    )
+    usage_record: Mapped["UsageRecord | None"] = relationship(
+        "UsageRecord",
+        primaryjoin="RequestLog.id == UsageRecord.request_log_id",
+        foreign_keys="[UsageRecord.request_log_id]",
+        back_populates="request_log",
+        uselist=False,
+    )
+    body: Mapped["RequestLogBody | None"] = relationship(
+        "RequestLogBody",
+        primaryjoin="RequestLog.id == RequestLogBody.request_log_id",
+        foreign_keys="[RequestLogBody.request_log_id]",
+        back_populates="request_log",
+        uselist=False,
+    )
 
 
 class RequestLogBody(Base):
     __tablename__ = table_name("request_log_bodies")
 
-    request_log_id: Mapped[int] = mapped_column(
-        ForeignKey(table_name("request_logs") + ".id", ondelete="CASCADE"), primary_key=True
-    )
+    request_log_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     request_body: Mapped[str | None] = mapped_column(Text, nullable=True)
     response_body: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    request_log: Mapped[RequestLog] = relationship(back_populates="body")
+    request_log: Mapped["RequestLog"] = relationship(
+        "RequestLog",
+        primaryjoin="RequestLogBody.request_log_id == RequestLog.id",
+        foreign_keys="[RequestLogBody.request_log_id]",
+        back_populates="body",
+    )
 
 
 class UsageRecord(Base):
     __tablename__ = table_name("usage_records")
 
-    request_log_id: Mapped[int] = mapped_column(ForeignKey(table_name("request_logs") + ".id", ondelete="CASCADE"), primary_key=True)
+    request_log_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cache_read_tokens: Mapped[int] = mapped_column(Integer, default=0)
@@ -191,14 +242,19 @@ class UsageRecord(Base):
     currency: Mapped[str] = mapped_column(String(8), default="USD")
     billing_date: Mapped[date] = mapped_column(Date, default=date.today, index=True)
 
-    request_log: Mapped[RequestLog] = relationship(back_populates="usage_record")
+    request_log: Mapped["RequestLog"] = relationship(
+        "RequestLog",
+        primaryjoin="UsageRecord.request_log_id == RequestLog.id",
+        foreign_keys="[UsageRecord.request_log_id]",
+        back_populates="usage_record",
+    )
 
 
 class BalanceLedger(Base):
     __tablename__ = table_name("balance_ledgers")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    api_key_id: Mapped[int] = mapped_column(ForeignKey(table_name("api_keys") + ".id", ondelete="CASCADE"), index=True)
+    api_key_id: Mapped[int] = mapped_column(Integer, index=True)
     change_type: Mapped[str] = mapped_column(String(32))
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 8))
     balance_before: Mapped[Decimal] = mapped_column(Numeric(18, 8))
@@ -216,7 +272,7 @@ class DailyUsageSummary(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    api_key_id: Mapped[int] = mapped_column(ForeignKey(table_name("api_keys") + ".id", ondelete="CASCADE"))
+    api_key_id: Mapped[int] = mapped_column(Integer)
     summary_date: Mapped[date] = mapped_column(Date, default=date.today)
     request_count: Mapped[int] = mapped_column(Integer, default=0)
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)

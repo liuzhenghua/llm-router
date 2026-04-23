@@ -154,6 +154,7 @@ function renderLogicalModelsTable() {
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">路由</button>
         <button type="button" onclick='fillForm("edit-logical-model-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-logical-model-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
+        <button type="button" onclick="deleteLogicalModel(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
       </div></td>
     `;
     tbody.appendChild(tr);
@@ -184,6 +185,25 @@ function renderLogicalModelsTable() {
   paginDiv.appendChild(nextButton);
 
   paginationContainer.appendChild(paginDiv);
+}
+
+function deleteLogicalModel(id, name) {
+  if (!confirm('确认删除逻辑模型「' + name + '」吗？\n\n请确保已删除该模型下的所有路由。')) return;
+  fetch('/admin/logical-models/' + id + '/delete', { method: 'POST' })
+    .then(res => res.json())
+    .then(result => {
+      if (result.ok) {
+        allLogicalModels = allLogicalModels.filter(m => m.id !== id);
+        allRoutesForModels = allRoutesForModels.filter(r => r.logical_model_id !== id);
+        const totalPages = Math.ceil(allLogicalModels.length / logicalModelsPerPage);
+        if (currentLogicalModelPage > 1 && currentLogicalModelPage > totalPages) currentLogicalModelPage = Math.max(1, totalPages);
+        renderLogicalModelsTable();
+        showToast('「' + name + '」 已删除');
+      } else {
+        showToast(result.error || '删除失败', 'error');
+      }
+    })
+    .catch(() => showToast('网络错误，请重试', 'error'));
 }
 
 document.getElementById('search-btn').addEventListener('click', () => {

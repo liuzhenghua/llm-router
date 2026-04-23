@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<div class="max-w-7xl mx-auto">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">API Debug</h1>
+      <p class="text-sm text-slate-500 mt-1">调试不同类型的API请求</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Left: Request Configuration -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 lg:p-5">
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">请求配置</h2>
+      
+      <form id="debug-form">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <!-- API Type -->
+          <div>
+            <label for="api-type" class="block text-xs font-medium text-slate-700 mb-1">API 类型</label>
+            <select id="api-type" name="api_type" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required>
+              <option value="openai_chat">OpenAI Chat Completions</option>
+              <option value="anthropic_chat">Anthropic Chat Completions</option>
+            </select>
+          </div>
+          
+          <!-- API Key -->
+          <div>
+            <label for="api-key" class="block text-xs font-medium text-slate-700 mb-1">API Key</label>
+            <select id="api-key" name="api_key_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required>
+              {% for api_key in api_keys %}
+              <option value="{{ api_key.id }}">{{ api_key.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        
+        <!-- Payload Editor -->
+        <div class="mb-4">
+          <label for="payload" class="block text-xs font-medium text-slate-700 mb-1">请求报文</label>
+          <textarea id="payload" name="payload" rows="12" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-mono" required>{{ default_openai_payload }}</textarea>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-2">
+          <button type="submit" id="send-btn" class="flex-1 rounded-xl bg-slate-800 px-4 py-2 text-sm text-white font-medium hover:bg-slate-700 transition">
+            发送请求
+          </button>
+          <button type="button" id="clear-btn" class="rounded-xl border border-slate-300 px-4 py-2 text-sm text-slate-700 font-medium hover:bg-slate-50 transition">
+            清空
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <!-- Right: Response Display -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 lg:p-5">
+      <h2 class="text-lg font-semibold text-slate-900 mb-4">响应报文</h2>
+      
+      <div class="mb-3 flex items-center justify-between">
+        <span class="text-xs font-medium text-slate-700">状态:</span>
+        <span id="response-status" class="inline-flex items-center rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700">未发送</span>
+      </div>
+      
+      <div class="mb-3 flex items-center justify-between">
+        <span class="text-xs font-medium text-slate-700">耗时:</span>
+        <span id="response-time" class="text-xs text-slate-500">--</span>
+      </div>
+      
+      <!-- Response Body -->
+      <div class="h-80 rounded-xl border border-slate-200 overflow-auto">
+        <pre id="response-body" class="p-3 text-xs font-mono text-slate-700 whitespace-pre-wrap">
+等待发送请求...</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Handle API type change to update default payload
+  const apiTypeSelect = document.getElementById('api-type');
+  const payloadTextarea = document.getElementById('payload');
+  const defaultPayloads = {
+    openai_chat: JSON.stringify({{ default_openai_payload | tojson }}, null, 2),
+    anthropic_chat: JSON.stringify({{ default_anthropic_payload | tojson }}, null, 2)
+  };
+  
+  apiTypeSelect.addEventListener('change', () => {
+    const selectedType = apiTypeSelect.value;
+    payloadTextarea.value = defaultPayloads[selectedType];
+  });
+  
+  // Handle form submission
+  const debugForm = document.getElementById('debug-form');
+  const sendBtn = document.getElementById('send-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const responseStatus = document.getElementById('response-status');
+  const responseTime = document.getElementById('response-time');
+  const responseBody = document.getElementById('response-body');
+  
+  debugForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    // Reset UI
+    responseBody.textContent = '发送中...';
+    responseStatus.className = 'inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700';
+    responseStatus.textContent = '发送中';
+    responseTime.textContent = '--';
+    sendBtn.disabled = true;
+    sendBtn.textContent = '发送中...';
+    
+    const startTime = Date.now();
+    
+    try {
+      // Get form data
+      const formData = new FormData(debugForm);
+      const payload = formData.get('payload');
+      
+      // Validate JSON
+      try {
+        JSON.parse(payload);
+      } catch (err) {
+        throw new Error('Invalid JSON format');
+      }
+      
+      // Send request
+      const response = await fetch('/admin/api-debug/execute', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      responseTime.textContent = `${duration}ms`;
+      
+      // Check if it's a streaming response
+      if (response.headers.get('content-type')?.includes('text/event-stream')) {
+        responseStatus.className = 'inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700';
+        responseStatus.textContent = '流式响应';
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let result = '';
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          result += chunk;
+          
+          // Format streaming response
+          const formattedChunk = formatStreamingResponse(chunk);
+          responseBody.textContent += formattedChunk;
+          responseBody.scrollTop = responseBody.scrollHeight;
+        }
+        
+        // Final formatting
+        responseBody.textContent = formatJson(result);
+      } else {
+        // Non-streaming response
+        const data = await response.json();
+        
+        if (response.ok) {
+          responseStatus.className = 'inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700';
+          responseStatus.textContent = '成功';
+          responseBody.textContent = formatJson(JSON.stringify(data, null, 2));
+        } else {
+          responseStatus.className = 'inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700';
+          responseStatus.textContent = '失败';
+          responseBody.textContent = formatJson(JSON.stringify(data, null, 2));
+        }
+      }
+    } catch (error) {
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      responseTime.textContent = `${duration}ms`;
+      
+      responseStatus.className = 'inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700';
+      responseStatus.textContent = '错误';
+      responseBody.textContent = `错误: ${error.message}`;
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = '发送请求';
+    }
+  });
+  
+  // Clear button handler
+  clearBtn.addEventListener('click', () => {
+    responseBody.textContent = '等待发送请求...';
+    responseStatus.className = 'inline-flex items-center rounded-full bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700';
+    responseStatus.textContent = '未发送';
+    responseTime.textContent = '--';
+  });
+  
+  // Helper functions
+  function formatJson(json) {
+    try {
+      const parsed = JSON.parse(json);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return json;
+    }
+  }
+  
+  function formatStreamingResponse(chunk) {
+    // Handle SSE format
+    const lines = chunk.split('\n');
+    let result = '';
+    
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6);
+        if (data === '[DONE]') {
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(data);
+          result += JSON.stringify(parsed, null, 2) + '\n';
+        } catch {
+          result += data + '\n';
+        }
+      }
+    }
+    
+    return result;
+  }
+</script>
+{% endblock %}
