@@ -113,8 +113,62 @@
         </div>
       </div>
 
+      <!-- OpenAI Models -->
+      <div id="openai-models" class="mb-10">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — List / Get Models</h3>
+        <p class="mb-3 text-slate-600">
+          获取当前 API Key 可访问的逻辑模型列表，或查询单个模型详情。响应格式与 OpenAI <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/v1/models</code> 完全兼容。
+        </p>
+
+        <p class="mb-2 text-xs text-slate-500"><span class="font-semibold text-slate-700">Endpoints:</span></p>
+        <ul class="mb-3 ml-4 list-disc text-xs text-slate-500 space-y-1">
+          <li><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">GET {{ base_url }}/v1/models</code> — 列出所有可用模型</li>
+          <li><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">GET {{ base_url }}/v1/models/{model_id}</code> — 查询单个模型</li>
+        </ul>
+
+        <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">示例代码</p>
+        <div class="code-tabs rounded-xl overflow-hidden" data-group="oai-models-example">
+          <div class="flex items-center bg-slate-900 border-b border-slate-700">
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-models-curl" data-group="oai-models-example">cURL</button>
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="oai-models-python" data-group="oai-models-example">Python</button>
+            <button class="copy-btn ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="oai-models-example">
+              <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </button>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="oai-models-curl">
+            <span class="text-slate-400"># 列出所有模型</span><br>
+            curl {{ base_url }}/v1/models \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Authorization: Bearer sk-xxxxxxxxxxxxxxxx"</span><br><br>
+            <span class="text-slate-400"># 查询单个模型</span><br>
+            curl {{ base_url }}/v1/models/<span class="text-amber-400">your-logical-model</span> \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Authorization: Bearer sk-xxxxxxxxxxxxxxxx"</span>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="oai-models-python">
+            <span class="text-sky-400">from</span> openai <span class="text-sky-400">import</span> OpenAI<br><br>
+            client = OpenAI(<br>
+            &nbsp;&nbsp;base_url=<span class="text-emerald-400">"{{ base_url }}/v1"</span>,<br>
+            &nbsp;&nbsp;api_key=<span class="text-emerald-400">"sk-xxxxxxxxxxxxxxxx"</span>,<br>
+            )<br><br>
+            <span class="text-slate-400"># 列出所有模型</span><br>
+            models = client.models.list()<br>
+            <span class="text-sky-400">for</span> m <span class="text-sky-400">in</span> models.data:<br>
+            &nbsp;&nbsp;<span class="text-sky-400">print</span>(m.id)<br><br>
+            <span class="text-slate-400"># 查询单个模型</span><br>
+            model = client.models.retrieve(<span class="text-emerald-400">"your-logical-model"</span>)<br>
+            <span class="text-sky-400">print</span>(model.id, model.created)
+          </div>
+        </div>
+
+        <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+          <span class="font-semibold text-slate-800">响应格式：</span>
+          列表接口返回 <code class="rounded bg-slate-100 px-1 font-mono">&#123;"object":"list","data":[&#123;"id":"...","object":"model","created":1234567890,"owned_by":"llm-router"&#125;]&#125;</code>。
+          详情接口返回单个模型对象，字段相同。
+        </div>
+      </div>
+
       <!-- Anthropic Messages -->
-      <div id="anthropic-messages">
+      <div id="anthropic-messages" class="mb-10">
         <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — Messages</h3>
         <p class="mb-3 text-slate-600">
           llm-router 同样兼容 Anthropic Messages 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务的 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/anthropic</code> 前缀即可。
@@ -167,6 +221,60 @@
             });<br>
             console.log(message.content[<span class="text-amber-400">0</span>].text);
           </div>
+        </div>
+      </div>
+
+      <!-- Anthropic Models -->
+      <div id="anthropic-models">
+        <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — List / Get Models</h3>
+        <p class="mb-3 text-slate-600">
+          获取当前 API Key 可访问的逻辑模型列表，或查询单个模型详情。响应格式与 Anthropic <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/v1/models</code> 完全兼容。
+        </p>
+
+        <p class="mb-2 text-xs text-slate-500"><span class="font-semibold text-slate-700">Endpoints:</span></p>
+        <ul class="mb-3 ml-4 list-disc text-xs text-slate-500 space-y-1">
+          <li><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">GET {{ base_url }}/anthropic/v1/models</code> — 列出所有可用模型</li>
+          <li><code class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-rose-600">GET {{ base_url }}/anthropic/v1/models/{model_id}</code> — 查询单个模型</li>
+        </ul>
+
+        <p class="mb-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500">示例代码</p>
+        <div class="code-tabs rounded-xl overflow-hidden" data-group="ant-models-example">
+          <div class="flex items-center bg-slate-900 border-b border-slate-700">
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-models-curl" data-group="ant-models-example">cURL</button>
+            <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="ant-models-python" data-group="ant-models-example">Python</button>
+            <button class="copy-btn ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="ant-models-example">
+              <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </button>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="ant-models-curl">
+            <span class="text-slate-400"># 列出所有模型</span><br>
+            curl {{ base_url }}/anthropic/v1/models \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Authorization: Bearer sk-xxxxxxxxxxxxxxxx"</span><br><br>
+            <span class="text-slate-400"># 查询单个模型</span><br>
+            curl {{ base_url }}/anthropic/v1/models/<span class="text-amber-400">your-logical-model</span> \<br>
+            &nbsp;&nbsp;-H <span class="text-emerald-400">"Authorization: Bearer sk-xxxxxxxxxxxxxxxx"</span>
+          </div>
+          <div class="tab-panel hidden rounded-b-xl bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6" id="ant-models-python">
+            <span class="text-sky-400">import</span> anthropic<br><br>
+            client = anthropic.Anthropic(<br>
+            &nbsp;&nbsp;base_url=<span class="text-emerald-400">"{{ base_url }}/anthropic"</span>,<br>
+            &nbsp;&nbsp;api_key=<span class="text-emerald-400">"sk-xxxxxxxxxxxxxxxx"</span>,<br>
+            )<br><br>
+            <span class="text-slate-400"># 列出所有模型</span><br>
+            models = client.models.list()<br>
+            <span class="text-sky-400">for</span> m <span class="text-sky-400">in</span> models.data:<br>
+            &nbsp;&nbsp;<span class="text-sky-400">print</span>(m.id, m.display_name)<br><br>
+            <span class="text-slate-400"># 查询单个模型</span><br>
+            model = client.models.retrieve(<span class="text-emerald-400">"your-logical-model"</span>)<br>
+            <span class="text-sky-400">print</span>(model.id, model.display_name)
+          </div>
+        </div>
+
+        <div class="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+          <span class="font-semibold text-slate-800">响应格式：</span>
+          列表接口返回 <code class="rounded bg-slate-100 px-1 font-mono">&#123;"data":[&#123;"type":"model","id":"...","display_name":"...","created_at":"..."&#125;],"has_more":false&#125;</code>。
+          详情接口返回单个模型对象，字段相同。
         </div>
       </div>
     </section>
@@ -336,7 +444,9 @@
         <a href="#api-integration" class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50">API 接入文档</a>
         <a href="#request-headers"  class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">请求头</a>
         <a href="#openai-chat"      class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI Chat Completions</a>
+        <a href="#openai-models"    class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI List Models</a>
         <a href="#anthropic-messages" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Anthropic Messages</a>
+        <a href="#anthropic-models" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Anthropic List Models</a>
         <a href="#dev-tools"        class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50 mt-2">编程工具集成</a>
         <a href="#claude-code"      class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Claude Code</a>
         <a href="#operations"       class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50 mt-2">运维文档</a>
@@ -424,7 +534,7 @@
 
   // ── TOC: highlight active section on scroll ───────────────────
   (function () {
-    var sectionIds = ['api-integration','request-headers','openai-chat','anthropic-messages','dev-tools','claude-code','operations','ops-guide','routing-rules'];
+    var sectionIds = ['api-integration','request-headers','openai-chat','openai-models','anthropic-messages','anthropic-models','dev-tools','claude-code','operations','ops-guide','routing-rules'];
     var headerIds  = new Set(['api-integration','dev-tools','operations']);
     var tocLinks   = {};
     sectionIds.forEach(function(id) {

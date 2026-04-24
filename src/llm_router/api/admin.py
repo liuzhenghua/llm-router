@@ -1115,7 +1115,7 @@ async def api_debug_execute(
     request: Request,
     api_key_id: int = Form(...),
     api_type: str = Form(...),
-    payload: str = Form(...),
+    payload: str = Form(default="{}"),
     _: None = Depends(require_admin),
 ):
     import json
@@ -1133,7 +1133,45 @@ async def api_debug_execute(
     if not api_key or api_key.status != "active":
         return JSONResponse({"ok": False, "error": "Invalid API key"}, status_code=400)
     
-    # Get raw API key
+    # Handle models list endpoints (no upstream proxy needed — query DB directly)
+    if api_type in ("openai_models", "anthropic_models"):
+        from sqlalchemy import select
+        stmt = select(LogicalModel).where(LogicalModel.is_active)
+        if api_key.allowed_logical_models_json:
+            stmt = stmt.where(LogicalModel.name.in_(api_key.allowed_logical_models_json))
+        items = (await session.execute(stmt)).scalars().all()
+
+        if api_type == "openai_models":
+            return JSONResponse({
+                "object": "list",
+                "data": [
+                    {
+                        "id": item.name,
+                        "object": "model",
+                        "created": int(item.created_at.timestamp()),
+                        "owned_by": "llm-router",
+                    }
+                    for item in items
+                ],
+            })
+        else:  # anthropic_models
+            data = [
+                {
+                    "type": "model",
+                    "id": item.name,
+                    "display_name": item.description or item.name,
+                    "created_at": item.created_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+                for item in items
+            ]
+            return JSONResponse({
+                "data": data,
+                "has_more": False,
+                "first_id": data[0]["id"] if data else None,
+                "last_id": data[-1]["id"] if data else None,
+            })
+
+    # Get raw API key (needed for proxy requests)
     if not api_key.encrypted_key:
         return JSONResponse({"ok": False, "error": "API key not available"}, status_code=400)
     try:

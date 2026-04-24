@@ -18,8 +18,14 @@
         <div>
           <label for="api-type" class="block text-xs text-slate-500 mb-1">API 类型</label>
           <select id="api-type" name="api_type" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs" required>
-            <option value="openai_chat">OpenAI Chat Completions</option>
-            <option value="anthropic_chat">Anthropic Chat Completions</option>
+            <optgroup label="OpenAI 协议">
+              <option value="openai_chat">Chat Completions</option>
+              <option value="openai_models">List Models</option>
+            </optgroup>
+            <optgroup label="Anthropic 协议">
+              <option value="anthropic_chat">Chat Completions</option>
+              <option value="anthropic_models">List Models</option>
+            </optgroup>
           </select>
         </div>
 
@@ -34,12 +40,12 @@
         </div>
       </div>
 
-      <!-- Payload Editor -->
-      <div class="mb-4">
+      <!-- Payload Editor (hidden for models endpoints) -->
+      <div id="payload-section" class="mb-4">
         <label for="payload" class="block text-xs text-slate-500 mb-1">请求报文 (JSON)</label>
         <textarea id="payload" name="payload" rows="16"
           class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-mono bg-slate-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-slate-400 transition resize-y"
-          required>{{ default_openai_payload }}</textarea>
+          >{{ default_openai_payload }}</textarea>
       </div>
 
       <!-- Action Buttons -->
@@ -83,14 +89,31 @@
 <script>
   const apiTypeSelect = document.getElementById('api-type');
   const payloadTextarea = document.getElementById('payload');
+  const payloadSection = document.getElementById('payload-section');
   const defaultPayloads = {
     openai_chat: JSON.stringify({{ default_openai_payload | tojson }}, null, 2),
-    anthropic_chat: JSON.stringify({{ default_anthropic_payload | tojson }}, null, 2)
+    anthropic_chat: JSON.stringify({{ default_anthropic_payload | tojson }}, null, 2),
+    openai_models: null,
+    anthropic_models: null,
   };
 
-  apiTypeSelect.addEventListener('change', () => {
-    payloadTextarea.value = defaultPayloads[apiTypeSelect.value];
-  });
+  const modelsTypes = new Set(['openai_models', 'anthropic_models']);
+
+  function updatePayloadVisibility() {
+    const isModels = modelsTypes.has(apiTypeSelect.value);
+    payloadSection.classList.toggle('hidden', isModels);
+  }
+
+  function onApiTypeChange() {
+    const val = apiTypeSelect.value;
+    updatePayloadVisibility();
+    if (!modelsTypes.has(val) && defaultPayloads[val]) {
+      payloadTextarea.value = defaultPayloads[val];
+    }
+  }
+
+  apiTypeSelect.addEventListener('change', onApiTypeChange);
+  updatePayloadVisibility();  // init: only toggle visibility, keep template-rendered value
 
   const debugForm = document.getElementById('debug-form');
   const sendBtn = document.getElementById('send-btn');
@@ -123,12 +146,20 @@
 
     try {
       const formData = new FormData(debugForm);
-      const payload = formData.get('payload');
+      const apiType = formData.get('api_type');
+      const isModels = modelsTypes.has(apiType);
 
-      try {
-        JSON.parse(payload);
-      } catch {
-        throw new Error('JSON 格式有误，请检查请求报文');
+      // For models endpoints, no JSON body validation needed
+      if (!isModels) {
+        const payload = formData.get('payload');
+        try {
+          JSON.parse(payload);
+        } catch {
+          throw new Error('JSON 格式有误，请检查请求报文');
+        }
+      } else {
+        // Ensure payload field is empty for models types
+        formData.set('payload', '{}');
       }
 
       const response = await fetch('/admin/api-debug/execute', {

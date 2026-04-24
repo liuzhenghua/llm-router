@@ -34,7 +34,47 @@ async def list_models(request: Request, authorization: str | None = Header(defau
     if api_key.allowed_logical_models_json:
         stmt = stmt.where(LogicalModel.name.in_(api_key.allowed_logical_models_json))
     items = (await session.execute(stmt)).scalars().all()
-    return {"object": "list", "data": [{"id": item.name, "object": "model"} for item in items]}
+    return {
+        "object": "list",
+        "data": [
+            {
+                "id": item.name,
+                "object": "model",
+                "created": int(item.created_at.timestamp()),
+                "owned_by": "llm-router",
+            }
+            for item in items
+        ],
+    }
+
+
+@router.get("/models/{model_id}")
+async def get_model(model_id: str, request: Request, authorization: str | None = Header(default=None)):
+    from sqlalchemy import select
+
+    from llm_router.domain.models import ApiKey, LogicalModel
+    from llm_router.core.security import hash_api_key
+
+    session: AsyncSession = request.state.db
+    raw_api_key = _extract_bearer_token(authorization)
+    api_key = (
+        await session.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw_api_key), ApiKey.status == "active"))
+    ).scalar_one_or_none()
+    if api_key is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+    if api_key.allowed_logical_models_json and model_id not in api_key.allowed_logical_models_json:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+    model = (
+        await session.execute(select(LogicalModel).where(LogicalModel.name == model_id, LogicalModel.is_active))
+    ).scalar_one_or_none()
+    if model is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+    return {
+        "id": model.name,
+        "object": "model",
+        "created": int(model.created_at.timestamp()),
+        "owned_by": "llm-router",
+    }
 
 
 @router.post("/chat/completions")
