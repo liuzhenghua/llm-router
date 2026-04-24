@@ -7,7 +7,7 @@ services:
       MYSQL_DATABASE: llm_router
       MYSQL_USER: llm_router
       MYSQL_PASSWORD: llm_router
-    command: ["mysqld", "--default-authentication-plugin=mysql_native_password"]
+    command: ["mysqld", "--mysql-native-password=ON"]
     ports:
       - "3306:3306"
     volumes:

@@ -200,6 +200,10 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        # Let redirect exceptions pass through as actual redirects
+        if 300 <= exc.status_code < 400:
+            location = (exc.headers or {}).get("Location") or "/"
+            return RedirectResponse(url=location, status_code=exc.status_code)
         return _error_response(request, exc.status_code, exc.detail or "HTTP error")
 
     @app.exception_handler(RequestValidationError)
