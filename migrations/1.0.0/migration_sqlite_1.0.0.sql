@@ -1,0 +1,9 @@
+-- Migration: 1.0.1
+-- Description: <one-line summary of what this migration does>
+--
+-- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
+-- !! replace every occurrence of "lr_" in this file with your prefix
+-- !! before running. Example: s/lr_/myprefix_/g
+--
+-- Apply (SQLite):
+--   sqlite3 data/llm_router.db < migrations/1.0.1/migration_sqlite_1.0.1.sql

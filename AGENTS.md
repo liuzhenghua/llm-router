@@ -226,35 +226,47 @@ Key classes:
 
 Schema changes are **never** embedded in Python code. Every schema change must be written as a SQL file under `migrations/`.
 
-### File naming
+### Versioned folder structure
+
+Migrations are grouped by project version (read from the `VERSION` file at the repo root).
 
 ```
 migrations/
-  sqlite/
-    YYYY_MM.sql    # SQLite variant
-  mysql/
-    YYYY_MM.sql    # MySQL variant
+  {version}/
+    migration_mysql_{version}.sql    # MySQL variant
+    migration_sqlite_{version}.sql   # SQLite variant
 ```
 
-Always create both files. Split the SQL when syntax differs between SQLite and MySQL.
+Example for version `1.0.1`:
+
+```
+migrations/
+  1.0.1/
+    migration_mysql_1.0.1.sql
+    migration_sqlite_1.0.1.sql
+```
+
+- Always write to the folder that matches the **current** version in `VERSION`.
+- When the version is bumped, create a new folder for the new version before adding any SQL.
+- Always create both files (MySQL + SQLite). Split the SQL when syntax differs.
 
 ### File header (required)
 
-Every migration file **must** start with the following header block. Replace `{YYYY_MM}` and fill in the description.
+Every migration file **must** start with the following header block. Replace `{version}` and fill in the description.
 
 ```sql
--- Migration: {YYYY_MM}
+-- Migration: {version}
 -- Description: <one-line summary of what this migration does>
 --
--- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "llm_router_"),
--- !! replace every occurrence of "llm_router_" in this file with your prefix
--- !! before running. Example: s/llm_router_/myprefix_/g
+-- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
+-- !! replace every occurrence of "lr_" in this file with your prefix
+-- !! before running. Example: s/lr_/myprefix_/g
 --
 -- Apply (SQLite):
---   sqlite3 data/llm_router.db < migrations/sqlite/{YYYY_MM}.sql
+--   sqlite3 data/llm_router.db < migrations/{version}/migration_sqlite_{version}.sql
 --
 -- Apply (MySQL):
---   mysql -u llm_router -p llm_router < migrations/mysql/{YYYY_MM}.sql
+--   mysql -u llm_router -p llm_router < migrations/{version}/migration_mysql_{version}.sql
 ```
 
 ### SQLite vs MySQL differences to watch for
@@ -272,6 +284,7 @@ Every migration file **must** start with the following header block. Replace `{Y
 - **Never** rely on SQLAlchemy `create_all()` to add new columns — it only creates missing tables.
 - Each migration file is **append-only**: once committed, do not edit it. Add a new file for follow-up fixes.
 - Keep migrations idempotent where possible (e.g. `ADD COLUMN IF NOT EXISTS` on MySQL 8+).
+- Default `TABLE_PREFIX` is `lr_`. All table names in migration files use this prefix unless overridden.
 
 ---
 
