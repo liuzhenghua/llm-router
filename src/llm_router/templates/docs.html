@@ -563,7 +563,7 @@
         var block = blockId && document.getElementById(blockId);
         if (!block) return;
         var text = (block.innerText || block.textContent || '').trim();
-        navigator.clipboard.writeText(text).then(function() {
+        function onCopied() {
           var copyIcon  = btn.querySelector('.copy-icon');
           var checkIcon = btn.querySelector('.check-icon');
           copyIcon.classList.add('hidden');
@@ -572,7 +572,20 @@
             copyIcon.classList.remove('hidden');
             checkIcon.classList.add('hidden');
           }, 1800);
-        });
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onCopied);
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          try { document.execCommand('copy'); } catch (_) {}
+          document.body.removeChild(ta);
+          onCopied();
+        }
       });
     });
 
@@ -584,7 +597,7 @@
         var activePanel = container && container.querySelector('.tab-panel:not(.hidden)');
         if (!activePanel) return;
         var text = (activePanel.innerText || activePanel.textContent || '').trim();
-        navigator.clipboard.writeText(text).then(function() {
+        function onCopied() {
           var copyIcon  = btn.querySelector('.copy-icon');
           var checkIcon = btn.querySelector('.check-icon');
           copyIcon.classList.add('hidden');
@@ -593,7 +606,20 @@
             copyIcon.classList.remove('hidden');
             checkIcon.classList.add('hidden');
           }, 1800);
-        });
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(onCopied);
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          try { document.execCommand('copy'); } catch (_) {}
+          document.body.removeChild(ta);
+          onCopied();
+        }
       });
     });
   })();

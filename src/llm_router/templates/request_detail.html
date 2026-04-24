@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const activePanel = container && container.querySelector('.tab-panel:not(.hidden)');
       if (!activePanel) return;
       const text = (activePanel.innerText || activePanel.textContent || '').trim();
-      navigator.clipboard.writeText(text).then(() => {
+      function onCopied() {
         const copyIcon  = btn.querySelector('.copy-icon');
         const checkIcon = btn.querySelector('.check-icon');
         copyIcon.classList.add('hidden');
@@ -217,7 +217,20 @@ document.addEventListener('DOMContentLoaded', () => {
           copyIcon.classList.remove('hidden');
           checkIcon.classList.add('hidden');
         }, 1800);
-      });
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(onCopied);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(ta);
+        onCopied();
+      }
     });
   });
 });
