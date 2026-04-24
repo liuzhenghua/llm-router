@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import desc, func, or_, select
+from sqlalchemy import case as sa_case, desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from llm_router.core.admin_users import AdminUserService
@@ -1093,6 +1093,168 @@ async def billing_page(
         },
         nav_active="billing",
         title="Billing",
+    )
+
+
+@protected_router.get("/statistics")
+async def statistics_page(
+    request: Request,
+    granularity: str = Query(default="day"),
+    date_from: str | None = Query(default=None),
+    date_to: str | None = Query(default=None),
+    group_by: str = Query(default="none"),
+    api_key_id: int | None = Query(default=None),
+    channel: str | None = Query(default=None),
+    end_user: str | None = Query(default=None),
+    _: None = Depends(require_admin),
+):
+    from datetime import date as date_type
+    session = request.state.db
+
+    today = date_type.today()
+    if date_from:
+        try:
+            df = date_type.fromisoformat(date_from)
+        except ValueError:
+            df = today
+    else:
+        df = today
+
+    if date_to:
+        try:
+            dt = date_type.fromisoformat(date_to)
+        except ValueError:
+            dt = today
+    else:
+        dt = today
+
+    group_col = None
+    if group_by == "api_key":
+        group_col = RequestLog.api_key_id
+    elif group_by == "channel":
+        group_col = RequestLog.channel
+    elif group_by == "end_user":
+        group_col = RequestLog.end_user
+
+    select_cols = [
+        RequestLog.local_date,
+        func.count(RequestLog.id).label("request_count"),
+        func.sum(sa_case((RequestLog.success == True, 1), else_=0)).label("success_count"),
+        func.coalesce(func.sum(UsageRecord.prompt_tokens), 0).label("prompt_tokens"),
+        func.coalesce(func.sum(UsageRecord.completion_tokens), 0).label("completion_tokens"),
+        func.coalesce(func.sum(UsageRecord.reasoning_tokens), 0).label("reasoning_tokens"),
+        func.coalesce(func.sum(UsageRecord.cost_total), 0).label("cost_total"),
+    ]
+    group_cols = [RequestLog.local_date]
+
+    if group_col is not None:
+        select_cols.append(group_col)
+        group_cols.append(group_col)
+
+    stmt = (
+        select(*select_cols)
+        .outerjoin(UsageRecord, RequestLog.id == UsageRecord.request_log_id)
+        .where(RequestLog.local_date >= df)
+        .where(RequestLog.local_date <= dt)
+        .group_by(*group_cols)
+        .order_by(RequestLog.local_date.desc())
+    )
+
+    if api_key_id:
+        stmt = stmt.where(RequestLog.api_key_id == api_key_id)
+    if channel:
+        stmt = stmt.where(RequestLog.channel == channel)
+    if end_user:
+        stmt = stmt.where(RequestLog.end_user == end_user)
+
+    raw_rows = (await session.execute(stmt)).all()
+
+    api_keys_result = (
+        await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.name.asc()))
+    ).scalars().all()
+    api_key_map = {k.id: k.name for k in api_keys_result}
+
+    agg: dict = {}
+    for row in raw_rows:
+        d = row.local_date
+        if d is None:
+            continue
+        if granularity == "month":
+            bucket = f"{d.year}-{d.month:02d}"
+        elif granularity == "year":
+            bucket = str(d.year)
+        else:
+            bucket = d.isoformat()
+
+        if group_by == "api_key":
+            dim_value = api_key_map.get(row.api_key_id, f"#{row.api_key_id}") if row.api_key_id else "-"
+        elif group_by == "channel":
+            dim_value = row.channel or "-"
+        elif group_by == "end_user":
+            dim_value = row.end_user or "-"
+        else:
+            dim_value = None
+
+        cost = Decimal(str(row.cost_total)) if row.cost_total else Decimal("0")
+        key = (bucket, dim_value)
+        if key in agg:
+            a = agg[key]
+            a["request_count"] += row.request_count
+            a["success_count"] += row.success_count
+            a["prompt_tokens"] += int(row.prompt_tokens)
+            a["completion_tokens"] += int(row.completion_tokens)
+            a["reasoning_tokens"] += int(row.reasoning_tokens)
+            a["cost_total"] = a["cost_total"] + cost
+        else:
+            agg[key] = {
+                "bucket": bucket,
+                "dim_value": dim_value,
+                "request_count": row.request_count,
+                "success_count": row.success_count,
+                "prompt_tokens": int(row.prompt_tokens),
+                "completion_tokens": int(row.completion_tokens),
+                "reasoning_tokens": int(row.reasoning_tokens),
+                "cost_total": cost,
+            }
+
+    rows = sorted(agg.values(), key=lambda x: x["bucket"], reverse=True)
+    for r in rows:
+        r["failed_count"] = r["request_count"] - r["success_count"]
+        r["success_rate"] = f"{r['success_count'] / r['request_count'] * 100:.1f}" if r["request_count"] > 0 else "0"
+        r["cost_total"] = str(r["cost_total"].quantize(Decimal("0.000001")))
+        r["total_tokens"] = r["prompt_tokens"] + r["completion_tokens"]
+
+    total_requests = sum(r["request_count"] for r in rows)
+    total_success = sum(r["success_count"] for r in rows)
+    total_cost = sum((Decimal(r["cost_total"]) for r in rows), Decimal("0"))
+    total_tokens = sum(r["total_tokens"] for r in rows)
+
+    return _render_admin(
+        request,
+        "statistics.html",
+        {
+            "rows": rows,
+            "filters": {
+                "granularity": granularity,
+                "date_from": df.isoformat(),
+                "date_to": dt.isoformat(),
+                "group_by": group_by,
+                "api_key_id": api_key_id or "",
+                "channel": channel or "",
+                "end_user": end_user or "",
+            },
+            "api_keys_list": [{"id": k.id, "name": k.name} for k in api_keys_result],
+            "summary": {
+                "total_requests": total_requests,
+                "total_success": total_success,
+                "success_rate": f"{total_success / total_requests * 100:.1f}" if total_requests > 0 else "0",
+                "total_cost": str(total_cost.quantize(Decimal("0.000001"))),
+                "total_tokens": total_tokens,
+            },
+            "group_by": group_by,
+        },
+        nav_active="statistics",
+        title="Statistics",
     )
 
 

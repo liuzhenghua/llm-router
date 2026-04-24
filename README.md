@@ -31,12 +31,15 @@
 
 ## Features
 
-- **Protocol compatibility** — serves OpenAI `POST /v1/chat/completions`, OpenAI `POST /v1/embeddings`, and Anthropic `POST /v1/messages`
+- **Protocol compatibility** — serves OpenAI `POST /v1/chat/completions`, `POST /v1/embeddings`, `GET /v1/models` and Anthropic `POST /anthropic/v1/messages`, `GET /anthropic/v1/models`
 - **Logical model routing** — expose a stable model name (e.g. `gpt-4o`) and route it to any number of real backend providers
 - **Priority fallback** — if the top-priority provider fails, the gateway automatically tries the next one
 - **Per-key quota control** — balance, daily spend cap, QPS limit, and allowed-model list per API key
-- **Accurate billing** — per-request cost breakdown: input, output, cache-read, and cache-write, priced at creation time so history is never affected by price changes
+- **Per-key timezone** — each API key carries an IANA timezone (`Asia/Shanghai`, `UTC`, …) used for billing-date calculation and daily budget reset
+- **Accurate billing** — per-request cost breakdown: input, output, cache-read, cache-write, and reasoning tokens, priced at creation time so history is never affected by price changes
 - **Prompt cache awareness** — handles `cache_read_tokens` and `cache_write_tokens` so cached tokens are never double-billed
+- **Reasoning token tracking** — captures `reasoning_tokens` from supported models and includes them in usage records and daily summaries
+- **Channel tagging** — tag requests with a channel via the `x-channel` request header; falls back to the API key's `default_channel` for downstream analytics
 - **Streaming support** — transparent SSE pass-through for both OpenAI and Anthropic streaming
 - **Audit logging** — optional per-key request/response content capture; metadata always recorded
 - **Flexible deployment** — defaults to SQLite + in-memory cache with zero external dependencies; set `MYSQL_URL` and/or `REDIS_URL` to scale to multi-instance, production deployments — same codebase, no code changes required
@@ -187,6 +190,7 @@ Key environment variables (see `.env.example` for the full list):
 |---|---|---|
 | `APP_ENCRYPTION_KEY` | Yes | Fernet key used to encrypt upstream provider API keys |
 | `SESSION_SECRET` | Yes | Secret for admin session cookies |
+| `TZ` | No | IANA timezone for billing-date calculation and daily budget reset (default: `UTC`). Example: `Asia/Shanghai` |
 | `MYSQL_URL` | No | Set to enable MySQL — format: `mysql://user@host:port/database` |
 | `MYSQL_PASSWORD` | No | MySQL password |
 | `REDIS_URL` | No | Set to enable Redis cache, queue, and distributed lock — format: `redis://host:port/db` |
@@ -209,6 +213,10 @@ A concrete upstream endpoint — provider type, protocol (`openai` or `anthropic
 
 A mapping from a logical model to one or more provider models, each with a priority. The gateway selects by priority and falls back automatically on failure.
 
+### Channel
+
+An optional string tag attached to each request for analytics and cost attribution. Set via the `x-channel` HTTP header per request, or configure a `default_channel` on the API key as a fallback.
+
 ---
 
 ## API Compatibility
@@ -217,7 +225,11 @@ A mapping from a logical model to one or more provider models, each with a prior
 |---|---|---|
 | `POST /v1/chat/completions` | OpenAI | ✅ SSE |
 | `POST /v1/embeddings` | OpenAI | — |
-| `POST /v1/messages` | Anthropic | ✅ streaming |
+| `GET /v1/models` | OpenAI | — |
+| `GET /v1/models/{model_id}` | OpenAI | — |
+| `POST /anthropic/v1/messages` | Anthropic | ✅ streaming |
+| `GET /anthropic/v1/models` | Anthropic | — |
+| `GET /anthropic/v1/models/{model_id}` | Anthropic | — |
 
 Usage with the OpenAI Python SDK:
 

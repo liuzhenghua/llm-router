@@ -2,7 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 
 RUN --mount=type=cache,id=llm_router_apt,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=llm_router_apt_lib,target=/var/lib/apt,sharing=locked \
-    sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's|http://deb.debian.org|https://mirrors.aliyun.com|g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update && apt-get install -y --no-install-recommends \
     less \
     telnet \

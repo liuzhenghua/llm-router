@@ -33,7 +33,6 @@ class Settings(BaseSettings):
     default_request_logging_enabled: bool = False
     default_response_logging_enabled: bool = False
 
-    admin_users_file: Path = DATA_DIR / "admin_users.json"
     session_secret: str = "change-me-session-secret"
     app_encryption_key: str = "change-me-encryption-key"
 
@@ -92,7 +91,6 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     settings = Settings()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    settings.admin_users_file.parent.mkdir(parents=True, exist_ok=True)
     return settings
 
 
