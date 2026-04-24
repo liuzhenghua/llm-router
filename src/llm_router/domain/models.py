@@ -184,6 +184,9 @@ class RequestLog(Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     channel: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # Local date in the API key's timezone — used for timezone-aware statistics grouping (day/month/year).
+    # Mirrors the billing date logic in post_request.py (_record_billing_task).
+    local_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
 
     api_key: Mapped["ApiKey | None"] = relationship(

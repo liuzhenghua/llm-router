@@ -1,13 +1,3 @@
--- Migration: 1.0.1
--- Description: <one-line summary of what this migration does>
---
--- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
--- !! replace every occurrence of "lr_" in this file with your prefix
--- !! before running. Example: s/lr_/myprefix_/g
---
--- Apply (MySQL):
---   mysql -u llm_router -p llm_router < migrations/1.0.1/migration_mysql_1.0.1.sql
-
 CREATE TABLE lr_admin_users (
 	id INTEGER NOT NULL AUTO_INCREMENT,
 	username VARCHAR(100) NOT NULL,
@@ -153,6 +143,7 @@ CREATE TABLE lr_request_logs (
 	ended_at DATETIME,
 	end_user VARCHAR(255),
 	channel VARCHAR(64),
+	local_date DATE,
 	created_at DATETIME NOT NULL DEFAULT now(),
 	PRIMARY KEY (id)
 );
@@ -162,6 +153,8 @@ CREATE INDEX ix_lr_request_logs_api_key_id ON lr_request_logs (api_key_id);
 CREATE INDEX ix_lr_request_logs_channel ON lr_request_logs (channel);
 
 CREATE INDEX ix_lr_request_logs_end_user ON lr_request_logs (end_user);
+
+CREATE INDEX ix_lr_request_logs_local_date ON lr_request_logs (local_date);
 
 CREATE INDEX ix_lr_request_logs_logical_model_id ON lr_request_logs (logical_model_id);
 

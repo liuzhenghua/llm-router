@@ -72,6 +72,13 @@ async def _create_request_log_task(
     data: RequestFinalizationData,
 ) -> RequestLog | None:
     """异步创建或更新请求日志"""
+    # Resolve local_date: fetch api_key timezone for timezone-aware date grouping in statistics.
+    # Falls back to system default timezone when api_key is not found.
+    _tz_stmt = select(ApiKey.timezone).where(ApiKey.id == data.api_key_id)
+    _tz_result = await session.execute(_tz_stmt)
+    _tz = _tz_result.scalar_one_or_none() or "UTC"
+    _local_date = local_date_for(_tz)
+
     # 检查是否已存在（处理重试场景）
     stmt = select(RequestLog).where(RequestLog.request_id == data.request_id)
     result = await session.execute(stmt)
@@ -91,6 +98,8 @@ async def _create_request_log_task(
             existing.end_user = data.end_user
         if data.channel:
             existing.channel = data.channel
+        if existing.local_date is None:
+            existing.local_date = _local_date
         await session.flush()
         # 更新或补充 body 记录
         if data.response_body is not None:
@@ -122,6 +131,7 @@ async def _create_request_log_task(
         ended_at=data.ended_at,
         end_user=data.end_user,
         channel=data.channel,
+        local_date=_local_date,
     )
     session.add(request_log)
     await session.flush()
