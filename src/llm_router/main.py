@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 BASE_PATH = Path(__file__).resolve().parent
 settings = get_settings()
-setup_logging(settings.log_dir, settings.log_level)
+setup_logging(settings.log_dir, settings.log_level, settings.log_format)
 
 # Global cache components
 _dual_cache: DualCache | None = None
@@ -236,6 +237,26 @@ def create_app() -> FastAPI:
                 await background()
 
         response.background = BackgroundTask(close_session)
+        return response
+
+    @app.middleware("http")
+    async def request_log_middleware(request: Request, call_next):
+        """Log request start and end (with status + cost). Skips /healthz."""
+        if request.url.path == "/healthz":
+            return await call_next(request)
+        start = time.perf_counter()
+        logger.info("→ %s %s", request.method, request.url.path)
+        response = await call_next(request)
+        cost_ms = int((time.perf_counter() - start) * 1000)
+        access_context = getattr(request.state, "access_log_context", "-|-|-")
+        logger.info(
+            "← %s %s %s %dms",
+            request.method,
+            request.url.path,
+            response.status_code,
+            cost_ms,
+            extra={"access_context": access_context},
+        )
         return response
 
 

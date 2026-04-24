@@ -4,7 +4,7 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -47,6 +47,7 @@ async def handle_proxy_request(
     raw_api_key: str,
     headers: dict[str, str],
     request_path: str,
+    request: Request | None = None,
 ) -> JSONResponse | StreamingResponse:
     logical_model_name = payload.get("model")
     if not logical_model_name:
@@ -65,6 +66,12 @@ async def handle_proxy_request(
         headers=headers,
     )
     context.request_id = request_id
+
+    # Expose resolved context fields to access-log middleware via request.state
+    if request is not None:
+        request.state.access_log_context = (
+            f"{context.api_key_name or '-'}|{context.channel or '-'}|{context.end_user or '-'}"
+        )
 
     # 获取分组后的 provider 候选列表
     provider_groups = await resolve_provider_candidates(session, logical_model.id, protocol)
@@ -183,6 +190,7 @@ async def handle_embedding_request(
     payload: dict[str, Any],
     raw_api_key: str,
     headers: dict[str, str],
+    request: Request | None = None,
 ) -> JSONResponse:
     """Handle OpenAI-compatible embeddings requests.
 
@@ -206,6 +214,12 @@ async def handle_embedding_request(
         headers=headers,
     )
     context.request_id = request_id
+
+    # Expose resolved context fields to access-log middleware via request.state
+    if request is not None:
+        request.state.access_log_context = (
+            f"{context.api_key_name or '-'}|{context.channel or '-'}|{context.end_user or '-'}"
+        )
 
     provider_groups = await resolve_provider_candidates(session, logical_model.id, ProviderProtocol.OPENAI)
 

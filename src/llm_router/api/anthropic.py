@@ -95,4 +95,5 @@ async def messages(
         raw_api_key=raw_api_key,
         headers=dict(request.headers),
         request_path="/v1/messages",
+        request=request,
     )

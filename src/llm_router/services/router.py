@@ -89,8 +89,8 @@ async def resolve_request_context(
             daily_spend_date=date.fromisoformat(cached.daily_spend_date) if cached.daily_spend_date else None,
             qps_limit=cached.qps_limit,
             allowed_logical_models_json=cached.allowed_logical_models_json,
-            request_content_logging_enabled=False,
-            response_content_logging_enabled=False,
+            request_content_logging_enabled=cached.request_content_logging_enabled,
+            response_content_logging_enabled=cached.response_content_logging_enabled,
         )
 
         context = RequestContext(
@@ -99,8 +99,8 @@ async def resolve_request_context(
             logical_model_name=logical_model_name,
             payload=payload,
             stream=stream,
-            request_logging_enabled=settings.default_request_logging_enabled,
-            response_logging_enabled=settings.default_response_logging_enabled,
+            request_logging_enabled=cached.request_content_logging_enabled if cached.request_content_logging_enabled is not None else settings.default_request_logging_enabled,
+            response_logging_enabled=cached.response_content_logging_enabled if cached.response_content_logging_enabled is not None else settings.default_response_logging_enabled,
             api_key_id=api_key.id,
             api_key_name=api_key.name,
             logical_model_id=logical_model.id,
@@ -150,6 +150,8 @@ async def resolve_request_context(
             end_user=api_key.end_user,
             timezone=api_key.timezone,
             default_channel=api_key.default_channel,
+            request_content_logging_enabled=api_key.request_content_logging_enabled,
+            response_content_logging_enabled=api_key.response_content_logging_enabled,
         )
         await dual_cache.set_apikey(key_hash, cached_api_key.to_dict())
 

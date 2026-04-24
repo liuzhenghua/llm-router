@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = "INFO"
     log_dir: Path = DATA_DIR / "logs"
+    log_format: str = (
+        '%(asctime)s.%(msecs)03d %(levelname)s [%(threadName)s] [%(access_context)s] [%(filename)s#%(name)s:%(lineno)d] - %(message)s'
+    )
 
     # Optional table name prefix, e.g. "lr_" → lr_api_keys, lr_request_logs, ...
     table_prefix: str = "lr_"

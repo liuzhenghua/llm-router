@@ -93,6 +93,7 @@ async def chat_completions(
         raw_api_key=raw_api_key,
         headers=dict(request.headers),
         request_path="/chat/completions",
+        request=request,
     )
 
 
@@ -109,4 +110,5 @@ async def embeddings(
         payload=payload,
         raw_api_key=raw_api_key,
         headers=dict(request.headers),
+        request=request,
     )

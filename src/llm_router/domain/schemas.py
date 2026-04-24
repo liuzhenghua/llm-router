@@ -78,6 +78,8 @@ class CachedApiKey:
     end_user: str | None = None
     timezone: str = "UTC"  # IANA timezone name for billing date calculation
     default_channel: str | None = None  # Default channel tag for requests
+    request_content_logging_enabled: bool | None = None  # None = fall back to global setting
+    response_content_logging_enabled: bool | None = None  # None = fall back to global setting
 
     def to_dict(self) -> dict:
         return {
@@ -93,6 +95,8 @@ class CachedApiKey:
             "end_user": self.end_user,
             "timezone": self.timezone,
             "default_channel": self.default_channel,
+            "request_content_logging_enabled": self.request_content_logging_enabled,
+            "response_content_logging_enabled": self.response_content_logging_enabled,
         }
 
     @classmethod
@@ -110,6 +114,8 @@ class CachedApiKey:
             end_user=d.get("end_user"),
             timezone=d.get("timezone") or "UTC",
             default_channel=d.get("default_channel"),
+            request_content_logging_enabled=d.get("request_content_logging_enabled"),
+            response_content_logging_enabled=d.get("response_content_logging_enabled"),
         )
 
 

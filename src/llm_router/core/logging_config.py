@@ -4,45 +4,63 @@ import logging
 import logging.handlers
 from pathlib import Path
 
+_DEFAULT_LOG_FORMAT = (
+    "%(asctime)s.%(msecs)03d %(levelname)s [%(threadName)s] [%(access_context)s] "
+    "[%(filename)s#%(name)s:%(lineno)d] - %(message)s"
+)
+_DATEFMT = "%Y-%m-%d %H:%M:%S"
 
-def setup_logging(log_dir: Path, log_level: str = "INFO") -> None:
-    """Configure root logger with console + daily-rotating file handler."""
-    log_dir.mkdir(parents=True, exist_ok=True)
 
-    level = getattr(logging, log_level.upper(), logging.INFO)
+class _DefaultContextFilter(logging.Filter):
+    """Inject default access_context into every app log record that lacks it."""
 
-    formatter = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "access_context"):
+            record.access_context = "-|-|-"  # type: ignore[attr-defined]
+        return True
 
-    # Console handler
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(formatter)
-    console_handler.setLevel(level)
 
-    # Rotating file handler: 10 MB per file, keep 7 backups
-    file_handler = logging.handlers.RotatingFileHandler(
-        filename=log_dir / "llm_router.log",
+def _make_rotating_handler(path: Path, formatter: logging.Formatter, level: int) -> logging.Handler:
+    handler = logging.handlers.RotatingFileHandler(
+        filename=path,
         maxBytes=10 * 1024 * 1024,
         backupCount=7,
         encoding="utf-8",
     )
-    file_handler.setFormatter(formatter)
-    file_handler.setLevel(level)
+    handler.setFormatter(formatter)
+    handler.setLevel(level)
+    return handler
 
+
+def setup_logging(
+    log_dir: Path,
+    log_level: str = "INFO",
+    log_format: str = _DEFAULT_LOG_FORMAT,
+) -> None:
+    """Configure root logger → console + app.log."""
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    level = getattr(logging, log_level.upper(), logging.INFO)
+
+    # ── Formatters ──────────────────────────────────────────────────────
+    app_formatter = logging.Formatter(fmt=log_format, datefmt=_DATEFMT)
+
+    # ── Context filter: injects default access_context when not set ─────
+    ctx_filter = _DefaultContextFilter()
+
+    # ── Console handler ─────────────────────────────────────────────────
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(app_formatter)
+    console_handler.setLevel(level)
+    console_handler.addFilter(ctx_filter)
+
+    # ── Rotating file handler → app.log ────────────────────────────────
+    app_file_handler = _make_rotating_handler(log_dir / "app.log", app_formatter, level)
+    app_file_handler.addFilter(ctx_filter)
+
+    # ── Root logger ─────────────────────────────────────────────────────
     root = logging.getLogger()
     root.setLevel(level)
-    # Avoid adding duplicate handlers on hot-reload
-    if not root.handlers:
-        root.addHandler(console_handler)
-        root.addHandler(file_handler)
-    else:
-        root.handlers.clear()
-        root.addHandler(console_handler)
-        root.addHandler(file_handler)
-
-    # Suppress overly verbose third-party loggers
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    logging.getLogger("hpack").setLevel(logging.WARNING)
+    root.handlers.clear()
+    root.addHandler(console_handler)
+    root.addHandler(app_file_handler)
