@@ -106,6 +106,7 @@ async def resolve_request_context(
             raw_authorization=raw_api_key,
             headers=headers,
             end_user=headers.get("x-end-user") or cached.end_user,
+            channel=headers.get("x-channel") or cached.default_channel,
         )
         return api_key, logical_model, context
 
@@ -147,6 +148,7 @@ async def resolve_request_context(
             allowed_logical_models_json=api_key.allowed_logical_models_json or [],
             end_user=api_key.end_user,
             timezone=api_key.timezone,
+            default_channel=api_key.default_channel,
         )
         await dual_cache.set_apikey(key_hash, cached_api_key.to_dict())
 
@@ -164,6 +166,7 @@ async def resolve_request_context(
         raw_authorization=raw_api_key,
         headers=headers,
         end_user=headers.get("x-end-user") or api_key.end_user,
+        channel=headers.get("x-channel") or api_key.default_channel,
     )
     return api_key, logical_model, context
 

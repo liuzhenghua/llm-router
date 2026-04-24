@@ -61,6 +61,10 @@
           <dt class="text-xs text-slate-400">终端用户</dt>
           <dd class="truncate text-xs font-medium text-slate-800">{{ log.end_user or "-" }}</dd>
         </div>
+        <div class="flex flex-col gap-0.5">
+          <dt class="text-xs text-slate-400">Channel</dt>
+          <dd class="truncate text-xs font-medium text-slate-800">{{ log.channel or "-" }}</dd>
+        </div>
       </dl>
     </div>
 

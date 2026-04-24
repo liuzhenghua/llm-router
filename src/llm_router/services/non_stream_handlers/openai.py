@@ -102,6 +102,7 @@ class OpenAINonStreamHandler(BaseNonStreamHandler):
                     started_at=started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
                 )
             )
 
@@ -133,6 +134,7 @@ class OpenAINonStreamHandler(BaseNonStreamHandler):
                     started_at=started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
                 )
             )
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -200,6 +202,7 @@ class OpenAINonStreamHandler(BaseNonStreamHandler):
             usage=usage_data,
             provider_prices=prices_data,
             end_user=kwargs.get("end_user"),
+            channel=kwargs.get("channel"),
         )
 
 
@@ -282,6 +285,7 @@ class OpenAIEmbeddingNonStreamHandler(BaseNonStreamHandler):
                     started_at=started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
                 )
             )
 
@@ -313,6 +317,7 @@ class OpenAIEmbeddingNonStreamHandler(BaseNonStreamHandler):
                     started_at=started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
                 )
             )
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -380,4 +385,5 @@ class OpenAIEmbeddingNonStreamHandler(BaseNonStreamHandler):
             usage=usage_data,
             provider_prices=prices_data,
             end_user=kwargs.get("end_user"),
+            channel=kwargs.get("channel"),
         )

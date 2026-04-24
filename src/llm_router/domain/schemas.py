@@ -48,6 +48,7 @@ class RequestContext:
     raw_authorization: str | None
     headers: dict[str, str] = field(default_factory=dict)
     end_user: str | None = None
+    channel: str | None = None
 
 
 @dataclass(slots=True)
@@ -76,6 +77,7 @@ class CachedApiKey:
     allowed_logical_models_json: list[str]  # JSON array stored as list
     end_user: str | None = None
     timezone: str = "UTC"  # IANA timezone name for billing date calculation
+    default_channel: str | None = None  # Default channel tag for requests
 
     def to_dict(self) -> dict:
         return {
@@ -90,6 +92,7 @@ class CachedApiKey:
             "allowed_logical_models_json": self.allowed_logical_models_json,
             "end_user": self.end_user,
             "timezone": self.timezone,
+            "default_channel": self.default_channel,
         }
 
     @classmethod
@@ -106,6 +109,7 @@ class CachedApiKey:
             allowed_logical_models_json=d.get("allowed_logical_models_json") or [],
             end_user=d.get("end_user"),
             timezone=d.get("timezone") or "UTC",
+            default_channel=d.get("default_channel"),
         )
 
 

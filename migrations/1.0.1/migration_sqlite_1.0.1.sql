@@ -1,5 +1,5 @@
 -- Migration: 1.0.1
--- Description: <one-line summary of what this migration does>
+-- Description: Add default_channel to api_keys and channel to request_logs
 --
 -- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
 -- !! replace every occurrence of "lr_" in this file with your prefix

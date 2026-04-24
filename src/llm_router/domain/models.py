@@ -78,6 +78,8 @@ class ApiKey(Base, TimestampMixin):
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
     # IANA timezone name (e.g. "UTC", "Asia/Shanghai") — used for billing date calculation
     timezone: Mapped[str] = mapped_column(String(64), default=lambda: get_settings().tz)
+    # Default channel tag — used as fallback when x-channel request header is not provided
+    default_channel: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
     request_logs: Mapped[list["RequestLog"]] = relationship(
@@ -181,6 +183,7 @@ class RequestLog(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    channel: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, server_default=func.now())
 
     api_key: Mapped["ApiKey | None"] = relationship(

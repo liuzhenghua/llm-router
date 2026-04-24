@@ -96,6 +96,7 @@
       </label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">时区 <span class="text-slate-400">（IANA 格式，例如 Asia/Shanghai，留空则不修改）</span></span><input name="timezone" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">默认渠道 (Channel) <span class="text-slate-400">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">保存</button>
     </form>
   </div>
@@ -148,6 +149,7 @@
       </div>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">时区 <span class="text-slate-400">（IANA 格式，留空使用系统默认值 {{ default_tz }}）</span></span><input name="timezone" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">默认渠道 (Channel) <span class="text-slate-400">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">创建 API Key</button>
     </form>
   </div>
@@ -437,6 +439,7 @@ function openEditModal(item) {
   form.querySelector('[name="response_content_logging_enabled"]').value = resVal;
   form.querySelector('[name="end_user"]').value = item.end_user || '';
   form.querySelector('[name="timezone"]').value = item.timezone || '';
+  form.querySelector('[name="default_channel"]').value = item.default_channel || '';
 
   const models = item.allowed_logical_models_json || [];
 
@@ -476,6 +479,7 @@ document.getElementById('edit-api-key-form').addEventListener('submit', function
           allApiKeys[keyIndex].end_user = data.get('end_user') || '';
           const tz = data.get('timezone');
           if (tz) allApiKeys[keyIndex].timezone = tz;
+          allApiKeys[keyIndex].default_channel = data.get('default_channel') || '';
         }
         renderTable();
         closeModal('edit-api-key-modal');

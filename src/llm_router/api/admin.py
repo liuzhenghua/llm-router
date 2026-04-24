@@ -289,6 +289,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
             "response_content_logging_enabled": key.response_content_logging_enabled,
             "end_user": key.end_user or "",
             "timezone": key.timezone,
+            "default_channel": key.default_channel or "",
             "has_key": key.encrypted_key is not None,
         }
         for key in api_keys_result
@@ -388,6 +389,7 @@ async def create_api_key(
     allowed_models: str = Form(default=""),
     end_user: str = Form(default=""),
     timezone: str = Form(default=""),
+    default_channel: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -407,6 +409,7 @@ async def create_api_key(
             response_content_logging_enabled=None,
             end_user=end_user.strip() or None,
             timezone=tz_value,
+            default_channel=default_channel.strip() or None,
         )
     )
     await session.commit()
@@ -443,6 +446,7 @@ async def update_api_key(
     response_content_logging_enabled: str = Form(default=""),
     end_user: str = Form(default=""),
     timezone: str = Form(default=""),
+    default_channel: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -459,6 +463,7 @@ async def update_api_key(
     api_key.end_user = end_user.strip() or None
     if timezone.strip():
         api_key.timezone = timezone.strip()
+    api_key.default_channel = default_channel.strip() or None
     await session.commit()
     await _invalidate_apikey_cache(api_key)
     return JSONResponse({"ok": True, "id": api_key_id})
@@ -836,6 +841,7 @@ async def request_logs_page(
     api_key_id: int | None = Query(default=None),
     provider_model_id: int | None = Query(default=None),
     end_user: str | None = Query(default=None),
+    channel: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     _: None = Depends(require_admin),
 ):
@@ -872,6 +878,9 @@ async def request_logs_page(
     if end_user:
         stmt = stmt.where(RequestLog.end_user.contains(end_user))
         count_stmt = count_stmt.where(RequestLog.end_user.contains(end_user))
+    if channel:
+        stmt = stmt.where(RequestLog.channel.contains(channel))
+        count_stmt = count_stmt.where(RequestLog.channel.contains(channel))
     total = (await session.execute(count_stmt)).scalar() or 0
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
@@ -902,6 +911,7 @@ async def request_logs_page(
             "api_key_name": log.api_key.name if log.api_key else None,
             "provider_model_name": log.provider_model.name if log.provider_model else None,
             "end_user": log.end_user or "",
+            "channel": log.channel or "",
             "usage_record": {
                 "prompt_tokens": log.usage_record.prompt_tokens,
                 "completion_tokens": log.usage_record.completion_tokens,
@@ -926,6 +936,7 @@ async def request_logs_page(
                 "api_key_id": api_key_id or "",
                 "provider_model_id": provider_model_id or "",
                 "end_user": end_user or "",
+                "channel": channel or "",
             },
             "api_keys_list": [{"id": k.id, "name": k.name} for k in api_keys_list],
             "provider_models_list": [{"id": m.id, "name": m.name} for m in provider_models_list],
@@ -986,6 +997,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "provider_model_protocol": log.protocol,
         "logical_model_name": logical_model_name,
         "end_user": log.end_user,
+        "channel": log.channel,
         "usage_record": {
             "prompt_tokens": log.usage_record.prompt_tokens,
             "completion_tokens": log.usage_record.completion_tokens,

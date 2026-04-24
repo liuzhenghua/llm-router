@@ -60,6 +60,7 @@ class RequestFinalizationData:
     usage: UsageSnapshotData | None
     provider_prices: ProviderPricesData | None
     end_user: str | None = None
+    channel: str | None = None
 
 
 def _per_million_cost(tokens: int, unit_price: Decimal) -> Decimal:
@@ -88,6 +89,8 @@ async def _create_request_log_task(
         existing.ended_at = data.ended_at
         if data.end_user:
             existing.end_user = data.end_user
+        if data.channel:
+            existing.channel = data.channel
         await session.flush()
         # 更新或补充 body 记录
         if data.response_body is not None:
@@ -118,6 +121,7 @@ async def _create_request_log_task(
         started_at=data.started_at,
         ended_at=data.ended_at,
         end_user=data.end_user,
+        channel=data.channel,
     )
     session.add(request_log)
     await session.flush()
