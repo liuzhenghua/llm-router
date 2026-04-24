@@ -31,12 +31,12 @@
             <tbody>
               <tr class="bg-white border-b">
                 <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">Authorization</code></td>
-                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">必填</span></td>
+                <td class="px-3 py-2 text-xs whitespace-nowrap"><span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">必填</span></td>
                 <td class="px-3 py-2 text-xs">格式为 <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">Bearer &lt;api-key&gt;</code>，使用在 API Keys 页面创建的密钥。</td>
               </tr>
               <tr class="bg-white border-b">
                 <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">x-request-id</code></td>
-                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs whitespace-nowrap"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
                 <td class="px-3 py-2 text-xs">自定义请求 ID，用于全链路追踪。若不传，网关会自动生成并在响应头中返回。</td>
               </tr>
               <tr class="bg-white border-b">
@@ -45,13 +45,18 @@
                 <td class="px-3 py-2 text-xs">终端用户标识，用于请求日志归因。可传入用户 ID 或会话 ID 便于后续审计。</td>
               </tr>
               <tr class="bg-white border-b">
+                <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">x-channel</code></td>
+                <td class="px-3 py-2 text-xs whitespace-nowrap"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs">请求渠道标识，用于日志分类与归因。若不传则回落到该 API Key 配置的默认渠道。常用值示例：<code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">PERSONAL</code>、<code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">TEAM</code>、<code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">BOT</code>。</td>
+              </tr>
+              <tr class="bg-white border-b">
                 <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">anthropic-version</code></td>
-                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs whitespace-nowrap"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
                 <td class="px-3 py-2 text-xs">仅 Anthropic 协议有效，默认 <code class="rounded bg-slate-100 px-1 py-0.5 font-mono text-xs">2023-06-01</code>，会透传至上游。</td>
               </tr>
               <tr class="bg-white">
                 <td class="px-3 py-2 whitespace-nowrap"><code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">anthropic-beta</code></td>
-                <td class="px-3 py-2 text-xs"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
+                <td class="px-3 py-2 text-xs whitespace-nowrap"><span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">可选</span></td>
                 <td class="px-3 py-2 text-xs">仅 Anthropic 协议有效，用于开启 Beta 功能，有值时透传至上游。</td>
               </tr>
             </tbody>
@@ -497,15 +502,15 @@
 
   <!-- ── Table of Contents — sticky right column ── -->
   <!-- self-start + sticky top-5 on the aside itself ensures it stays visible while scrolling -->
-  <aside class="hidden xl:block w-52 shrink-0 sticky top-5 self-start">
+  <aside class="hidden xl:block w-55 shrink-0 sticky top-5 self-start">
     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">目录</p>
       <nav id="toc-nav" class="space-y-1 text-xs">
         <a href="#api-integration" class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50">API 接入文档</a>
         <a href="#request-headers"  class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">请求头</a>
         <a href="#openai-chat"       class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI Chat Completions</a>
-        <a href="#openai-embeddings" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI Embeddings</a>
         <a href="#openai-models"     class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI List Models</a>
+        <a href="#openai-embeddings" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">OpenAI Embeddings</a>
         <a href="#anthropic-messages" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Anthropic Messages</a>
         <a href="#anthropic-models" class="toc-link block rounded-lg px-2 py-1 pl-4 text-slate-500 hover:bg-slate-50 hover:text-slate-800">Anthropic List Models</a>
         <a href="#dev-tools"        class="toc-link block rounded-lg px-2 py-1.5 font-semibold text-slate-800 hover:bg-slate-50 mt-2">编程工具集成</a>
@@ -595,7 +600,7 @@
 
   // ── TOC: highlight active section on scroll ───────────────────
   (function () {
-    var sectionIds = ['api-integration','request-headers','openai-chat','openai-embeddings','openai-models','anthropic-messages','anthropic-models','dev-tools','claude-code','operations','ops-guide','routing-rules'];
+    var sectionIds = ['api-integration','request-headers','openai-chat','openai-models','openai-embeddings','anthropic-messages','anthropic-models','dev-tools','claude-code','operations','ops-guide','routing-rules'];
     var headerIds  = new Set(['api-integration','dev-tools','operations']);
     var tocLinks   = {};
     sectionIds.forEach(function(id) {
