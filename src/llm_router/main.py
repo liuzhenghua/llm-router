@@ -10,8 +10,9 @@ from pathlib import Path
 
 import jinja2
 import uvicorn
-from fastapi import FastAPI, Request
-from fastapi.responses import RedirectResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
@@ -155,6 +156,37 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     logger.info("Cache system shut down")
 
 
+def _error_response(request: Request, status_code: int, message: str) -> JSONResponse:
+    """Return a protocol-appropriate JSON error response based on the request path."""
+    path = request.url.path
+    if path.startswith("/v1/"):
+        error_type = "server_error" if status_code >= 500 else "invalid_request_error"
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "error": {
+                    "message": message,
+                    "type": error_type,
+                    "code": error_type,
+                }
+            },
+        )
+    if path.startswith("/anthropic/"):
+        error_type = "api_error" if status_code >= 500 else "invalid_request_error"
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "type": "error",
+                "error": {
+                    "type": error_type,
+                    "message": message,
+                },
+            },
+        )
+    # Admin / other routes
+    return JSONResponse(status_code=status_code, content={"detail": message})
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
     app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
@@ -166,11 +198,32 @@ def create_app() -> FastAPI:
     env.filters["format_datetime"] = _format_datetime
     app.state.templates = Jinja2Templates(env=env)
 
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+        return _error_response(request, exc.status_code, exc.detail or "HTTP error")
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        message = "; ".join(
+            f"{'.'.join(str(l) for l in e['loc'])}: {e['msg']}" for e in exc.errors()
+        )
+        return _error_response(request, 422, message)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        return _error_response(request, 500, "Internal server error")
+
     @app.middleware("http")
     async def db_session_middleware(request: Request, call_next):
         session = SessionLocal()
         request.state.db = session
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            await session.close()
+            logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+            raise
         background = response.background
 
         async def close_session() -> None:
