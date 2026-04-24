@@ -1102,8 +1102,8 @@ async def api_debug_page(request: Request, _: None = Depends(require_admin)):
         "api_debug.html",
         {
             "api_keys": api_keys,
-            "default_openai_payload": "{\n  \"model\": \"gpt-3.5-turbo\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"temperature\": 0.7,\n  \"stream\": false\n}",
-            "default_anthropic_payload": "{\n  \"model\": \"claude-3-sonnet-20240229\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"temperature\": 0.7,\n  \"stream\": false\n}",
+            "default_openai_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"stream\": false\n}",
+            "default_anthropic_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"stream\": false\n}",
         },
         nav_active="api_debug",
         title="API Debug",

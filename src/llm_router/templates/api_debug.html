@@ -6,14 +6,15 @@
   <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900">API Playground</h1>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+<form id="debug-form">
+<div class="flex gap-6 items-start">
 
-  <!-- Left: Request Configuration -->
-  <section class="rounded-2xl bg-white shadow-sm p-4 lg:p-5">
-    <h2 class="text-sm font-semibold text-slate-800 mb-4">请求配置</h2>
+  <!-- Left: request controls -->
+  <div class="w-56 shrink-0 space-y-4">
+    <div class="rounded-2xl bg-white p-4 shadow-sm">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">请求配置</p>
+      <div class="space-y-3">
 
-    <form id="debug-form">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <!-- API Type -->
         <div>
           <label for="api-type" class="block text-xs text-slate-500 mb-1">API 类型</label>
@@ -38,153 +39,197 @@
             {% endfor %}
           </select>
         </div>
-      </div>
 
-      <!-- Payload Editor (hidden for models endpoints) -->
-      <div id="payload-section" class="mb-4">
-        <label for="payload" class="block text-xs text-slate-500 mb-1">请求报文 (JSON)</label>
-        <textarea id="payload" name="payload" rows="16"
-          class="w-full rounded-xl border border-slate-700 px-3 py-2 text-xs font-mono bg-slate-950 text-slate-200 caret-white focus:outline-none focus:ring-1 focus:ring-slate-500 transition resize-y"
-          spellcheck="false">{{ default_openai_payload }}</textarea>
-      </div>
+        <!-- Action buttons -->
+        <div class="flex gap-2 pt-1">
+          <button type="submit" id="send-btn"
+            class="flex-1 rounded-xl bg-slate-800 px-3 py-2 text-xs text-white font-medium hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            发送请求
+          </button>
+          <button type="button" id="clear-btn"
+            class="rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-700 font-medium hover:bg-slate-50 transition">
+            清空
+          </button>
+        </div>
 
-      <!-- Action Buttons -->
-      <div class="flex gap-2">
-        <button type="submit" id="send-btn"
-          class="flex-1 rounded-xl bg-slate-800 px-4 py-2 text-xs text-white font-medium hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-          发送请求
-        </button>
-        <button type="button" id="clear-btn"
-          class="rounded-xl border border-slate-300 px-4 py-2 text-xs text-slate-700 font-medium hover:bg-slate-50 transition">
-          清空
-        </button>
-      </div>
-    </form>
-  </section>
-
-  <!-- Right: Response Display -->
-  <section class="rounded-2xl bg-white shadow-sm p-4 lg:p-5 flex flex-col">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-sm font-semibold text-slate-800">响应报文</h2>
-      <div class="flex items-center gap-2">
-        <!-- Copy button -->
-        <button id="copy-response-btn" type="button"
-          class="flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-slate-700 transition" title="复制">
-          <svg id="copy-response-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-          </svg>
-          <svg id="copy-response-check" class="w-3.5 h-3.5 hidden text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-          </svg>
-        </button>
-        <span class="text-xs text-slate-500">耗时:
-          <span id="response-time" class="font-medium text-slate-700">--</span>
-        </span>
-        <span id="response-status"
-          class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-          未发送
-        </span>
       </div>
     </div>
+  </div>
 
-    <!-- Response Body -->
-    <div class="flex-1 rounded-xl border border-slate-700 bg-slate-950 overflow-auto" style="min-height: 24rem;">
-      <pre id="response-body"
-        class="p-3 text-xs font-mono text-slate-300 whitespace-pre-wrap break-all leading-5"><span class="text-slate-500">等待发送请求...</span></pre>
+  <!-- Right: tabbed request / response panels -->
+  <div class="min-w-0 flex-1">
+    <div class="code-tabs rounded-xl overflow-hidden" data-group="req-res">
+
+      <!-- Tab bar -->
+      <div class="flex items-center bg-slate-900 border-b border-slate-700">
+        <button type="button" class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
+          data-tab="req-panel" data-group="req-res">请求体</button>
+        <button type="button" class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
+          data-tab="res-panel" data-group="req-res">响应体</button>
+
+        <!-- Status, time, copy on the right -->
+        <div class="ml-auto mr-2 flex items-center gap-3">
+          <span class="text-xs text-slate-500">耗时: <span id="response-time" class="font-medium text-slate-400">--</span></span>
+          <span id="response-status"
+            class="inline-flex items-center rounded-full bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-300">
+            未发送
+          </span>
+          <button type="button" id="copy-btn"
+            class="flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制">
+            <svg id="copy-icon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <svg id="check-icon" class="w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 请求体 tab -->
+      <div class="tab-panel hidden" id="req-panel">
+        <div id="payload-editor">
+          <textarea id="payload" name="payload"
+            class="w-full bg-slate-950 text-slate-200 caret-white px-4 py-3 text-xs font-mono focus:outline-none resize-none overflow-y-auto"
+            style="height: 65vh;"
+            spellcheck="false">{{ default_openai_payload }}</textarea>
+        </div>
+        <div id="no-payload-msg" class="hidden bg-slate-950 flex items-center justify-center" style="height: 65vh;">
+          <p class="text-xs text-slate-500">GET 请求，无请求体</p>
+        </div>
+      </div>
+
+      <!-- 响应体 tab -->
+      <div class="tab-panel hidden" id="res-panel">
+        <pre id="response-body"
+          class="overflow-y-auto bg-slate-950 px-4 py-3 text-xs font-mono text-slate-300 whitespace-pre-wrap break-all leading-5"
+          style="height: 65vh;"><span class="text-slate-500">等待发送请求...</span></pre>
+      </div>
+
     </div>
-  </section>
+  </div>
 
 </div>
+</form>
 
 <script>
-  // ── JSON syntax highlighter ────────────────────────────────────
+  // ── JSON syntax highlighter ───────────────────────────────────
   function escapeHtml(s) {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function highlightJSON(json) {
     if (typeof json !== 'string') json = JSON.stringify(json, null, 2);
-    // Escape HTML first, then colorize tokens
     return escapeHtml(json).replace(
       /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
       function (match) {
         if (/^"/.test(match)) {
-          // key (string followed by colon) vs string value
           return /:$/.test(match)
             ? '<span class="text-sky-300">' + match + '</span>'
             : '<span class="text-emerald-400">' + match + '</span>';
         }
         if (/true|false/.test(match)) return '<span class="text-sky-400">' + match + '</span>';
         if (/null/.test(match))       return '<span class="text-slate-400">' + match + '</span>';
-        return '<span class="text-amber-400">' + match + '</span>'; // number
+        return '<span class="text-amber-400">' + match + '</span>';
       }
     );
   }
 
-  // ── Type selector & payload visibility ────────────────────────
-  const apiTypeSelect = document.getElementById('api-type');
-  const payloadTextarea = document.getElementById('payload');
-  const payloadSection = document.getElementById('payload-section');
-  const defaultPayloads = {
-    openai_chat: JSON.stringify({{ default_openai_payload | tojson }}, null, 2),
-    anthropic_chat: JSON.stringify({{ default_anthropic_payload | tojson }}, null, 2),
-    openai_models: null,
-    anthropic_models: null,
-  };
+  // ── Tab switcher (same pattern as request_detail.html) ────────
+  const ACTIVE_BTN   = ['text-white', 'border-b-2', 'border-white'];
+  const INACTIVE_BTN = ['text-slate-300'];
 
-  const modelsTypes = new Set(['openai_models', 'anthropic_models']);
-
-  function updatePayloadVisibility() {
-    const isModels = modelsTypes.has(apiTypeSelect.value);
-    payloadSection.classList.toggle('hidden', isModels);
+  function activateTab(group, tabId) {
+    document.querySelectorAll('.tab-btn[data-group="' + group + '"]').forEach(btn => {
+      const isActive = btn.dataset.tab === tabId;
+      ACTIVE_BTN.forEach(c   => btn.classList.toggle(c, isActive));
+      INACTIVE_BTN.forEach(c => btn.classList.toggle(c, !isActive));
+    });
+    const container = document.querySelector('.code-tabs[data-group="' + group + '"]');
+    if (!container) return;
+    container.querySelectorAll('.tab-panel').forEach(panel => {
+      panel.classList.toggle('hidden', panel.id !== tabId);
+    });
   }
+
+  document.querySelectorAll('.code-tabs').forEach(container => {
+    const group = container.dataset.group;
+    container.querySelectorAll('.tab-btn').forEach((btn, i) => {
+      btn.addEventListener('click', () => activateTab(group, btn.dataset.tab));
+      if (i === 0) activateTab(group, btn.dataset.tab);
+    });
+  });
+
+  // ── API type selector ─────────────────────────────────────────
+  const apiTypeSelect  = document.getElementById('api-type');
+  const payloadTextarea = document.getElementById('payload');
+  const payloadEditor  = document.getElementById('payload-editor');
+  const noPayloadMsg   = document.getElementById('no-payload-msg');
+  const modelsTypes    = new Set(['openai_models', 'anthropic_models']);
+
+  // Raw string values — no JSON.stringify wrapping to avoid double-escaping
+  const defaultPayloads = {
+    openai_chat:    {{ default_openai_payload | tojson }},
+    anthropic_chat: {{ default_anthropic_payload | tojson }},
+  };
 
   function onApiTypeChange() {
     const val = apiTypeSelect.value;
-    updatePayloadVisibility();
-    if (!modelsTypes.has(val) && defaultPayloads[val]) {
+    const isModels = modelsTypes.has(val);
+    payloadEditor.classList.toggle('hidden', isModels);
+    noPayloadMsg.classList.toggle('hidden', !isModels);
+    if (!isModels && defaultPayloads[val]) {
       payloadTextarea.value = defaultPayloads[val];
     }
   }
 
   apiTypeSelect.addEventListener('change', onApiTypeChange);
-  updatePayloadVisibility();  // init: only toggle visibility, keep template-rendered value
+  // init: do NOT call onApiTypeChange() — keep template-rendered textarea value
 
-  // ── Form submit ────────────────────────────────────────────────
-  const debugForm = document.getElementById('debug-form');
-  const sendBtn = document.getElementById('send-btn');
-  const clearBtn = document.getElementById('clear-btn');
+  // ── Status badge ──────────────────────────────────────────────
   const responseStatus = document.getElementById('response-status');
-  const responseTime = document.getElementById('response-time');
-  const responseBody = document.getElementById('response-body');
-
-  // Copy response button
-  document.getElementById('copy-response-btn').addEventListener('click', () => {
-    const text = responseBody.textContent.trim();
-    if (!text || text === '等待发送请求...' || text === '发送中...') return;
-    navigator.clipboard.writeText(text).then(() => {
-      const icon = document.getElementById('copy-response-icon');
-      const check = document.getElementById('copy-response-check');
-      icon.classList.add('hidden');
-      check.classList.remove('hidden');
-      setTimeout(() => { icon.classList.remove('hidden'); check.classList.add('hidden'); }, 1800);
-    });
-  });
+  const responseTime   = document.getElementById('response-time');
+  const responseBody   = document.getElementById('response-body');
 
   function setStatus(text, color) {
     const map = {
-      slate:   'bg-slate-100 text-slate-600',
-      blue:    'bg-blue-50 text-blue-700',
-      emerald: 'bg-emerald-50 text-emerald-700',
-      rose:    'bg-rose-50 text-rose-700',
+      slate:   'bg-slate-700 text-slate-300',
+      blue:    'bg-blue-900/60 text-blue-300',
+      emerald: 'bg-emerald-900/60 text-emerald-300',
+      rose:    'bg-rose-900/60 text-rose-300',
     };
     responseStatus.className = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ' + (map[color] || map.slate);
     responseStatus.textContent = text;
   }
 
+  // ── Copy button ───────────────────────────────────────────────
+  document.getElementById('copy-btn').addEventListener('click', () => {
+    const container = document.querySelector('.code-tabs[data-group="req-res"]');
+    const activePanel = container.querySelector('.tab-panel:not(.hidden)');
+    if (!activePanel) return;
+    const text = activePanel.id === 'req-panel'
+      ? (modelsTypes.has(apiTypeSelect.value) ? '' : payloadTextarea.value.trim())
+      : responseBody.textContent.trim();
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const copyIcon  = document.getElementById('copy-icon');
+      const checkIcon = document.getElementById('check-icon');
+      copyIcon.classList.add('hidden');
+      checkIcon.classList.remove('hidden');
+      setTimeout(() => { copyIcon.classList.remove('hidden'); checkIcon.classList.add('hidden'); }, 1800);
+    });
+  });
+
+  // ── Form submit ───────────────────────────────────────────────
+  const debugForm = document.getElementById('debug-form');
+  const sendBtn   = document.getElementById('send-btn');
+  const clearBtn  = document.getElementById('clear-btn');
+
   debugForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
+    // Switch to response tab and show "sending" state
+    activateTab('req-res', 'res-panel');
     responseBody.innerHTML = '<span class="text-slate-400 italic">发送中...</span>';
     setStatus('发送中', 'blue');
     responseTime.textContent = '--';
@@ -195,16 +240,12 @@
 
     try {
       const formData = new FormData(debugForm);
-      const apiType = formData.get('api_type');
+      const apiType  = formData.get('api_type');
       const isModels = modelsTypes.has(apiType);
 
       if (!isModels) {
-        const payload = formData.get('payload');
-        try {
-          JSON.parse(payload);
-        } catch {
-          throw new Error('JSON 格式有误，请检查请求报文');
-        }
+        try { JSON.parse(formData.get('payload')); }
+        catch { throw new Error('JSON 格式有误，请检查请求报文'); }
       } else {
         formData.set('payload', '{}');
       }
@@ -212,32 +253,26 @@
       const response = await fetch('/admin/api-debug/execute', {
         method: 'POST',
         body: formData,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
       });
 
-      const elapsed = Date.now() - startTime;
-      responseTime.textContent = `${elapsed}ms`;
+      responseTime.textContent = `${Date.now() - startTime}ms`;
 
       if (response.headers.get('content-type')?.includes('text/event-stream')) {
         setStatus('流式响应', 'emerald');
-        const reader = response.body.getReader();
+        const reader  = response.body.getReader();
         const decoder = new TextDecoder();
         responseBody.innerHTML = '';
-
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          responseBody.innerHTML += formatStreamingChunk(chunk);
-          responseBody.parentElement.scrollTop = responseBody.parentElement.scrollHeight;
+          responseBody.innerHTML += formatStreamingChunk(decoder.decode(value, { stream: true }));
+          responseBody.scrollTop = responseBody.scrollHeight;
         }
       } else {
         const data = await response.json();
-        if (response.ok) {
-          setStatus('成功 ' + response.status, 'emerald');
-        } else {
-          setStatus('失败 ' + response.status, 'rose');
-        }
+        setStatus(response.ok ? '成功 ' + response.status : '失败 ' + response.status,
+                  response.ok ? 'emerald' : 'rose');
         responseBody.innerHTML = highlightJSON(JSON.stringify(data, null, 2));
       }
     } catch (error) {
@@ -251,11 +286,13 @@
   });
 
   clearBtn.addEventListener('click', () => {
+    activateTab('req-res', 'req-panel');
     responseBody.innerHTML = '<span class="text-slate-500">等待发送请求...</span>';
     setStatus('未发送', 'slate');
     responseTime.textContent = '--';
   });
 
+  // ── Streaming chunk formatter ─────────────────────────────────
   function formatStreamingChunk(chunk) {
     let result = '';
     for (const line of chunk.split('\n')) {
