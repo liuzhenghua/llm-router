@@ -252,7 +252,7 @@
         formData.set('payload', '{}');
       }
 
-      const response = await fetch('/admin/api-debug/execute', {
+      const response = await fetch('/admin/playground/execute', {
         method: 'POST',
         body: formData,
         headers: { 'X-Requested-With': 'XMLHttpRequest' },

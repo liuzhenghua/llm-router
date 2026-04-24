@@ -1108,8 +1108,8 @@ async def docs_page(request: Request, _: None = Depends(require_admin)):
     )
 
 
-@protected_router.get("/api-debug")
-async def api_debug_page(request: Request, _: None = Depends(require_admin)):
+@protected_router.get("/playground")
+async def playground_page(request: Request, _: None = Depends(require_admin)):
     session = request.state.db
     api_keys_result = (await session.execute(select(ApiKey).where(ApiKey.status == "active").order_by(ApiKey.name.asc()))).scalars().all()
     api_keys = [
@@ -1118,20 +1118,20 @@ async def api_debug_page(request: Request, _: None = Depends(require_admin)):
     ]
     return _render_admin(
         request,
-        "api_debug.html",
+        "playground.html",
         {
             "api_keys": api_keys,
             "default_openai_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"stream\": false\n}",
             "default_anthropic_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"stream\": false\n}",
             "default_embedding_payload": "{\n  \"model\": \"bge-m3\",\n  \"input\": \"Hello, world!\",\n  \"encoding_format\": \"float\"\n}",
         },
-        nav_active="api_debug",
-        title="API Debug",
+        nav_active="playground",
+        title="Playground",
     )
 
 
-@protected_router.post("/api-debug/execute")
-async def api_debug_execute(
+@protected_router.post("/playground/execute")
+async def playground_execute(
     request: Request,
     api_key_id: int = Form(...),
     api_type: str = Form(...),
