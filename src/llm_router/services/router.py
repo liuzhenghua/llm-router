@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import random
-from datetime import date
-from decimal import Decimal
 from typing import Sequence
 
 from fastapi import HTTPException, status
@@ -10,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from llm_router.core.config import get_settings
+from llm_router.core.config import get_settings, local_date_for
 from llm_router.core.security import Encryptor, hash_api_key
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import ApiKey, LogicalModel, LogicalModelRoute
@@ -24,10 +22,9 @@ from llm_router.domain.schemas import (
     RoutedProvider,
 )
 from llm_router.services.billing import check_balance_and_budget
-from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType
+from llm_router.services.cache.degraded_cache import DegradedRouteCache
 from llm_router.services.cache.dual_cache import get_dual_cache
 from llm_router.services.rate_limit import rate_limiter
-
 
 settings = get_settings()
 encryptor = Encryptor(settings.app_encryption_key)
@@ -149,6 +146,7 @@ async def resolve_request_context(
             qps_limit=api_key.qps_limit,
             allowed_logical_models_json=api_key.allowed_logical_models_json or [],
             end_user=api_key.end_user,
+            timezone=api_key.timezone,
         )
         await dual_cache.set_apikey(key_hash, cached_api_key.to_dict())
 
@@ -175,7 +173,7 @@ def _check_balance_from_cache(cached: CachedApiKey) -> None:
     if cached.balance <= 0:
         raise ValueError("Insufficient balance")
 
-    today = date.today().isoformat()
+    today = local_date_for(cached.timezone).isoformat()
     if cached.daily_spend_date != today:
         # 新的一天，重置日预算
         return

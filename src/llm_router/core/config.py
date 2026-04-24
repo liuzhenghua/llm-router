@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -23,6 +25,10 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
+
+    # Timezone for date-based calculations (billing date, daily budget reset, etc.)
+    # Uses IANA timezone names, e.g. "Asia/Shanghai", "America/New_York", "UTC"
+    tz: str = "UTC"
 
     default_request_logging_enabled: bool = False
     default_response_logging_enabled: bool = False
@@ -88,3 +94,14 @@ def get_settings() -> Settings:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     settings.admin_users_file.parent.mkdir(parents=True, exist_ok=True)
     return settings
+
+
+def local_date_for(tz_name: str) -> date:
+    """Return today's date in the given IANA timezone name.
+    Use this for per-API-key timezone-aware billing date calculations.
+    Falls back to UTC if the timezone name is empty or invalid.
+    """
+    try:
+        return datetime.now(ZoneInfo(tz_name or "UTC")).date()
+    except Exception:
+        return datetime.now(ZoneInfo("UTC")).date()

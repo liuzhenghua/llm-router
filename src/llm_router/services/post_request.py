@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from llm_router.core.config import local_date_for
 from llm_router.core.database import SessionLocal
 from llm_router.domain.enums import ChangeType
 from llm_router.domain.models import ApiKey, BalanceLedger, DailyUsageSummary, RequestLog, RequestLogBody, UsageRecord
@@ -137,7 +136,6 @@ async def _record_billing_task(
     data: RequestFinalizationData,
 ) -> None:
     """异步执行计费逻辑"""
-    today = date.today()
     usage = data.usage
     prices = data.provider_prices
 
@@ -149,6 +147,8 @@ async def _record_billing_task(
         logger.warning(f"ApiKey not found for billing: {data.api_key_id}")
         return
 
+    # 按 API Key 的时区确定今天的日期（用于日限额和账单汇总）
+    today = local_date_for(api_key.timezone)
     # 重置每日限额
     if api_key.daily_spend_date != today:
         api_key.daily_spend_date = today

@@ -4,6 +4,8 @@ import json
 from datetime import date, datetime
 from decimal import Decimal
 
+from llm_router.core.config import get_settings
+
 from sqlalchemy import (
     Boolean,
     Date,
@@ -74,6 +76,8 @@ class ApiKey(Base, TimestampMixin):
     request_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     response_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    # IANA timezone name (e.g. "UTC", "Asia/Shanghai") — used for billing date calculation
+    timezone: Mapped[str] = mapped_column(String(64), default=lambda: get_settings().tz)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
     request_logs: Mapped[list["RequestLog"]] = relationship(
@@ -240,7 +244,7 @@ class UsageRecord(Base):
     cost_cache_write: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     cost_total: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     currency: Mapped[str] = mapped_column(String(8), default="USD")
-    billing_date: Mapped[date] = mapped_column(Date, default=date.today, index=True)
+    billing_date: Mapped[date] = mapped_column(Date, index=True)
 
     request_log: Mapped["RequestLog"] = relationship(
         "RequestLog",
@@ -273,7 +277,7 @@ class DailyUsageSummary(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     api_key_id: Mapped[int] = mapped_column(Integer)
-    summary_date: Mapped[date] = mapped_column(Date, default=date.today)
+    summary_date: Mapped[date] = mapped_column(Date)
     request_count: Mapped[int] = mapped_column(Integer, default=0)
     prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)

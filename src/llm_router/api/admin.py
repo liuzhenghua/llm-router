@@ -288,6 +288,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
             "request_content_logging_enabled": key.request_content_logging_enabled,
             "response_content_logging_enabled": key.response_content_logging_enabled,
             "end_user": key.end_user or "",
+            "timezone": key.timezone,
             "has_key": key.encrypted_key is not None,
         }
         for key in api_keys_result
@@ -297,7 +298,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
     return _render_admin(
         request,
         "api_keys.html",
-        {"api_keys": api_keys, "logical_models": logical_models, "raw_api_key": request.session.pop("new_api_key", None)},
+        {"api_keys": api_keys, "logical_models": logical_models, "raw_api_key": request.session.pop("new_api_key", None), "default_tz": settings.tz},
         nav_active="api_keys",
         title="API Keys",
     )
@@ -386,11 +387,13 @@ async def create_api_key(
     qps_limit: int = Form(default=5),
     allowed_models: str = Form(default=""),
     end_user: str = Form(default=""),
+    timezone: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
     raw_key = generate_api_key()
     allowed = [item.strip() for item in allowed_models.split(",") if item.strip()]
+    tz_value = timezone.strip() or settings.tz
     session.add(
         ApiKey(
             name=name,
@@ -403,6 +406,7 @@ async def create_api_key(
             request_content_logging_enabled=None,
             response_content_logging_enabled=None,
             end_user=end_user.strip() or None,
+            timezone=tz_value,
         )
     )
     await session.commit()
@@ -438,6 +442,7 @@ async def update_api_key(
     request_content_logging_enabled: str = Form(default=""),
     response_content_logging_enabled: str = Form(default=""),
     end_user: str = Form(default=""),
+    timezone: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -452,6 +457,8 @@ async def update_api_key(
     api_key.request_content_logging_enabled = _parse_logging_flag(request_content_logging_enabled)
     api_key.response_content_logging_enabled = _parse_logging_flag(response_content_logging_enabled)
     api_key.end_user = end_user.strip() or None
+    if timezone.strip():
+        api_key.timezone = timezone.strip()
     await session.commit()
     await _invalidate_apikey_cache(api_key)
     return JSONResponse({"ok": True, "id": api_key_id})
@@ -1104,7 +1111,7 @@ async def api_debug_page(request: Request, _: None = Depends(require_admin)):
             "api_keys": api_keys,
             "default_openai_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"stream\": false\n}",
             "default_anthropic_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"stream\": false\n}",
-            "default_embedding_payload": "{\n  \"model\": \"your-embedding-model\",\n  \"input\": \"Hello, world!\",\n  \"encoding_format\": \"float\"\n}",
+            "default_embedding_payload": "{\n  \"model\": \"bge-m3\",\n  \"input\": \"Hello, world!\",\n  \"encoding_format\": \"float\"\n}",
         },
         nav_active="api_debug",
         title="API Debug",

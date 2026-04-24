@@ -75,6 +75,7 @@ class CachedApiKey:
     qps_limit: int
     allowed_logical_models_json: list[str]  # JSON array stored as list
     end_user: str | None = None
+    timezone: str = "UTC"  # IANA timezone name for billing date calculation
 
     def to_dict(self) -> dict:
         return {
@@ -88,6 +89,7 @@ class CachedApiKey:
             "qps_limit": self.qps_limit,
             "allowed_logical_models_json": self.allowed_logical_models_json,
             "end_user": self.end_user,
+            "timezone": self.timezone,
         }
 
     @classmethod
@@ -103,6 +105,7 @@ class CachedApiKey:
             qps_limit=d["qps_limit"],
             allowed_logical_models_json=d.get("allowed_logical_models_json") or [],
             end_user=d.get("end_user"),
+            timezone=d.get("timezone") or "UTC",
         )
 
 

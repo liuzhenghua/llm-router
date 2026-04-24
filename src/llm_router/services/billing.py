@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from llm_router.core.config import local_date_for
 from llm_router.domain.enums import ChangeType
 from llm_router.domain.models import ApiKey, BalanceLedger, DailyUsageSummary, RequestLog, UsageRecord
 from llm_router.domain.schemas import BillingResult, RoutedProvider, UsageSnapshot
@@ -38,7 +38,7 @@ def compute_costs(provider: RoutedProvider, usage: UsageSnapshot) -> BillingResu
 
 
 async def check_balance_and_budget(api_key: ApiKey) -> None:
-    today = date.today()
+    today = local_date_for(api_key.timezone)
     if api_key.daily_spend_date != today:
         api_key.daily_spend_date = today
         api_key.daily_spend_amount = ZERO
@@ -63,7 +63,7 @@ async def record_billing(
     以支持多 Pod 并发写入时不会互相覆盖。其他记录（UsageRecord, BalanceLedger,
     DailyUsageSummary）仍然立即写入。
     """
-    today = date.today()
+    today = local_date_for(api_key.timezone)
     if api_key.daily_spend_date != today:
         api_key.daily_spend_date = today
         api_key.daily_spend_amount = ZERO
