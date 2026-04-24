@@ -4,11 +4,12 @@ from llm_router.services.non_stream_handlers.cross_protocol import (
     AnthropicOverOpenAINonStreamHandler,
     OpenAIOverAnthropicNonStreamHandler,
 )
-from llm_router.services.non_stream_handlers.openai import OpenAINonStreamHandler
+from llm_router.services.non_stream_handlers.openai import OpenAIEmbeddingNonStreamHandler, OpenAINonStreamHandler
 
 __all__ = [
     "BaseNonStreamHandler",
     "OpenAINonStreamHandler",
+    "OpenAIEmbeddingNonStreamHandler",
     "AnthropicNonStreamHandler",
     "AnthropicOverOpenAINonStreamHandler",
     "OpenAIOverAnthropicNonStreamHandler",

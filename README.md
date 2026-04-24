@@ -31,7 +31,7 @@
 
 ## Features
 
-- **Protocol compatibility** — serves OpenAI `POST /v1/chat/completions` and Anthropic `POST /v1/messages`
+- **Protocol compatibility** — serves OpenAI `POST /v1/chat/completions`, OpenAI `POST /v1/embeddings`, and Anthropic `POST /v1/messages`
 - **Logical model routing** — expose a stable model name (e.g. `gpt-4o`) and route it to any number of real backend providers
 - **Priority fallback** — if the top-priority provider fails, the gateway automatically tries the next one
 - **Per-key quota control** — balance, daily spend cap, QPS limit, and allowed-model list per API key
@@ -216,6 +216,7 @@ A mapping from a logical model to one or more provider models, each with a prior
 | Endpoint | Protocol | Streaming |
 |---|---|---|
 | `POST /v1/chat/completions` | OpenAI | ✅ SSE |
+| `POST /v1/embeddings` | OpenAI | — |
 | `POST /v1/messages` | Anthropic | ✅ streaming |
 
 Usage with the OpenAI Python SDK:

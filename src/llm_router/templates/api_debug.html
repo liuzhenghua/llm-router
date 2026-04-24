@@ -21,6 +21,7 @@
           <select id="api-type" name="api_type" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs" required>
             <optgroup label="OpenAI 协议">
               <option value="openai_chat">Chat Completions</option>
+              <option value="openai_embeddings">Embeddings</option>
               <option value="openai_models">List Models</option>
             </optgroup>
             <optgroup label="Anthropic 协议">
@@ -169,8 +170,9 @@
 
   // Raw string values — no JSON.stringify wrapping to avoid double-escaping
   const defaultPayloads = {
-    openai_chat:    {{ default_openai_payload | tojson }},
-    anthropic_chat: {{ default_anthropic_payload | tojson }},
+    openai_chat:       {{ default_openai_payload | tojson }},
+    openai_embeddings: {{ default_embedding_payload | tojson }},
+    anthropic_chat:    {{ default_anthropic_payload | tojson }},
   };
 
   function onApiTypeChange() {

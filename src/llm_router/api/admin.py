@@ -1104,6 +1104,7 @@ async def api_debug_page(request: Request, _: None = Depends(require_admin)):
             "api_keys": api_keys,
             "default_openai_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful assistant.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"stream\": false\n}",
             "default_anthropic_payload": "{\n  \"model\": \"kimi-k2.6\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Hello!\"\n    }\n  ],\n  \"max_tokens\": 1024,\n  \"stream\": false\n}",
+            "default_embedding_payload": "{\n  \"model\": \"your-embedding-model\",\n  \"input\": \"Hello, world!\",\n  \"encoding_format\": \"float\"\n}",
         },
         nav_active="api_debug",
         title="API Debug",
@@ -1120,7 +1121,7 @@ async def api_debug_execute(
 ):
     import json
     from llm_router.domain.enums import ProviderProtocol
-    from llm_router.services.gateway import handle_proxy_request
+    from llm_router.services.gateway import handle_embedding_request, handle_proxy_request
     from llm_router.core.security import Encryptor
     from llm_router.core.config import get_settings
     
@@ -1186,7 +1187,18 @@ async def api_debug_execute(
         return JSONResponse({"ok": False, "error": "Invalid JSON payload"}, status_code=400)
     
     # Set protocol based on API type
-    if api_type == "openai_chat":
+    if api_type == "openai_embeddings":
+        try:
+            response = await handle_embedding_request(
+                session,
+                payload=parsed_payload,
+                raw_api_key=raw_api_key,
+                headers={"Content-Type": "application/json"},
+            )
+            return response
+        except Exception as e:
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+    elif api_type == "openai_chat":
         protocol = ProviderProtocol.OPENAI
         request_path = "/chat/completions"
     elif api_type == "anthropic_chat":

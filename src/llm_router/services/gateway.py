@@ -15,6 +15,7 @@ from llm_router.services.cache.degraded_cache import DegradedRouteCache, Degrade
 from llm_router.services.cache.dual_cache import get_dual_cache
 from llm_router.services.non_stream_handlers import (
     AnthropicNonStreamHandler,
+    OpenAIEmbeddingNonStreamHandler,
     OpenAINonStreamHandler,
 )
 from llm_router.services.non_stream_handlers.cross_protocol import (
@@ -174,3 +175,106 @@ async def handle_proxy_request(
     if last_error is not None:
         raise last_error
     raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="No provider succeeded")
+
+
+async def handle_embedding_request(
+    session: AsyncSession,
+    *,
+    payload: dict[str, Any],
+    raw_api_key: str,
+    headers: dict[str, str],
+) -> JSONResponse:
+    """Handle OpenAI-compatible embeddings requests.
+
+    Embeddings are always non-streaming and require an OpenAI-compatible upstream.
+    Providers with only an Anthropic endpoint are skipped.
+    """
+    logical_model_name = payload.get("model")
+    if not logical_model_name:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="model is required")
+
+    request_id = headers.get("x-request-id") or uuid.uuid4().hex
+    headers = {**headers, "x-request-id": request_id}
+
+    api_key, logical_model, context = await resolve_request_context(
+        session,
+        raw_api_key=raw_api_key,
+        logical_model_name=logical_model_name,
+        protocol=ProviderProtocol.OPENAI,
+        payload=payload,
+        stream=False,
+        headers=headers,
+    )
+    context.request_id = request_id
+
+    provider_groups = await resolve_provider_candidates(session, logical_model.id, ProviderProtocol.OPENAI)
+
+    dual_cache = get_dual_cache()
+    degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
+
+    last_error: HTTPException | None = None
+
+    for group in provider_groups:
+        # Embeddings only work with OpenAI-compatible upstream endpoints
+        openai_providers = [p for p in group.providers if p.provider.upstream_protocol == ProviderProtocol.OPENAI]
+        if not openai_providers:
+            continue
+
+        selected = weighted_random_select(openai_providers)
+        if selected is None:
+            continue
+
+        current_provider = selected.provider
+        current_route_id = selected.route_id
+
+        for attempt in range(MAX_RETRY_PER_GROUP):
+            try:
+                handler = OpenAIEmbeddingNonStreamHandler()
+                return await handler.proxy(
+                    session,
+                    api_key=api_key,
+                    context=context,
+                    provider=current_provider,
+                    request_path="/embeddings",
+                )
+            except HTTPException as exc:
+                last_error = exc
+
+                if exc.status_code == 429 or exc.status_code == 403:
+                    if degraded_cache:
+                        await degraded_cache.mark_degraded(
+                            route_id=current_route_id,
+                            degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                            fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
+                        )
+                    break
+
+                if 400 <= exc.status_code < 500:
+                    raise exc
+
+                if degraded_cache:
+                    new_count = await degraded_cache.increment_fail_count(current_route_id)
+                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                        await degraded_cache.mark_degraded(
+                            route_id=current_route_id,
+                            degraded_type=DegradedType.UNAVAILABLE,
+                            fail_count=new_count,
+                        )
+                        logger.warning(
+                            f"Route {current_route_id} marked as unavailable after {new_count} failures"
+                        )
+
+                await session.rollback()
+
+                if attempt < MAX_RETRY_PER_GROUP - 1:
+                    selected = weighted_random_select(openai_providers)
+                    if selected:
+                        current_provider = selected.provider
+                        current_route_id = selected.route_id
+                continue
+
+        continue
+
+    if last_error is not None:
+        raise last_error
+    raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="No provider available for embeddings")

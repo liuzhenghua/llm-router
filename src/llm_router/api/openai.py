@@ -4,7 +4,7 @@ from fastapi import APIRouter, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm_router.domain.enums import ProviderProtocol
-from llm_router.services.gateway import handle_proxy_request
+from llm_router.services.gateway import handle_embedding_request, handle_proxy_request
 
 
 router = APIRouter(prefix="/v1", tags=["openai"])
@@ -93,4 +93,20 @@ async def chat_completions(
         raw_api_key=raw_api_key,
         headers=dict(request.headers),
         request_path="/chat/completions",
+    )
+
+
+@router.post("/embeddings")
+async def embeddings(
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
+    session: AsyncSession = request.state.db
+    payload = await request.json()
+    raw_api_key = _extract_bearer_token(authorization)
+    return await handle_embedding_request(
+        session,
+        payload=payload,
+        raw_api_key=raw_api_key,
+        headers=dict(request.headers),
     )
