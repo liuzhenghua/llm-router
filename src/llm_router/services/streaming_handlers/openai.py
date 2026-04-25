@@ -198,6 +198,8 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             usage=usage_data,
             provider_prices=prices_data,
             end_user=kwargs.get("end_user"),
+            channel=kwargs.get("channel"),
+            api_key_timezone=kwargs.get("api_key_timezone", "UTC"),
         )
 
     async def proxy(
@@ -246,6 +248,8 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
                     started_at=self._started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
+                    api_key_timezone=context.api_key_timezone,
                 )
             )
             raise HTTPException(status_code=self._upstream_response.status_code, detail=detail)
@@ -293,6 +297,8 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
                         started_at=self._started_at,
                         ended_at=utcnow(),
                         end_user=context.end_user,
+                        channel=context.channel,
+                        api_key_timezone=context.api_key_timezone,
                     )
                 )
                 await stream_cm.__aexit__(None, None, None)

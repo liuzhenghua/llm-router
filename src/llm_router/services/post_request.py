@@ -61,6 +61,7 @@ class RequestFinalizationData:
     provider_prices: ProviderPricesData | None
     end_user: str | None = None
     channel: str | None = None
+    api_key_timezone: str = "UTC"
 
 
 def _per_million_cost(tokens: int, unit_price: Decimal) -> Decimal:
@@ -72,12 +73,8 @@ async def _create_request_log_task(
     data: RequestFinalizationData,
 ) -> RequestLog | None:
     """异步创建或更新请求日志"""
-    # Resolve local_date: fetch api_key timezone for timezone-aware date grouping in statistics.
-    # Falls back to system default timezone when api_key is not found.
-    _tz_stmt = select(ApiKey.timezone).where(ApiKey.id == data.api_key_id)
-    _tz_result = await session.execute(_tz_stmt)
-    _tz = _tz_result.scalar_one_or_none() or "UTC"
-    _local_date = local_date_for(_tz)
+    # Use timezone passed from upstream (already resolved at auth time) — no extra DB query needed.
+    _local_date = local_date_for(data.api_key_timezone)
 
     # 检查是否已存在（处理重试场景）
     stmt = select(RequestLog).where(RequestLog.request_id == data.request_id)
@@ -148,18 +145,11 @@ async def _record_billing_task(
     session: AsyncSession,
     request_log: RequestLog,
     data: RequestFinalizationData,
+    api_key: ApiKey,
 ) -> None:
     """异步执行计费逻辑"""
     usage = data.usage
     prices = data.provider_prices
-
-    # 获取并锁定 ApiKey（使用 FOR UPDATE）
-    stmt = select(ApiKey).where(ApiKey.id == data.api_key_id).with_for_update()
-    result = await session.execute(stmt)
-    api_key = result.scalar_one_or_none()
-    if api_key is None:
-        logger.warning(f"ApiKey not found for billing: {data.api_key_id}")
-        return
 
     # 按 API Key 的时区确定今天的日期（用于日限额和账单汇总）
     today = local_date_for(api_key.timezone)
@@ -262,12 +252,17 @@ async def _execute_post_request_tasks(data: RequestFinalizationData) -> None:
     """执行所有后置任务（在新 session 中运行）"""
     async with SessionLocal() as session:
         try:
-            # 1. 创建请求日志
+            # 1. 创建请求日志（timezone 已在认证阶段传入，无需查 DB）
             request_log = await _create_request_log_task(session, data)
 
-            # 2. 如果成功且有计费信息，执行计费
+            # 2. 如果成功且有计费信息，获取并锁定 ApiKey 执行计费
             if data.success and data.usage and data.provider_prices:
-                await _record_billing_task(session, request_log, data)
+                stmt = select(ApiKey).where(ApiKey.id == data.api_key_id).with_for_update()
+                api_key = (await session.execute(stmt)).scalar_one_or_none()
+                if api_key is None:
+                    logger.warning(f"ApiKey not found for billing: {data.api_key_id}")
+                else:
+                    await _record_billing_task(session, request_log, data, api_key)
 
             # 3. 提交事务
             await session.commit()

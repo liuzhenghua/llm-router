@@ -107,6 +107,8 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
                     started_at=started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
+                    api_key_timezone=context.api_key_timezone,
                 )
             )
 
@@ -138,6 +140,8 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
                     started_at=started_at,
                     ended_at=utcnow(),
                     end_user=context.end_user,
+                    channel=context.channel,
+                    api_key_timezone=context.api_key_timezone,
                 )
             )
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
@@ -206,4 +210,6 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
             usage=usage_data,
             provider_prices=prices_data,
             end_user=kwargs.get("end_user"),
+            channel=kwargs.get("channel"),
+            api_key_timezone=kwargs.get("api_key_timezone", "UTC"),
         )

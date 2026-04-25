@@ -44,6 +44,7 @@ class RequestContext:
     response_logging_enabled: bool
     api_key_id: int
     api_key_name: str
+    api_key_timezone: str
     logical_model_id: int
     raw_authorization: str | None
     headers: dict[str, str] = field(default_factory=dict)
