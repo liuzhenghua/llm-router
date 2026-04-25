@@ -1043,11 +1043,11 @@ async def billing_page(
     ledgers = [
         {
             "change_type": item.change_type,
-            "amount": str(item.amount),
+            "amount": format(item.amount, 'f'),
             "api_key_id": item.api_key_id,
             "api_key_name": api_key_map.get(item.api_key_id, f"#{item.api_key_id}"),
-            "balance_before": str(item.balance_before),
-            "balance_after": str(item.balance_after),
+            "balance_before": format(item.balance_before, 'f'),
+            "balance_after": format(item.balance_after, 'f'),
             "remark": item.remark,
         }
         for item in ledgers_result
@@ -1057,7 +1057,7 @@ async def billing_page(
     usage_records = [
         {
             "request_log_id": item.request_log_id,
-            "cost_total": str(item.cost_total),
+            "cost_total": format(item.cost_total, 'f'),
             "prompt_tokens": item.prompt_tokens,
             "completion_tokens": item.completion_tokens,
             "reasoning_tokens": item.reasoning_tokens,
@@ -1073,7 +1073,7 @@ async def billing_page(
             "api_key_name": api_key_map.get(item.api_key_id, f"#{item.api_key_id}"),
             "summary_date": item.summary_date.isoformat(),
             "request_count": item.request_count,
-            "cost_total": str(item.cost_total),
+            "cost_total": format(item.cost_total, 'f'),
             "prompt_tokens": item.prompt_tokens,
             "completion_tokens": item.completion_tokens,
             "reasoning_tokens": item.reasoning_tokens,

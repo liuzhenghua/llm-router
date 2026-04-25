@@ -138,11 +138,7 @@
       <div class="flex items-center bg-slate-900 border-b border-slate-700">
         <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="req-body-panel" data-group="req-res">请求体</button>
         <button class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition" data-tab="res-body-panel" data-group="req-res">响应体 / 错误</button>
-        <button class="fmt-btn mr-1 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition ml-auto" title="格式化 JSON" data-group="req-res">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h7"/></svg>
-          <span class="text-xs">Format</span>
-        </button>
-        <button class="copy-btn mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="req-res">
+        <button class="copy-btn ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition" title="复制" data-group="req-res">
           <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
           <svg class="check-icon w-3.5 h-3.5 hidden text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         </button>
@@ -160,31 +156,17 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  function decodeHtmlEntities(str) {
-    const ta = document.createElement('textarea');
-    ta.innerHTML = str;
-    return ta.value;
-  }
-
   function formatJsonInPre(elementId) {
     const pre = document.getElementById(elementId);
     if (!pre) return;
-    // Decode HTML entities that Jinja2 may have escaped, then attempt JSON parse
-    const text = decodeHtmlEntities(pre.innerHTML).trim();
+    // Use textContent — browser already decodes HTML entities for us
+    const text = pre.textContent.trim();
     try {
       const parsed = JSON.parse(text);
       pre.textContent = JSON.stringify(parsed, null, 2);
     } catch (e) {
       // Not valid JSON — leave as-is
     }
-  }
-
-  function formatActivePanel(group) {
-    const container = document.querySelector('.code-tabs[data-group="' + group + '"]');
-    const activePanel = container && container.querySelector('.tab-panel:not(.hidden)');
-    if (!activePanel) return;
-    const pre = activePanel.querySelector('pre');
-    if (pre) formatJsonInPre(pre.id);
   }
 
   formatJsonInPre('request-body-pre');
@@ -214,11 +196,6 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.addEventListener('click', () => activateTab(group, btn.dataset.tab));
       if (i === 0) activateTab(group, btn.dataset.tab);
     });
-  });
-
-  // ── Format button ─────────────────────────────────────────────
-  document.querySelectorAll('.fmt-btn').forEach(btn => {
-    btn.addEventListener('click', () => formatActivePanel(btn.dataset.group));
   });
 
   // ── Copy button ───────────────────────────────────────────────

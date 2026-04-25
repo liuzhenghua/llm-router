@@ -116,7 +116,7 @@
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
           {% if log.usage_record %}
-          {{ "%.4f" | format(log.usage_record.cost_total) if log.usage_record.cost_total else 'N/A' }}
+          {{ "%.4f" | format(log.usage_record.cost_total) if log.usage_record.cost_total is not none else 'N/A' }}
           {% else %}
           -
           {% endif %}
