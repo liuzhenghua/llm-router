@@ -74,7 +74,7 @@ async def handle_proxy_request(
         )
 
     # 获取分组后的 provider 候选列表
-    provider_groups = await resolve_provider_candidates(session, logical_model.id, protocol)
+    provider_groups = await resolve_provider_candidates(session, context.logical_model_ids, protocol)
 
     # All DB queries for this request are done. Release the connection back to the pool
     # before blocking on the upstream LLM call. Streaming responses can take 30–300 s;
@@ -225,7 +225,7 @@ async def handle_embedding_request(
             f"{context.api_key_name or '-'}|{context.channel or '-'}|{context.end_user or '-'}"
         )
 
-    provider_groups = await resolve_provider_candidates(session, logical_model.id, ProviderProtocol.OPENAI)
+    provider_groups = await resolve_provider_candidates(session, context.logical_model_ids, ProviderProtocol.OPENAI)
 
     # All DB queries for this request are done. Release the connection back to the pool
     # before blocking on the upstream embedding call.

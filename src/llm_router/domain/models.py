@@ -72,7 +72,7 @@ class ApiKey(Base, TimestampMixin):
     daily_spend_amount: Mapped[Decimal] = mapped_column(Numeric(18, 6), default=Decimal("0"))
     daily_spend_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     qps_limit: Mapped[int] = mapped_column(Integer, default=5)
-    allowed_logical_models_json: Mapped[list[str]] = mapped_column(JsonString, default=list)
+    allowed_logical_models_json: Mapped[list[int]] = mapped_column(JsonString, default=list)
     request_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     response_content_logging_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True, default=None)
     end_user: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
@@ -94,7 +94,7 @@ class LogicalModel(Base, TimestampMixin):
     __tablename__ = table_name("logical_models")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), index=True)
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     routing_strategy: Mapped[str] = mapped_column(String(32), default="priority")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

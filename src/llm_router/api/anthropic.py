@@ -65,12 +65,12 @@ async def get_model(model_id: str, request: Request, authorization: str | None =
     ).scalar_one_or_none()
     if api_key is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-    if api_key.allowed_logical_models_json and model_id not in api_key.allowed_logical_models_json:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
     model = (
-        await session.execute(select(LogicalModel).where(LogicalModel.name == model_id, LogicalModel.is_active))
-    ).scalar_one_or_none()
+        await session.execute(select(LogicalModel).where(LogicalModel.name == model_id, LogicalModel.is_active).order_by(LogicalModel.id.asc()))
+    ).scalars().first()
     if model is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
+    if api_key.allowed_logical_models_json and model.id not in api_key.allowed_logical_models_json:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
     return {
         "type": "model",

@@ -27,7 +27,6 @@ _db_writer: DbSpendWriter | None = None
 _redis_cache: RedisCache | None = None
 _degraded_recovery_task: asyncio.Task | None = None
 
-
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     global _dual_cache, _spend_queue, _db_writer, _redis_cache

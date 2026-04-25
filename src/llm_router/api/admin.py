@@ -295,7 +295,7 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
         for key in api_keys_result
     ]
     logical_models_result = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
-    logical_models = [{"id": m.id, "name": m.name} for m in logical_models_result]
+    logical_models = [{"id": m.id, "name": m.name, "description": m.description or ""} for m in logical_models_result]
     return _render_admin(
         request,
         "api_keys.html",
@@ -394,7 +394,7 @@ async def create_api_key(
 ):
     session = request.state.db
     raw_key = generate_api_key()
-    allowed = [item.strip() for item in allowed_models.split(",") if item.strip()]
+    allowed = [int(item.strip()) for item in allowed_models.split(",")]
     tz_value = timezone.strip() or settings.tz
     session.add(
         ApiKey(
@@ -457,7 +457,7 @@ async def update_api_key(
     api_key.status = status_text
     api_key.daily_budget_limit = _to_decimal(daily_budget_limit)
     api_key.qps_limit = qps_limit
-    api_key.allowed_logical_models_json = [item.strip() for item in allowed_models.split(",") if item.strip()]
+    api_key.allowed_logical_models_json = [int(item.strip()) for item in allowed_models.split(",")]
     api_key.request_content_logging_enabled = _parse_logging_flag(request_content_logging_enabled)
     api_key.response_content_logging_enabled = _parse_logging_flag(response_content_logging_enabled)
     api_key.end_user = end_user.strip() or None

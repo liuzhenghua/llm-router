@@ -46,7 +46,8 @@ class RequestContext:
     api_key_name: str
     api_key_timezone: str
     logical_model_id: int
-    raw_authorization: str | None
+    logical_model_ids: list[int] = field(default_factory=list)  # all matching model IDs for union-of-providers routing
+    raw_authorization: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
     end_user: str | None = None
     channel: str | None = None
@@ -75,7 +76,7 @@ class CachedApiKey:
     daily_spend_amount: Decimal
     daily_spend_date: str | None  # ISO date string, e.g. "2025-01-15"
     qps_limit: int
-    allowed_logical_models_json: list[str]  # JSON array stored as list
+    allowed_logical_models: list[dict] = field(default_factory=list)  # [{"id": int, "name": str}, ...] enriched for name-based cache lookup
     end_user: str | None = None
     timezone: str = "UTC"  # IANA timezone name for billing date calculation
     default_channel: str | None = None  # Default channel tag for requests
@@ -92,7 +93,7 @@ class CachedApiKey:
             "daily_spend_amount": str(self.daily_spend_amount),
             "daily_spend_date": self.daily_spend_date,
             "qps_limit": self.qps_limit,
-            "allowed_logical_models_json": self.allowed_logical_models_json,
+            "allowed_logical_models": self.allowed_logical_models,
             "end_user": self.end_user,
             "timezone": self.timezone,
             "default_channel": self.default_channel,
@@ -111,7 +112,7 @@ class CachedApiKey:
             daily_spend_amount=Decimal(d["daily_spend_amount"]),
             daily_spend_date=d.get("daily_spend_date"),
             qps_limit=d["qps_limit"],
-            allowed_logical_models_json=d.get("allowed_logical_models_json") or [],
+            allowed_logical_models=d.get("allowed_logical_models") or [],
             end_user=d.get("end_user"),
             timezone=d.get("timezone") or "UTC",
             default_channel=d.get("default_channel"),

@@ -296,19 +296,16 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTable();
 });
 
-var logicalModels = [
-  {% for model in logical_models %}
-    {id: {{ model.id }}, name: "{{ model.name }}"},
-  {% endfor %}
-];
+var logicalModels = {{ logical_models|tojson }};
 
-// ===== Model Selector v2（稳定版）=====
+// ===== Model Selector v3（ID-based）=====
 function createModelSelector(selector, initialSelected) {
   if (selector._inited) return;
 
+  // initialSelected is an array of IDs (numbers)
   const state = {
-    selected: Array.isArray(initialSelected) ? [...initialSelected] : [],
-    all: logicalModels.map(m => m.name)
+    selected: (Array.isArray(initialSelected) ? [...initialSelected] : []).map(Number).filter(n => !isNaN(n)),
+    all: logicalModels  // [{id, name, description}, ...]
   };
 
   const els = {
@@ -324,13 +321,24 @@ function createModelSelector(selector, initialSelected) {
   selector._state = state;
   selector._els = els;
 
+  function displayLabel(model) {
+    return model.description ? `${model.name} <span class="text-slate-400">(${model.description})</span>` : model.name;
+  }
+
+  function displayLabelPlain(model) {
+    return model.description ? `${model.name} (${model.description})` : model.name;
+  }
+
   function renderTags() {
     els.tags.innerHTML = '';
-    state.selected.forEach(name => {
+    state.selected.forEach(id => {
+      const model = state.all.find(m => m.id === id);
+      if (!model) return;
       const tag = document.createElement('span');
       tag.className = 'inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 px-3 py-1 text-sm cursor-default';
 
-      const labelNode = document.createTextNode(name);
+      const labelSpan = document.createElement('span');
+      labelSpan.innerHTML = displayLabel(model);
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'delete-btn ml-1 text-slate-400 hover:text-rose-500 transition-colors font-bold text-lg leading-none';
@@ -338,11 +346,11 @@ function createModelSelector(selector, initialSelected) {
       button.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        state.selected = state.selected.filter(n => n !== name);
+        state.selected = state.selected.filter(n => n !== id);
         sync();
       });
 
-      tag.appendChild(labelNode);
+      tag.appendChild(labelSpan);
       tag.appendChild(button);
       els.tags.appendChild(tag);
     });
@@ -351,26 +359,29 @@ function createModelSelector(selector, initialSelected) {
   function renderDropdown() {
     const keyword = els.search.value.toLowerCase();
     els.items.innerHTML = '';
-    const list = state.all.filter(name => name.toLowerCase().includes(keyword));
+    const list = state.all.filter(m =>
+      m.name.toLowerCase().includes(keyword) ||
+      (m.description || '').toLowerCase().includes(keyword)
+    );
 
     if (!list.length) {
       els.items.innerHTML = '<div class="px-4 py-2 text-slate-400">无匹配模型</div>';
       return;
     }
 
-    list.forEach(name => {
-      const isSelected = state.selected.includes(name);
+    list.forEach(model => {
+      const isSelected = state.selected.includes(model.id);
       const item = document.createElement('div');
       item.className = `cursor-pointer px-4 py-2.5 flex justify-between items-center hover:bg-slate-50 transition-colors ${isSelected ? 'bg-sky-50/50 text-sky-700' : 'text-slate-700'}`;
-      item.innerHTML = `<span>${name}</span>${isSelected ? '<span class="font-bold">✓</span>' : ''}`;
+      item.innerHTML = `<span>${displayLabel(model)}</span>${isSelected ? '<span class="font-bold">✓</span>' : ''}`;
 
       item.onclick = (e) => {
         e.preventDefault();
-        e.stopPropagation(); // 阻止冒泡到 document 导致下拉框关闭
+        e.stopPropagation();
         if (isSelected) {
-          state.selected = state.selected.filter(n => n !== name);
+          state.selected = state.selected.filter(n => n !== model.id);
         } else {
-          state.selected.push(name);
+          state.selected.push(model.id);
         }
         sync();
       };
@@ -399,8 +410,11 @@ function createModelSelector(selector, initialSelected) {
     e.preventDefault();
     e.stopPropagation();
     const keyword = els.search.value.toLowerCase();
-    const visible = state.all.filter(name => name.toLowerCase().includes(keyword));
-    state.selected = Array.from(new Set([...state.selected, ...visible]));
+    const visible = state.all.filter(m =>
+      m.name.toLowerCase().includes(keyword) ||
+      (m.description || '').toLowerCase().includes(keyword)
+    );
+    state.selected = Array.from(new Set([...state.selected, ...visible.map(m => m.id)]));
     sync();
   };
 
@@ -441,7 +455,8 @@ function openEditModal(item) {
   form.querySelector('[name="timezone"]').value = item.timezone || '';
   form.querySelector('[name="default_channel"]').value = item.default_channel || '';
 
-  const models = item.allowed_logical_models_json || [];
+  // allowed_logical_models_json now contains IDs (numbers)
+  const models = (item.allowed_logical_models_json || []).map(Number).filter(n => !isNaN(n));
 
   if (!selector._inited) {
     createModelSelector(selector, models);
@@ -471,7 +486,7 @@ document.getElementById('edit-api-key-form').addEventListener('submit', function
           allApiKeys[keyIndex].status = data.get('status');
           allApiKeys[keyIndex].daily_budget_limit = data.get('daily_budget_limit');
           allApiKeys[keyIndex].qps_limit = data.get('qps_limit');
-          allApiKeys[keyIndex].allowed_logical_models_json = data.get('allowed_models').split(',').filter(Boolean);
+          allApiKeys[keyIndex].allowed_logical_models_json = data.get('allowed_models').split(',').filter(Boolean).map(Number).filter(n => !isNaN(n));
           const rv = data.get('request_content_logging_enabled');
           const resv = data.get('response_content_logging_enabled');
           allApiKeys[keyIndex].request_content_logging_enabled = rv === 'true' ? true : (rv === 'false' ? false : null);

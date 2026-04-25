@@ -1,0 +1,51 @@
+-- Migration: 1.0.1
+-- Description: (1) Drop UNIQUE constraint on lr_logical_models.name to allow duplicate names;
+--              (2) Convert allowed_logical_models_json in lr_api_keys from model names to model IDs.
+--
+-- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
+-- !! replace every occurrence of "lr_" in this file with your prefix
+-- !! before running. Example: s/lr_/myprefix_/g
+--
+-- Apply (MySQL):
+--   mysql -u llm_router -p llm_router < migrations/1.0.1/migration_mysql_1.0.1.sql
+--
+-- === Part 1: Remove UNIQUE constraint on lr_logical_models.name ===
+
+ALTER TABLE lr_logical_models DROP INDEX name;
+CREATE INDEX ix_lr_logical_models_name ON lr_logical_models (name);
+
+-- === Part 2: Data migration — allowed_logical_models_json names → IDs ===
+-- The application performs this automatically on first startup.
+-- For a pure SQL approach (MySQL 8+), use the stored procedure below:
+--
+-- DELIMITER $$
+-- CREATE PROCEDURE migrate_allowed_models()
+-- BEGIN
+--   DECLARE done INT DEFAULT FALSE;
+--   DECLARE key_id INT;
+--   DECLARE models_json TEXT;
+--   DECLARE cur CURSOR FOR SELECT id, allowed_logical_models_json FROM lr_api_keys;
+--   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+--   OPEN cur;
+--   migrate_loop: LOOP
+--     FETCH cur INTO key_id, models_json;
+--     IF done THEN LEAVE migrate_loop; END IF;
+--     IF JSON_LENGTH(models_json) > 0 AND JSON_TYPE(JSON_EXTRACT(models_json, '$[0]')) != 'INTEGER' THEN
+--       SET @new_ids = JSON_ARRAY();
+--       SET @i = 0;
+--       WHILE @i < JSON_LENGTH(models_json) DO
+--         SET @name = JSON_UNQUOTE(JSON_EXTRACT(models_json, CONCAT('$[', @i, ']')));
+--         SET @model_id = (SELECT id FROM lr_logical_models WHERE name = @name LIMIT 1);
+--         IF @model_id IS NOT NULL THEN
+--           SET @new_ids = JSON_ARRAY_APPEND(@new_ids, '$', @model_id);
+--         END IF;
+--         SET @i = @i + 1;
+--       END WHILE;
+--       UPDATE lr_api_keys SET allowed_logical_models_json = @new_ids WHERE id = key_id;
+--     END IF;
+--   END LOOP;
+--   CLOSE cur;
+-- END $$
+-- DELIMITER ;
+-- CALL migrate_allowed_models();
+-- DROP PROCEDURE IF EXISTS migrate_allowed_models;

@@ -66,16 +66,30 @@ async def resolve_request_context(
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)) from exc
 
-        # 检查模型权限
-        if cached.allowed_logical_models_json and logical_model_name not in cached.allowed_logical_models_json:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Model not allowed for API key")
-
-        # 查 LogicalModel（暂不缓存）
-        logical_model = (
-            await session.execute(select(LogicalModel).where(LogicalModel.name == logical_model_name, LogicalModel.is_active))
-        ).scalar_one_or_none()
-        if logical_model is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Logical model not found")
+        # 模型权限检查：直接对比缓存中的模型名，无需查 DB
+        allowed = cached.allowed_logical_models  # [{"id": int, "name": str}, ...]
+        if allowed:
+            matching = [m for m in allowed if m["name"] == logical_model_name]
+            if not matching:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Model not allowed for API key")
+            logical_model_ids = [m["id"] for m in matching]
+            logical_model_id = logical_model_ids[0]
+            # 构造轻量 LogicalModel 对象用于返回
+            logical_model = LogicalModel(id=logical_model_id, name=logical_model_name)
+        else:
+            # 无限制的 API key：查 DB 获取所有同名活跃模型
+            matching_models = (
+                await session.execute(
+                    select(LogicalModel)
+                    .where(LogicalModel.name == logical_model_name, LogicalModel.is_active)
+                    .order_by(LogicalModel.id.asc())
+                )
+            ).scalars().all()
+            if not matching_models:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Logical model not found")
+            logical_model_ids = [m.id for m in matching_models]
+            logical_model_id = logical_model_ids[0]
+            logical_model = matching_models[0]
 
         # 从缓存数据创建轻量级 ApiKey 对象（用于返回）
         api_key = ApiKey(
@@ -88,7 +102,7 @@ async def resolve_request_context(
             daily_spend_amount=cached.daily_spend_amount,
             daily_spend_date=date.fromisoformat(cached.daily_spend_date) if cached.daily_spend_date else None,
             qps_limit=cached.qps_limit,
-            allowed_logical_models_json=cached.allowed_logical_models_json,
+            allowed_logical_models_json=[],
             request_content_logging_enabled=cached.request_content_logging_enabled,
             response_content_logging_enabled=cached.response_content_logging_enabled,
         )
@@ -104,7 +118,8 @@ async def resolve_request_context(
             api_key_id=api_key.id,
             api_key_name=api_key.name,
             api_key_timezone=cached.timezone or "UTC",
-            logical_model_id=logical_model.id,
+            logical_model_id=logical_model_id,
+            logical_model_ids=logical_model_ids,
             raw_authorization=raw_api_key,
             headers=headers,
             end_user=headers.get("x-end-user") or cached.end_user,
@@ -127,17 +142,51 @@ async def resolve_request_context(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail=str(exc)) from exc
 
-    logical_model = (
-        await session.execute(select(LogicalModel).where(LogicalModel.name == logical_model_name, LogicalModel.is_active))
-    ).scalar_one_or_none()
-    if logical_model is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Logical model not found")
+    # 查找该请求对应的所有活跃 LogicalModel（支持重名，取并集）
+    allowed_ids: set[int] = set(api_key.allowed_logical_models_json or [])
+    if allowed_ids:
+        # 受限 key：只在已授权 ID 中找同名模型
+        matching_models = (
+            await session.execute(
+                select(LogicalModel)
+                .where(
+                    LogicalModel.name == logical_model_name,
+                    LogicalModel.is_active,
+                    LogicalModel.id.in_(allowed_ids),
+                )
+                .order_by(LogicalModel.id.asc())
+            )
+        ).scalars().all()
+        if not matching_models:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Model not allowed for API key")
+    else:
+        # 无限制 key：找所有同名活跃模型
+        matching_models = (
+            await session.execute(
+                select(LogicalModel)
+                .where(LogicalModel.name == logical_model_name, LogicalModel.is_active)
+                .order_by(LogicalModel.id.asc())
+            )
+        ).scalars().all()
+        if not matching_models:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Logical model not found")
 
-    if api_key.allowed_logical_models_json and logical_model_name not in api_key.allowed_logical_models_json:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Model not allowed for API key")
+    logical_model_ids = [m.id for m in matching_models]
+    logical_model = matching_models[0]
 
-    # === 3. 回填缓存 ===
+    # === 3. 回填缓存（含完整 allowed_logical_models {id, name} 列表）===
     if dual_cache:
+        if allowed_ids:
+            # 加载所有授权模型对象，用于后续请求的名字匹配（无需再查 DB）
+            allowed_models_result = (
+                await session.execute(
+                    select(LogicalModel)
+                    .where(LogicalModel.id.in_(allowed_ids), LogicalModel.is_active)
+                )
+            ).scalars().all()
+            allowed_models_data = [{"id": m.id, "name": m.name} for m in allowed_models_result]
+        else:
+            allowed_models_data = []
         cached_api_key = CachedApiKey(
             id=api_key.id,
             name=api_key.name,
@@ -147,7 +196,7 @@ async def resolve_request_context(
             daily_spend_amount=api_key.daily_spend_amount,
             daily_spend_date=api_key.daily_spend_date.isoformat() if api_key.daily_spend_date else None,
             qps_limit=api_key.qps_limit,
-            allowed_logical_models_json=api_key.allowed_logical_models_json or [],
+            allowed_logical_models=allowed_models_data,
             end_user=api_key.end_user,
             timezone=api_key.timezone,
             default_channel=api_key.default_channel,
@@ -168,6 +217,7 @@ async def resolve_request_context(
         api_key_name=api_key.name,
         api_key_timezone=api_key.timezone or "UTC",
         logical_model_id=logical_model.id,
+        logical_model_ids=logical_model_ids,
         raw_authorization=raw_api_key,
         headers=headers,
         end_user=headers.get("x-end-user") or api_key.end_user,
@@ -229,17 +279,21 @@ def weighted_random_select(
 
 async def resolve_provider_candidates(
     session: AsyncSession,
-    logical_model_id: int,
+    logical_model_ids: list[int],
     protocol: ProviderProtocol,
 ) -> list[RoutableProviderGroup]:
     """
     解析可用的 provider 候选列表，按优先级分组
 
+    支持多 logical_model_id（相同 model name 的所有匹配项），
+    取所有 ID 路由的 provider 并集（按 provider_model_id 去重）。
+
     路由流程：
-    1. 获取所有 active 且 weight > 0 的路由
-    2. 过滤掉 degraded 状态的路由
-    3. 按 is_fallback 和 priority 分组
-    4. 组按 priority 排序，fallback 组在最后
+    1. 对每个 logical_model_id 获取路由（缓存或 DB）
+    2. 按 provider_model_id 去重合并
+    3. 过滤掉 degraded 状态的路由
+    4. 按 is_fallback 和 priority 分组
+    5. 组按 priority 排序，fallback 组在最后
 
     Returns:
         list[RoutableProviderGroup]，按 priority 升序排列
@@ -247,79 +301,90 @@ async def resolve_provider_candidates(
     dual_cache = get_dual_cache()
     degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
 
-    # === 1. 获取路由数据 ===
-    cached_routes_data = None
-    if dual_cache:
-        cached_routes_data = await dual_cache.get_routes_by_logical_model(logical_model_id)
+    # Collect merged route data across all logical_model_ids, dedup by provider_model_id
+    seen_provider_ids: set[int] = set()
+    merged_routes_data: list[dict] = []
 
-    if cached_routes_data:
-        # 缓存命中
-        routes_data = cached_routes_data
-    else:
-        # 缓存 miss：从 DB 查询
-        stmt = (
-            select(LogicalModelRoute)
-            .options(joinedload(LogicalModelRoute.provider_model))
-            .where(
-                LogicalModelRoute.logical_model_id == logical_model_id,
-                LogicalModelRoute.status == "active",
-            )
-            .order_by(LogicalModelRoute.priority.asc(), LogicalModelRoute.id.asc())
-        )
-        db_routes = (await session.execute(stmt)).scalars().all()
+    for logical_model_id in logical_model_ids:
+        # === 1. 获取路由数据 ===
+        cached_routes_data = None
+        if dual_cache:
+            cached_routes_data = await dual_cache.get_routes_by_logical_model(logical_model_id)
 
-        routes_data = []
-        routes_to_cache: list[dict] = []
-
-        for route in db_routes:
-            provider = route.provider_model
-            if not provider.is_active:
-                continue
-
-            # Include provider if it has at least one endpoint (may need protocol conversion)
-            if not provider.openai_endpoint and not provider.anthropic_endpoint:
-                continue
-
-            # 构建缓存数据
-            cached_route = CachedRoute(
-                route_id=route.id,
-                logical_model_id=route.logical_model_id,
-                provider_model_id=provider.id,
-                priority=route.priority,
-                weight=route.weight,
-                is_fallback=route.is_fallback,
-                status=route.status,
-            )
-            routes_data.append(cached_route.to_dict())
-
-            if dual_cache:
-                routes_to_cache.append(cached_route.to_dict())
-
-                cached_provider = CachedProvider(
-                    id=provider.id,
-                    name=provider.name,
-                    openai_endpoint=provider.openai_endpoint,
-                    anthropic_endpoint=provider.anthropic_endpoint,
-                    encrypted_api_key=provider.encrypted_api_key,
-                    upstream_model_name=provider.upstream_model_name,
-                    input_token_price=provider.input_token_price,
-                    output_token_price=provider.output_token_price,
-                    cache_read_token_price=provider.cache_read_token_price,
-                    cache_write_token_price=provider.cache_write_token_price,
-                    supports_prompt_cache=provider.supports_prompt_cache,
-                    timeout_seconds=provider.timeout_seconds,
-                    is_active=provider.is_active,
+        if cached_routes_data:
+            routes_data = cached_routes_data
+        else:
+            # 缓存 miss：从 DB 查询
+            stmt = (
+                select(LogicalModelRoute)
+                .options(joinedload(LogicalModelRoute.provider_model))
+                .where(
+                    LogicalModelRoute.logical_model_id == logical_model_id,
+                    LogicalModelRoute.status == "active",
                 )
-                await dual_cache.set_provider(provider.id, cached_provider.to_dict())
+                .order_by(LogicalModelRoute.priority.asc(), LogicalModelRoute.id.asc())
+            )
+            db_routes = (await session.execute(stmt)).scalars().all()
 
-        # 回填路由列表缓存
-        if dual_cache and routes_to_cache:
-            await dual_cache.set_routes(logical_model_id, routes_to_cache)
+            routes_data = []
+            routes_to_cache: list[dict] = []
+
+            for route in db_routes:
+                provider = route.provider_model
+                if not provider.is_active:
+                    continue
+
+                # Include provider if it has at least one endpoint (may need protocol conversion)
+                if not provider.openai_endpoint and not provider.anthropic_endpoint:
+                    continue
+
+                # 构建缓存数据
+                cached_route = CachedRoute(
+                    route_id=route.id,
+                    logical_model_id=route.logical_model_id,
+                    provider_model_id=provider.id,
+                    priority=route.priority,
+                    weight=route.weight,
+                    is_fallback=route.is_fallback,
+                    status=route.status,
+                )
+                routes_data.append(cached_route.to_dict())
+
+                if dual_cache:
+                    routes_to_cache.append(cached_route.to_dict())
+
+                    cached_provider = CachedProvider(
+                        id=provider.id,
+                        name=provider.name,
+                        openai_endpoint=provider.openai_endpoint,
+                        anthropic_endpoint=provider.anthropic_endpoint,
+                        encrypted_api_key=provider.encrypted_api_key,
+                        upstream_model_name=provider.upstream_model_name,
+                        input_token_price=provider.input_token_price,
+                        output_token_price=provider.output_token_price,
+                        cache_read_token_price=provider.cache_read_token_price,
+                        cache_write_token_price=provider.cache_write_token_price,
+                        supports_prompt_cache=provider.supports_prompt_cache,
+                        timeout_seconds=provider.timeout_seconds,
+                        is_active=provider.is_active,
+                    )
+                    await dual_cache.set_provider(provider.id, cached_provider.to_dict())
+
+            # 回填路由列表缓存
+            if dual_cache and routes_to_cache:
+                await dual_cache.set_routes(logical_model_id, routes_to_cache)
+
+        # 按 provider_model_id 去重合并
+        for route_data in routes_data:
+            pmid = route_data.get("provider_model_id")
+            if pmid not in seen_provider_ids:
+                seen_provider_ids.add(pmid)
+                merged_routes_data.append(route_data)
 
     # === 2. 解析路由并构建 provider ===
     all_routable: list[tuple[int, int, bool, int, RoutedProvider]] = []  # (route_id, priority, is_fallback, weight, provider)
 
-    for route_data in routes_data:
+    for route_data in merged_routes_data:
         route = CachedRoute.from_dict(route_data)
 
         # 过滤 weight <= 0
