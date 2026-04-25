@@ -76,6 +76,12 @@ async def handle_proxy_request(
     # 获取分组后的 provider 候选列表
     provider_groups = await resolve_provider_candidates(session, logical_model.id, protocol)
 
+    # All DB queries for this request are done. Release the connection back to the pool
+    # before blocking on the upstream LLM call. Streaming responses can take 30–300 s;
+    # holding an idle MySQL connection for that duration risks CR_SERVER_LOST (2013).
+    # The session remains usable — it will lazily acquire a new connection if needed.
+    await session.close()
+
     # 初始化降级缓存
     dual_cache = get_dual_cache()
     degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
@@ -165,8 +171,6 @@ async def handle_proxy_request(
                             f"Route {current_route_id} marked as unavailable after {new_count} failures"
                         )
 
-                await session.rollback()
-
                 # 重试：重新在组内选择（可能选到同一个，也可能选到其他）
                 if attempt < MAX_RETRY_PER_GROUP - 1:
                     selected = weighted_random_select(group.providers)
@@ -223,6 +227,10 @@ async def handle_embedding_request(
 
     provider_groups = await resolve_provider_candidates(session, logical_model.id, ProviderProtocol.OPENAI)
 
+    # All DB queries for this request are done. Release the connection back to the pool
+    # before blocking on the upstream embedding call.
+    await session.close()
+
     dual_cache = get_dual_cache()
     degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
 
@@ -277,8 +285,6 @@ async def handle_embedding_request(
                         logger.warning(
                             f"Route {current_route_id} marked as unavailable after {new_count} failures"
                         )
-
-                await session.rollback()
 
                 if attempt < MAX_RETRY_PER_GROUP - 1:
                     selected = weighted_random_select(openai_providers)

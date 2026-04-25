@@ -13,11 +13,11 @@ import jinja2
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.background import BackgroundTask
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.responses import RedirectResponse, JSONResponse
 
 from llm_router.api import admin, anthropic, openai
 from llm_router.core.config import get_settings
@@ -200,7 +200,7 @@ def create_app() -> FastAPI:
     app.state.templates = Jinja2Templates(env=env)
 
     @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    async def http_exception_handler(request: Request, exc: HTTPException) -> RedirectResponse | JSONResponse:
         # Let redirect exceptions pass through as actual redirects
         if 300 <= exc.status_code < 400:
             location = (exc.headers or {}).get("Location") or "/"
@@ -226,13 +226,18 @@ def create_app() -> FastAPI:
         try:
             response = await call_next(request)
         except Exception as exc:
-            await session.close()
-            logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+            try:
+                await session.close()
+            except Exception:
+                pass
             raise
         background = response.background
 
         async def close_session() -> None:
-            await session.close()
+            try:
+                await session.close()
+            except Exception:
+                logger.debug("DB session close failed (connection already lost), ignoring")
             if background is not None:
                 await background()
 
@@ -247,16 +252,33 @@ def create_app() -> FastAPI:
         start = time.perf_counter()
         logger.info("→ %s %s", request.method, request.url.path)
         response = await call_next(request)
-        cost_ms = int((time.perf_counter() - start) * 1000)
-        access_context = getattr(request.state, "access_log_context", "-|-|-")
-        logger.info(
-            "← %s %s %s %dms",
-            request.method,
-            request.url.path,
-            response.status_code,
-            cost_ms,
-            extra={"access_context": access_context},
-        )
+
+        # Log end timing as a background task so that the cost_ms reflects the
+        # full end-to-end duration including the streamed body. For streaming
+        # (SSE / chunked) responses call_next() returns on the first header,
+        # not after the body — the background task fires after the body is fully
+        # flushed to the client, giving accurate latency instead of
+        # time-to-first-header.
+        status_code = response.status_code
+        method = request.method
+        path = request.url.path
+        existing_bg = response.background
+
+        async def log_end() -> None:
+            cost_ms = int((time.perf_counter() - start) * 1000)
+            access_context = getattr(request.state, "access_log_context", "-|-|-")
+            logger.info(
+                "← %s %s %s %dms",
+                method,
+                path,
+                status_code,
+                cost_ms,
+                extra={"access_context": access_context},
+            )
+            if existing_bg is not None:
+                await existing_bg()
+
+        response.background = BackgroundTask(log_end)
         return response
 
 
