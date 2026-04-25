@@ -56,7 +56,7 @@ async def handle_proxy_request(
     request_id = headers.get("x-request-id") or uuid.uuid4().hex
     headers = {**headers, "x-request-id": request_id}
 
-    api_key, logical_model, context = await resolve_request_context(
+    api_key, context = await resolve_request_context(
         session,
         raw_api_key=raw_api_key,
         logical_model_name=logical_model_name,
@@ -208,7 +208,7 @@ async def handle_embedding_request(
     request_id = headers.get("x-request-id") or uuid.uuid4().hex
     headers = {**headers, "x-request-id": request_id}
 
-    api_key, logical_model, context = await resolve_request_context(
+    api_key, context = await resolve_request_context(
         session,
         raw_api_key=raw_api_key,
         logical_model_name=logical_model_name,

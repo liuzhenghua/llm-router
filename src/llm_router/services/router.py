@@ -40,7 +40,7 @@ async def resolve_request_context(
     payload: dict,
     stream: bool,
     headers: dict[str, str],
-) -> tuple[ApiKey, LogicalModel, RequestContext]:
+) -> tuple[ApiKey, RequestContext]:
     key_hash = hash_api_key(raw_api_key)
     dual_cache = get_dual_cache()
 
@@ -74,8 +74,6 @@ async def resolve_request_context(
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Model not allowed for API key")
             logical_model_ids = [m["id"] for m in matching]
             logical_model_id = logical_model_ids[0]
-            # 构造轻量 LogicalModel 对象用于返回
-            logical_model = LogicalModel(id=logical_model_id, name=logical_model_name)
         else:
             # 无限制的 API key：查 DB 获取所有同名活跃模型
             matching_models = (
@@ -89,7 +87,6 @@ async def resolve_request_context(
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Logical model not found")
             logical_model_ids = [m.id for m in matching_models]
             logical_model_id = logical_model_ids[0]
-            logical_model = matching_models[0]
 
         # 从缓存数据创建轻量级 ApiKey 对象（用于返回）
         api_key = ApiKey(
@@ -125,7 +122,7 @@ async def resolve_request_context(
             end_user=headers.get("x-end-user") or cached.end_user,
             channel=headers.get("x-channel") or cached.default_channel,
         )
-        return api_key, logical_model, context
+        return api_key, context
 
     # === 2. 缓存 miss：从 DB 查询 ===
     api_key = (
@@ -172,7 +169,6 @@ async def resolve_request_context(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Logical model not found")
 
     logical_model_ids = [m.id for m in matching_models]
-    logical_model = matching_models[0]
 
     # === 3. 回填缓存（含完整 allowed_logical_models {id, name} 列表）===
     if dual_cache:
@@ -216,14 +212,14 @@ async def resolve_request_context(
         api_key_id=api_key.id,
         api_key_name=api_key.name,
         api_key_timezone=api_key.timezone or "UTC",
-        logical_model_id=logical_model.id,
+        logical_model_id=logical_model_ids[0],
         logical_model_ids=logical_model_ids,
         raw_authorization=raw_api_key,
         headers=headers,
         end_user=headers.get("x-end-user") or api_key.end_user,
         channel=headers.get("x-channel") or api_key.default_channel,
     )
-    return api_key, logical_model, context
+    return api_key, context
 
 
 def _check_balance_from_cache(cached: CachedApiKey) -> None:

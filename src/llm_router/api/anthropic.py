@@ -32,7 +32,7 @@ async def list_models(request: Request, authorization: str | None = Header(defau
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
     stmt = select(LogicalModel).where(LogicalModel.is_active)
     if api_key.allowed_logical_models_json:
-        stmt = stmt.where(LogicalModel.name.in_(api_key.allowed_logical_models_json))
+        stmt = stmt.where(LogicalModel.id.in_(api_key.allowed_logical_models_json))
     items = (await session.execute(stmt)).scalars().all()
     data = [
         {
@@ -65,12 +65,14 @@ async def get_model(model_id: str, request: Request, authorization: str | None =
     ).scalar_one_or_none()
     if api_key is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-    model = (
-        await session.execute(select(LogicalModel).where(LogicalModel.name == model_id, LogicalModel.is_active).order_by(LogicalModel.id.asc()))
-    ).scalars().first()
+    stmt = (
+        select(LogicalModel)
+        .where(LogicalModel.name == model_id, LogicalModel.is_active)
+    )
+    if api_key.allowed_logical_models_json:
+        stmt = stmt.where(LogicalModel.id.in_(api_key.allowed_logical_models_json))
+    model = (await session.execute(stmt.order_by(LogicalModel.id.asc()))).scalars().first()
     if model is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
-    if api_key.allowed_logical_models_json and model.id not in api_key.allowed_logical_models_json:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")
     return {
         "type": "model",
