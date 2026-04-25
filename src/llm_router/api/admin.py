@@ -1199,8 +1199,8 @@ async def statistics_page(
         key = (bucket, dim_value)
         if key in agg:
             a = agg[key]
-            a["request_count"] += row.request_count
-            a["success_count"] += row.success_count
+            a["request_count"] += int(row.request_count)
+            a["success_count"] += int(row.success_count)
             a["prompt_tokens"] += int(row.prompt_tokens)
             a["completion_tokens"] += int(row.completion_tokens)
             a["reasoning_tokens"] += int(row.reasoning_tokens)
@@ -1209,8 +1209,8 @@ async def statistics_page(
             agg[key] = {
                 "bucket": bucket,
                 "dim_value": dim_value,
-                "request_count": row.request_count,
-                "success_count": row.success_count,
+                "request_count": int(row.request_count),
+                "success_count": int(row.success_count),
                 "prompt_tokens": int(row.prompt_tokens),
                 "completion_tokens": int(row.completion_tokens),
                 "reasoning_tokens": int(row.reasoning_tokens),
