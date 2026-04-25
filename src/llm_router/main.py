@@ -1,48 +1,27 @@
 from __future__ import annotations
 
-import asyncio
-import logging
-import time
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 
 import jinja2
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.background import BackgroundTask
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse, JSONResponse
 
 from llm_router.api import admin, anthropic, openai
+from llm_router.api.health import router as health_router
 from llm_router.core.config import get_settings
-from llm_router.core.database import SessionLocal, init_db
 from llm_router.core.logging_config import setup_logging
-from llm_router.services.cache.db_writer import DbSpendWriter, set_db_writer
-from llm_router.services.cache.dual_cache import DualCache, set_dual_cache
-from llm_router.services.cache.in_memory_cache import InMemoryCache
-from llm_router.services.cache.redis_cache import RedisCache
-from llm_router.services.cache.redis_lock import set_lock_manager, RedisLockManager
-from llm_router.services.cache.spend_queue import SpendDeltaQueue, set_spend_queue
-from llm_router.services.degraded_route_recovery import run_recovery_task
-
-logger = logging.getLogger(__name__)
+from llm_router.exception_handlers import register_exception_handlers
+from llm_router.lifespan import lifespan
+from llm_router.middleware import db_session_middleware, request_log_middleware
 
 BASE_PATH = Path(__file__).resolve().parent
 settings = get_settings()
 setup_logging(settings.log_dir, settings.log_level, settings.log_format)
-
-# Global cache components
-_dual_cache: DualCache | None = None
-_spend_queue: SpendDeltaQueue | None = None
-_db_writer: DbSpendWriter | None = None
-_redis_cache: RedisCache | None = None
-_degraded_recovery_task: asyncio.Task | None = None
 
 
 def _format_decimal(value: Decimal | float | str | None) -> str:
@@ -63,134 +42,23 @@ def _format_datetime(value: str | None) -> str:
         return ""
     try:
         dt = datetime.fromisoformat(value)
-        # stored as naive UTC, append Z to indicate UTC
         return dt.strftime("%Y-%m-%dT%H:%M:%S") + "Z"
     except (ValueError, TypeError):
         return value
 
 
-@asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    global _dual_cache, _spend_queue, _db_writer, _redis_cache
-
-    try:
-        await init_db()
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(
-            "init_db() failed — tables may already exist or the DB user lacks DDL privileges. "
-            "Continuing startup. Error: %s",
-            exc,
-        )
-
-    # === 初始化缓存组件 ===
-    in_memory_cache = InMemoryCache(
-        max_size=10000,
-        default_ttl=settings.default_in_memory_ttl,
-    )
-
-    redis_client = None
-    if settings.redis_enabled:
-        # Redis 模式：初始化 Redis 缓存
-        _redis_cache = RedisCache(
-            url=settings.redis_url,
-            password=settings.redis_password,
-            default_ttl=settings.default_redis_ttl,
-        )
-        await _redis_cache.connect()
-        redis_client = _redis_cache._client  # 用于 spend_queue 和 lock_manager
-
-    # 初始化 DualCache
-    _dual_cache = DualCache(
-        settings=settings,
-        in_memory_cache=in_memory_cache,
-        redis_cache=_redis_cache,
-        in_memory_ttl=settings.default_in_memory_ttl,
-        redis_ttl=settings.default_redis_ttl,
-    )
-    set_dual_cache(_dual_cache)
-
-    # 初始化增量队列
-    _spend_queue = SpendDeltaQueue(
-        redis_enabled=settings.redis_enabled,
-        redis_client=redis_client,
-    )
-    set_spend_queue(_spend_queue)
-
-    # 初始化 Redis 锁管理器
-    if settings.redis_enabled and redis_client:
-        lock_manager = RedisLockManager(redis_client)
-        set_lock_manager(lock_manager)
-
-    # 初始化 DB 写入器
-    _db_writer = DbSpendWriter(
-        spend_queue=_spend_queue,
-        redis_client=redis_client,
-        redis_enabled=settings.redis_enabled,
-        flush_interval=settings.spend_queue_flush_interval,
-    )
-    set_db_writer(_db_writer)
-    await _db_writer.start()
-
-    # 启动降级路由恢复定时任务
-    global _degraded_recovery_task
-    _degraded_recovery_task = asyncio.create_task(
-        run_recovery_task(SessionLocal, interval_seconds=300)  # 5 分钟
-    )
-    logger.info("Degraded route recovery task started")
-
-    logger.info(f"Cache system initialized (redis_enabled={settings.redis_enabled}, use_mysql={settings.use_mysql})")
-
-    yield
-
-    # === 清理 ===
-    if _degraded_recovery_task:
-        _degraded_recovery_task.cancel()
-        try:
-            await _degraded_recovery_task
-        except asyncio.CancelledError:
-            pass
-        logger.info("Degraded route recovery task stopped")
-    if _db_writer:
-        await _db_writer.stop()
-    if _redis_cache:
-        await _redis_cache.close()
-    logger.info("Cache system shut down")
-
-
-def _error_response(request: Request, status_code: int, message: str) -> JSONResponse:
-    """Return a protocol-appropriate JSON error response based on the request path."""
-    path = request.url.path
-    if path.startswith("/v1/"):
-        error_type = "server_error" if status_code >= 500 else "invalid_request_error"
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "error": {
-                    "message": message,
-                    "type": error_type,
-                    "code": error_type,
-                }
-            },
-        )
-    if path.startswith("/anthropic/"):
-        error_type = "api_error" if status_code >= 500 else "invalid_request_error"
-        return JSONResponse(
-            status_code=status_code,
-            content={
-                "type": "error",
-                "error": {
-                    "type": error_type,
-                    "message": message,
-                },
-            },
-        )
-    # Admin / other routes
-    return JSONResponse(status_code=status_code, content={"detail": message})
-
-
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
+
+    # Middleware (registered last-in, first-run)
     app.add_middleware(SessionMiddleware, secret_key=settings.session_secret)
+    app.middleware("http")(db_session_middleware)
+    app.middleware("http")(request_log_middleware)
+
+    # Exception handlers
+    register_exception_handlers(app)
+
+    # Static files & Jinja2 templates
     app.mount("/static", StaticFiles(directory=BASE_PATH / "static"), name="static")
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(BASE_PATH / "templates")),
@@ -199,101 +67,13 @@ def create_app() -> FastAPI:
     env.filters["format_datetime"] = _format_datetime
     app.state.templates = Jinja2Templates(env=env)
 
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException) -> RedirectResponse | JSONResponse:
-        # Let redirect exceptions pass through as actual redirects
-        if 300 <= exc.status_code < 400:
-            location = (exc.headers or {}).get("Location") or "/"
-            return RedirectResponse(url=location, status_code=exc.status_code)
-        return _error_response(request, exc.status_code, exc.detail or "HTTP error")
-
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        message = "; ".join(
-            f"{'.'.join(str(l) for l in e['loc'])}: {e['msg']}" for e in exc.errors()
-        )
-        return _error_response(request, 422, message)
-
-    @app.exception_handler(Exception)
-    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
-        return _error_response(request, 500, "Internal server error")
-
-    @app.middleware("http")
-    async def db_session_middleware(request: Request, call_next):
-        session = SessionLocal()
-        request.state.db = session
-        try:
-            response = await call_next(request)
-        except Exception as exc:
-            try:
-                await session.close()
-            except Exception:
-                pass
-            raise
-        background = response.background
-
-        async def close_session() -> None:
-            try:
-                await session.close()
-            except Exception:
-                logger.debug("DB session close failed (connection already lost), ignoring")
-            if background is not None:
-                await background()
-
-        response.background = BackgroundTask(close_session)
-        return response
-
-    @app.middleware("http")
-    async def request_log_middleware(request: Request, call_next):
-        """Log request start and end (with status + cost). Skips /healthz."""
-        if request.url.path == "/healthz":
-            return await call_next(request)
-        start = time.perf_counter()
-        logger.info("→ %s %s", request.method, request.url.path)
-        response = await call_next(request)
-
-        # Log end timing as a background task so that the cost_ms reflects the
-        # full end-to-end duration including the streamed body. For streaming
-        # (SSE / chunked) responses call_next() returns on the first header,
-        # not after the body — the background task fires after the body is fully
-        # flushed to the client, giving accurate latency instead of
-        # time-to-first-header.
-        status_code = response.status_code
-        method = request.method
-        path = request.url.path
-        existing_bg = response.background
-
-        async def log_end() -> None:
-            cost_ms = int((time.perf_counter() - start) * 1000)
-            access_context = getattr(request.state, "access_log_context", "-|-|-")
-            logger.info(
-                "← %s %s %s %dms",
-                method,
-                path,
-                status_code,
-                cost_ms,
-                extra={"access_context": access_context},
-            )
-            if existing_bg is not None:
-                await existing_bg()
-
-        response.background = BackgroundTask(log_end)
-        return response
-
-
-    @app.get("/healthz")
-    async def healthz():
-        return {"status": "ok", "redis_enabled": settings.redis_enabled, "use_mysql": settings.use_mysql}
-
-    @app.get("/")
-    async def root():
-        return RedirectResponse("/admin", status_code=303)
-
+    # Routers
+    app.include_router(health_router)
     app.include_router(openai.router)
     app.include_router(anthropic.router)
     app.include_router(admin.public_router, prefix="/admin")
     app.include_router(admin.protected_router, prefix="/admin")
+
     return app
 
 
