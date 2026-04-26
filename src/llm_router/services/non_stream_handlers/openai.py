@@ -73,6 +73,33 @@ class OpenAINonStreamHandler(BaseNonStreamHandler):
                 response = await client.post(full_endpoint, json=payload, headers=headers)
 
             if response.status_code >= 400:
+                latency_ms = int((time.perf_counter() - started) * 1000)
+                schedule_post_request_tasks(
+                    self._create_finalization_data(
+                        request_id=context.request_id,
+                        upstream_request_id=None,
+                        api_key_id=context.api_key_id,
+                        logical_model_id=context.logical_model_id,
+                        provider_model_id=provider.id,
+                        protocol=ProviderProtocol.OPENAI,
+                        call_type="completion",
+                        status_code=response.status_code,
+                        success=False,
+                        latency_ms=latency_ms,
+                        request_payload=payload,
+                        response_body=None,
+                        error_message=response.text,
+                        request_logging_enabled=context.request_logging_enabled,
+                        response_logging_enabled=context.response_logging_enabled,
+                        usage=None,
+                        provider=provider,
+                        started_at=started_at,
+                        ended_at=utcnow(),
+                        end_user=context.end_user,
+                        channel=context.channel,
+                        api_key_timezone=context.api_key_timezone,
+                    )
+                )
                 raise HTTPException(status_code=response.status_code, detail=response.text)
 
             body = response.json()
@@ -259,6 +286,33 @@ class OpenAIEmbeddingNonStreamHandler(BaseNonStreamHandler):
                 response = await client.post(full_endpoint, json=payload, headers=headers)
 
             if response.status_code >= 400:
+                latency_ms = int((time.perf_counter() - started) * 1000)
+                schedule_post_request_tasks(
+                    self._create_finalization_data(
+                        request_id=context.request_id,
+                        upstream_request_id=None,
+                        api_key_id=context.api_key_id,
+                        logical_model_id=context.logical_model_id,
+                        provider_model_id=provider.id,
+                        protocol=ProviderProtocol.OPENAI,
+                        call_type="embedding",
+                        status_code=response.status_code,
+                        success=False,
+                        latency_ms=latency_ms,
+                        request_payload=payload,
+                        response_body=None,
+                        error_message=response.text,
+                        request_logging_enabled=context.request_logging_enabled,
+                        response_logging_enabled=context.response_logging_enabled,
+                        usage=None,
+                        provider=provider,
+                        started_at=started_at,
+                        ended_at=utcnow(),
+                        end_user=context.end_user,
+                        channel=context.channel,
+                        api_key_timezone=context.api_key_timezone,
+                    )
+                )
                 raise HTTPException(status_code=response.status_code, detail=response.text)
 
             body = response.json()
