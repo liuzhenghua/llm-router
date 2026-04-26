@@ -282,11 +282,13 @@ async def resolve_provider_candidates(
     解析可用的 provider 候选列表，按优先级分组
 
     支持多 logical_model_id（相同 model name 的所有匹配项），
-    取所有 ID 路由的 provider 并集（按 provider_model_id 去重）。
+    取所有 ID 下的 route 并集。这里保留每条 route 的独立身份，
+    即使它们指向同一个 provider_model_id，也要继续参与后续的
+    优先级 / 权重选择。
 
     路由流程：
     1. 对每个 logical_model_id 获取路由（缓存或 DB）
-    2. 按 provider_model_id 去重合并
+    2. 合并所有 route（不跨 logical model 去重）
     3. 过滤掉 degraded 状态的路由
     4. 按 is_fallback 和 priority 分组
     5. 组按 priority 排序，fallback 组在最后
@@ -297,8 +299,9 @@ async def resolve_provider_candidates(
     dual_cache = get_dual_cache()
     degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
 
-    # Collect merged route data across all logical_model_ids, dedup by provider_model_id
-    seen_provider_ids: set[int] = set()
+    # Collect merged route data across all logical_model_ids.
+    # Keep each route entry distinct even when multiple same-name logical models
+    # point to the same provider; route-level weight/priority should still apply.
     merged_routes_data: list[dict] = []
 
     for logical_model_id in logical_model_ids:
@@ -370,12 +373,7 @@ async def resolve_provider_candidates(
             if dual_cache and routes_to_cache:
                 await dual_cache.set_routes(logical_model_id, routes_to_cache)
 
-        # 按 provider_model_id 去重合并
-        for route_data in routes_data:
-            pmid = route_data.get("provider_model_id")
-            if pmid not in seen_provider_ids:
-                seen_provider_ids.add(pmid)
-                merged_routes_data.append(route_data)
+        merged_routes_data.extend(routes_data)
 
     # === 2. 解析路由并构建 provider ===
     all_routable: list[tuple[int, int, int, bool, int, RoutedProvider]] = []  # (route_id, logical_model_id, priority, is_fallback, weight, provider)

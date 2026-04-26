@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.services.gateway import handle_embedding_request, handle_proxy_request
+from llm_router.services.model_visibility import build_visible_logical_models_stmt, list_visible_logical_models
 
 
 router = APIRouter(prefix="/v1", tags=["openai"])
@@ -20,7 +21,7 @@ def _extract_bearer_token(authorization: str | None) -> str:
 async def list_models(request: Request, authorization: str | None = Header(default=None)):
     from sqlalchemy import select
 
-    from llm_router.domain.models import ApiKey, LogicalModel
+    from llm_router.domain.models import ApiKey
     from llm_router.core.security import hash_api_key
 
     session: AsyncSession = request.state.db
@@ -30,10 +31,7 @@ async def list_models(request: Request, authorization: str | None = Header(defau
     ).scalar_one_or_none()
     if api_key is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-    stmt = select(LogicalModel).where(LogicalModel.is_active)
-    if api_key.allowed_logical_models_json:
-        stmt = stmt.where(LogicalModel.id.in_(api_key.allowed_logical_models_json))
-    items = (await session.execute(stmt)).scalars().all()
+    items = await list_visible_logical_models(session, api_key)
     return {
         "object": "list",
         "data": [
@@ -62,12 +60,7 @@ async def get_model(model_id: str, request: Request, authorization: str | None =
     ).scalar_one_or_none()
     if api_key is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
-    stmt = (
-        select(LogicalModel)
-        .where(LogicalModel.name == model_id, LogicalModel.is_active)
-    )
-    if api_key.allowed_logical_models_json:
-        stmt = stmt.where(LogicalModel.id.in_(api_key.allowed_logical_models_json))
+    stmt = build_visible_logical_models_stmt(api_key).where(LogicalModel.name == model_id)
     model = (await session.execute(stmt.order_by(LogicalModel.id.asc()))).scalars().first()
     if model is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Model not found")

@@ -1,19 +1,18 @@
-from llm_router.core.config import AppMode, Settings
+from pathlib import Path
+
+from llm_router.core.config import Settings
 
 
-def test_local_database_url():
-    settings = Settings(app_mode=AppMode.LOCAL, database_url=None)
-    assert settings.effective_database_url.startswith("sqlite+aiosqlite:///")
+def test_local_database_url_uses_sqlite_path():
+    settings = Settings(mysql_url="", sqlite_path=Path("/tmp/llm-router-test.db"))
+
+    assert settings.effective_database_url == "sqlite+aiosqlite:////tmp/llm-router-test.db"
 
 
-def test_server_database_url():
+def test_server_database_url_uses_mysql_settings():
     settings = Settings(
-        app_mode=AppMode.SERVER,
-        database_url=None,
-        mysql_host="db",
-        mysql_port=3306,
-        mysql_user="user",
+        mysql_url="mysql://user@db:3306/router",
         mysql_password="pass",
-        mysql_database="router",
     )
-    assert settings.effective_database_url == "mysql+asyncmy://user:pass@db:3306/router"
+
+    assert settings.effective_database_url == "mysql+aiomysql://user:pass@db:3306/router"

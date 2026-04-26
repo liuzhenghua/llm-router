@@ -10,6 +10,7 @@ def test_compute_costs_uses_per_million_pricing():
         id=1,
         name="demo",
         protocol=ProviderProtocol.OPENAI,
+        upstream_protocol=ProviderProtocol.OPENAI,
         endpoint="https://example.com",
         api_key="secret",
         upstream_model_name="gpt-demo",

@@ -24,6 +24,7 @@ from llm_router.domain.models import (
     UsageRecord,
 )
 from llm_router.services.cache.dual_cache import get_dual_cache
+from llm_router.services.model_visibility import list_visible_logical_models
 
 _admin_user_service = AdminUserService()
 
@@ -1317,11 +1318,7 @@ async def playground_execute(
     
     # Handle models list endpoints (no upstream proxy needed — query DB directly)
     if api_type in ("openai_models", "anthropic_models"):
-        from sqlalchemy import select
-        stmt = select(LogicalModel).where(LogicalModel.is_active)
-        if api_key.allowed_logical_models_json:
-            stmt = stmt.where(LogicalModel.name.in_(api_key.allowed_logical_models_json))
-        items = (await session.execute(stmt)).scalars().all()
+        items = await list_visible_logical_models(session, api_key)
 
         if api_type == "openai_models":
             return JSONResponse({
