@@ -39,6 +39,7 @@ async def test_same_name_logical_models_keep_distinct_routes_for_same_provider(m
     provider_data = CachedProvider(
         id=provider_id,
         name="shared-provider",
+        description=None,
         openai_endpoint="https://example.com/v1",
         anthropic_endpoint=None,
         encrypted_api_key=encryptor.encrypt("secret"),

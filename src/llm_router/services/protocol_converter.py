@@ -31,15 +31,34 @@ def anthropic_to_openai_request(payload: dict, upstream_model: str) -> dict:
                 messages.append({"role": "system", "content": text})
 
     # Convert messages
-    for msg in payload.get("messages", []):
+    raw_messages = payload.get("messages", [])
+    for i, msg in enumerate(raw_messages):
         role = msg["role"]
         content = msg["content"]
+        is_last = (i == len(raw_messages) - 1)
+
         if isinstance(content, str):
-            messages.append({"role": role, "content": content})
+            openai_msg = {"role": role, "content": content}
         elif isinstance(content, list):
-            messages.extend(_anthropic_content_blocks_to_openai_messages(role, content))
+            converted = _anthropic_content_blocks_to_openai_messages(role, content)
+            # _anthropic_content_blocks_to_openai_messages returns a list;
+            # for assistant role it normally returns a single message dict.
+            if converted:
+                openai_msg = converted[0]
+                if len(converted) > 1:
+                    messages.extend(converted[:-1])
+                    openai_msg = converted[-1]
+            else:
+                openai_msg = {"role": role, "content": ""}
         else:
-            messages.append({"role": role, "content": content})
+            openai_msg = {"role": role, "content": content}
+
+        # Partial Mode: when the last message is from assistant, mark it as partial
+        # to enable prefill (leading text) functionality for OpenAI-compatible upstreams.
+        if is_last and role == "assistant" and not msg.get("tool_calls"):
+            openai_msg["partial"] = True
+
+        messages.append(openai_msg)
 
     result["messages"] = messages
 
@@ -118,12 +137,18 @@ def openai_to_anthropic_request(payload: dict, upstream_model: str) -> dict:
 
         else:
             if isinstance(content, str):
-                messages.append({"role": role, "content": content})
+                anthropic_msg = {"role": role, "content": content}
             elif isinstance(content, list):
                 anthropic_content = _openai_content_parts_to_anthropic(content)
-                messages.append({"role": role, "content": anthropic_content})
+                anthropic_msg = {"role": role, "content": anthropic_content}
             else:
-                messages.append({"role": role, "content": content or ""})
+                anthropic_msg = {"role": role, "content": content or ""}
+            messages.append(anthropic_msg)
+
+    # Handle partial mode: if the last message is assistant with partial=True,
+    # it represents a prefill/leading text that should be preserved as the last
+    # assistant message in Anthropic format (no special flag needed).
+    # The partial field is OpenAI-specific and is stripped when converting back.
 
     if system_parts:
         result["system"] = "\n".join(system_parts)
