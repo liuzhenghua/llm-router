@@ -175,27 +175,38 @@ class DualCache:
 
     # ==================== Degraded Routes 操作 ====================
 
-    async def add_degraded_route(self, route_id: int) -> None:
+    async def add_degraded_route(self, route_id: int, ttl: int | None = None) -> None:
         """添加降级路由到集合"""
+        ttl = ttl if ttl is not None else self._redis_ttl
+
         # 1. 先读写内存（LOCAL 模式）
         ids = await self._memory.get(self.KEY_DEGRADED_ROUTES) or set()
         ids.add(route_id)
-        await self._memory.set(self.KEY_DEGRADED_ROUTES, ids)
+        await self._memory.set(self.KEY_DEGRADED_ROUTES, ids, ttl)
 
         # 2. 再写 Redis（server 模式）
-        if self._redis and self._redis.is_available:
-            await self._redis._client.sadd(self.KEY_DEGRADED_ROUTES, route_id)
+        if self._redis and self._redis.is_available and self._redis._client:
+            redis_key = self._redis._key(self.KEY_DEGRADED_ROUTES)
+            await self._redis._client.sadd(redis_key, route_id)
+            await self._redis._client.expire(redis_key, ttl)
 
     async def remove_degraded_route(self, route_id: int) -> None:
         """从降级集合中移除路由"""
         # 1. 先读写内存（LOCAL 模式）
         ids = await self._memory.get(self.KEY_DEGRADED_ROUTES) or set()
         ids.discard(route_id)
-        await self._memory.set(self.KEY_DEGRADED_ROUTES, ids)
+        if ids:
+            await self._memory.set(self.KEY_DEGRADED_ROUTES, ids, self._redis_ttl)
+        else:
+            await self._memory.delete(self.KEY_DEGRADED_ROUTES)
 
         # 2. 再写 Redis（server 模式）
-        if self._redis and self._redis.is_available:
-            await self._redis._client.srem(self.KEY_DEGRADED_ROUTES, route_id)
+        if self._redis and self._redis.is_available and self._redis._client:
+            redis_key = self._redis._key(self.KEY_DEGRADED_ROUTES)
+            await self._redis._client.srem(redis_key, route_id)
+            remaining = await self._redis._client.scard(redis_key)
+            if remaining == 0:
+                await self._redis._client.delete(redis_key)
 
     async def get_all_degraded_route_ids(self) -> list[int]:
         """获取所有降级路由 ID"""
@@ -205,8 +216,8 @@ class DualCache:
             return list(ids)
 
         # 2. 回读 Redis（server 模式）
-        if self._redis and self._redis.is_available:
-            members = await self._redis._client.smembers(self.KEY_DEGRADED_ROUTES)
+        if self._redis and self._redis.is_available and self._redis._client:
+            members = await self._redis._client.smembers(self._redis._key(self.KEY_DEGRADED_ROUTES))
             return [int(m) for m in members]
 
         return []

@@ -170,7 +170,7 @@ class RequestLog(Base):
     __tablename__ = table_name("request_logs")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    request_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    request_id: Mapped[str] = mapped_column(String(64), index=True)
     api_key_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     logical_model_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     provider_model_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)

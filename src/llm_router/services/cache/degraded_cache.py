@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class DegradedType(str, Enum):
     """降级类型"""
+    AUTH_FAILED = "auth_failed"  # 401，认证失败/密钥失效
     QUOTA_EXHAUSTED = "quota_exhausted"  # 429/403，配额/限流/权限问题
     UNAVAILABLE = "unavailable"  # 5xx/超时，连通性问题
 
@@ -110,8 +111,9 @@ class DegradedRouteCache:
             serializer = CacheSerializer()
             raw = serializer.serialize(data)
             await self._cache._redis.set(cache_key, raw, self.DEFAULT_TTL)
-            # 添加到降级路由集合
-            await self._cache.add_degraded_route(route_id)
+
+        # 添加到降级路由集合（内存 + Redis）
+        await self._cache.add_degraded_route(route_id, ttl=self.DEFAULT_TTL)
 
         logger.info(f"Route {route_id} marked as degraded: type={degraded_type.value}, fail_count={fail_count}")
 
@@ -134,8 +136,9 @@ class DegradedRouteCache:
         # 删除 Redis
         if self._cache._redis and self._cache._redis.is_available:
             await self._cache._redis.delete(cache_key)
-            # 从降级路由集合中移除
-            await self._cache.remove_degraded_route(route_id)
+
+        # 从降级路由集合中移除（内存 + Redis）
+        await self._cache.remove_degraded_route(route_id)
 
         logger.info(f"Route {route_id} recovered from degraded state")
         return True

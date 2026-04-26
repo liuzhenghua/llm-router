@@ -72,45 +72,9 @@ async def _create_request_log_task(
     session: AsyncSession,
     data: RequestFinalizationData,
 ) -> RequestLog | None:
-    """异步创建或更新请求日志"""
+    """异步创建请求日志（每次实际 upstream 请求都单独记录）"""
     # Use timezone passed from upstream (already resolved at auth time) — no extra DB query needed.
     _local_date = local_date_for(data.api_key_timezone)
-
-    # 检查是否已存在（处理重试场景）
-    stmt = select(RequestLog).where(RequestLog.request_id == data.request_id)
-    result = await session.execute(stmt)
-    existing = result.scalar_one_or_none()
-    if existing:
-        # 重试场景：更新已有日志
-        existing.status_code = data.status_code
-        existing.success = data.success
-        existing.latency_ms = data.latency_ms
-        existing.error_message = data.error_message
-        existing.call_type = data.call_type
-        # upstream_request_id 可能在重试成功时才获取到
-        if data.upstream_request_id:
-            existing.upstream_request_id = data.upstream_request_id
-        existing.ended_at = data.ended_at
-        if data.end_user:
-            existing.end_user = data.end_user
-        if data.channel:
-            existing.channel = data.channel
-        if existing.local_date is None:
-            existing.local_date = _local_date
-        await session.flush()
-        # 更新或补充 body 记录
-        if data.response_body is not None:
-            body_stmt = select(RequestLogBody).where(RequestLogBody.request_log_id == existing.id)
-            body_record = (await session.execute(body_stmt)).scalar_one_or_none()
-            if body_record:
-                body_record.response_body = data.response_body
-            else:
-                session.add(RequestLogBody(
-                    request_log_id=existing.id,
-                    request_body=data.request_body,
-                    response_body=data.response_body,
-                ))
-        return existing
 
     request_log = RequestLog(
         request_id=data.request_id,

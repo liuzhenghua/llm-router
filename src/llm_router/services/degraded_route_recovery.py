@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 
 from llm_router.core.config import get_settings
 from llm_router.core.security import Encryptor
@@ -30,6 +32,14 @@ RECOVERY_SUCCESS_THRESHOLD = 3
 
 # 探测请求超时（秒）
 PROBE_TIMEOUT = 5
+
+
+@dataclass(slots=True)
+class _RecoveryProviderContext:
+    route: LogicalModelRoute
+    provider: ProviderModel
+    endpoint: str
+    protocol: str
 
 
 class DegradedRouteRecovery:
@@ -101,7 +111,7 @@ class DegradedRouteRecovery:
         degraded_type = status.degraded_type
 
         # 根据降级类型选择探测方式
-        if degraded_type == DegradedType.QUOTA_EXHAUSTED:
+        if degraded_type in (DegradedType.AUTH_FAILED, DegradedType.QUOTA_EXHAUSTED):
             # 配额问题：需要发送推理请求探测
             success = await self._probe_with_inference(route_id, session)
         else:
@@ -126,16 +136,10 @@ class DegradedRouteRecovery:
 
         发送一个 max_tokens=1 的最小请求，验证是否能正常返回
         """
-        # 获取路由和 provider 信息
-        route = await session.get(LogicalModelRoute, route_id)
-        if not route:
-            logger.warning(f"Route {route_id} not found in DB")
+        context = await self._load_provider_context(route_id, session)
+        if context is None:
             return False
-
-        provider = route.provider_model
-        if not provider or not provider.is_active:
-            logger.warning(f"Provider for route {route_id} not available")
-            return False
+        provider = context.provider
 
         # 构建探测请求
         try:
@@ -145,8 +149,8 @@ class DegradedRouteRecovery:
             return False
 
         # 根据协议选择端点
-        endpoint = provider.endpoint.rstrip("/")
-        if provider.protocol == "openai":
+        endpoint = context.endpoint.rstrip("/")
+        if context.protocol == "openai":
             url = f"{endpoint}/chat/completions"
             payload = {
                 "model": provider.upstream_model_name,
@@ -198,16 +202,10 @@ class DegradedRouteRecovery:
 
         可以调用模型的 list 接口或类似的健康检查
         """
-        # 获取路由和 provider 信息
-        route = await session.get(LogicalModelRoute, route_id)
-        if not route:
-            logger.warning(f"Route {route_id} not found in DB")
+        context = await self._load_provider_context(route_id, session)
+        if context is None:
             return False
-
-        provider = route.provider_model
-        if not provider or not provider.is_active:
-            logger.warning(f"Provider for route {route_id} not available")
-            return False
+        provider = context.provider
 
         # 构建探测请求
         try:
@@ -217,9 +215,9 @@ class DegradedRouteRecovery:
             return False
 
         # 构建健康检查请求
-        endpoint = provider.endpoint.rstrip("/")
+        endpoint = context.endpoint.rstrip("/")
 
-        if provider.protocol == "openai":
+        if context.protocol == "openai":
             # OpenAI: /models 接口
             url = f"{endpoint}/models"
         else:
@@ -247,6 +245,46 @@ class DegradedRouteRecovery:
         except Exception as e:
             logger.error(f"Health check for route {route_id} failed: {e}")
             return False
+
+    async def _load_provider_context(
+        self,
+        route_id: int,
+        session: AsyncSession,
+    ) -> _RecoveryProviderContext | None:
+        """Load route + provider eagerly to avoid async lazy-loading errors."""
+        stmt = (
+            select(LogicalModelRoute)
+            .options(joinedload(LogicalModelRoute.provider_model))
+            .where(LogicalModelRoute.id == route_id)
+        )
+        route = (await session.execute(stmt)).scalar_one_or_none()
+        if not route:
+            logger.warning(f"Route {route_id} not found in DB")
+            return None
+
+        provider = route.provider_model
+        if not provider or not provider.is_active:
+            logger.warning(f"Provider for route {route_id} not available")
+            return None
+
+        if provider.openai_endpoint:
+            return _RecoveryProviderContext(
+                route=route,
+                provider=provider,
+                endpoint=provider.openai_endpoint,
+                protocol="openai",
+            )
+
+        if provider.anthropic_endpoint:
+            return _RecoveryProviderContext(
+                route=route,
+                provider=provider,
+                endpoint=provider.anthropic_endpoint,
+                protocol="anthropic",
+            )
+
+        logger.warning(f"Provider for route {route_id} has no usable endpoint")
+        return None
 
 
 # 定时任务运行器

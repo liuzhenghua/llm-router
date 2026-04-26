@@ -327,7 +327,12 @@ function renderRoutesTable() {
     } else if (!health.degraded) {
       healthBadge = '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">健康</span>';
     } else {
-      const typeLabel = health.degraded_type === 'quota_exhausted' ? '配额耗尽' : (health.degraded_type || '异常');
+      const degradedTypeLabels = {
+        auth_failed: '认证失败',
+        quota_exhausted: '配额耗尽',
+        unavailable: '不可用',
+      };
+      const typeLabel = degradedTypeLabels[health.degraded_type] || health.degraded_type || '异常';
       healthBadge = `<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">降级</span><span class="ml-1 text-xs text-slate-400">${typeLabel}</span>`;
     }
     const recoverBtn = (health && health.degraded)

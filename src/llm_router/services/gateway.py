@@ -39,6 +39,34 @@ logger = logging.getLogger(__name__)
 MAX_RETRY_PER_GROUP = 3
 
 
+def _degraded_type_for_status(status_code: int) -> DegradedType | None:
+    """Map upstream HTTP status codes to persistent degraded types."""
+    if status_code == status.HTTP_401_UNAUTHORIZED:
+        return DegradedType.AUTH_FAILED
+    if status_code in (
+        status.HTTP_402_PAYMENT_REQUIRED,
+        status.HTTP_403_FORBIDDEN,
+        status.HTTP_429_TOO_MANY_REQUESTS,
+    ):
+        return DegradedType.QUOTA_EXHAUSTED
+    return None
+
+
+def _select_group_provider(
+    candidates: list[RoutableProvider],
+    excluded_route_ids: set[int] | None = None,
+) -> RoutableProvider | None:
+    """Select a provider while skipping routes already failed in this request."""
+    if not excluded_route_ids:
+        return weighted_random_select(candidates)
+
+    available_candidates = [
+        candidate for candidate in candidates
+        if candidate.route_id not in excluded_route_ids
+    ]
+    return weighted_random_select(available_candidates)
+
+
 async def handle_proxy_request(
     session: AsyncSession,
     *,
@@ -90,8 +118,10 @@ async def handle_proxy_request(
 
     # 遍历各组：先 Main 组，再 Fallback 组
     for group in provider_groups:
+        attempted_route_ids: set[int] = set()
+
         # 在组内加权随机选择 provider
-        selected = weighted_random_select(group.providers)
+        selected = _select_group_provider(group.providers, attempted_route_ids)
         if selected is None:
             # 组内没有可用 provider，切换下一组
             continue
@@ -142,14 +172,16 @@ async def handle_proxy_request(
                     )
             except HTTPException as exc:
                 last_error = exc
+                attempted_route_ids.add(current_route_id)
 
                 # 401/402/403/429：上游 provider 自身问题（认证失败/余额不足/权限不足/限流），
                 # 标记当前 route 为 degraded，然后在组内重试其他 provider
-                if exc.status_code in (401, 402, 403, 429):
+                degraded_type = _degraded_type_for_status(exc.status_code)
+                if degraded_type is not None:
                     if degraded_cache:
                         await degraded_cache.mark_degraded(
                             route_id=current_route_id,
-                            degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                            degraded_type=degraded_type,
                             fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                         )
 
@@ -174,7 +206,7 @@ async def handle_proxy_request(
 
                 # 重试：重新在组内选择其他 provider（当前 route 已被标记为 degraded，不会被选中）
                 if attempt < MAX_RETRY_PER_GROUP - 1:
-                    selected = weighted_random_select(group.providers)
+                    selected = _select_group_provider(group.providers, attempted_route_ids)
                     if selected:
                         current_provider = selected.provider
                         current_route_id = selected.route_id
@@ -241,12 +273,14 @@ async def handle_embedding_request(
     last_error: HTTPException | None = None
 
     for group in provider_groups:
+        attempted_route_ids: set[int] = set()
+
         # Embeddings only work with OpenAI-compatible upstream endpoints
         openai_providers = [p for p in group.providers if p.provider.upstream_protocol == ProviderProtocol.OPENAI]
         if not openai_providers:
             continue
 
-        selected = weighted_random_select(openai_providers)
+        selected = _select_group_provider(openai_providers, attempted_route_ids)
         if selected is None:
             continue
 
@@ -266,14 +300,16 @@ async def handle_embedding_request(
                 )
             except HTTPException as exc:
                 last_error = exc
+                attempted_route_ids.add(current_route_id)
 
                 # 401/402/403/429：上游 provider 自身问题（认证失败/余额不足/权限不足/限流），
                 # 标记当前 route 为 degraded，然后在组内重试其他 provider
-                if exc.status_code in (401, 402, 403, 429):
+                degraded_type = _degraded_type_for_status(exc.status_code)
+                if degraded_type is not None:
                     if degraded_cache:
                         await degraded_cache.mark_degraded(
                             route_id=current_route_id,
-                            degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                            degraded_type=degraded_type,
                             fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                         )
 
@@ -297,7 +333,7 @@ async def handle_embedding_request(
 
                 # 重试：重新在组内选择其他 provider（当前 route 已被标记为 degraded，不会被选中）
                 if attempt < MAX_RETRY_PER_GROUP - 1:
-                    selected = weighted_random_select(openai_providers)
+                    selected = _select_group_provider(openai_providers, attempted_route_ids)
                     if selected:
                         current_provider = selected.provider
                         current_route_id = selected.route_id
