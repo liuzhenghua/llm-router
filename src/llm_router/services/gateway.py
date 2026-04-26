@@ -143,43 +143,45 @@ async def handle_proxy_request(
             except HTTPException as exc:
                 last_error = exc
 
-                # 429/403：立即标记为 degraded (quota_exhausted)
-                if exc.status_code == 429 or exc.status_code == 403:
+                # 401/402/403/429：上游 provider 自身问题（认证失败/余额不足/权限不足/限流），
+                # 标记当前 route 为 degraded，然后在组内重试其他 provider
+                if exc.status_code in (401, 402, 403, 429):
                     if degraded_cache:
                         await degraded_cache.mark_degraded(
                             route_id=current_route_id,
                             degraded_type=DegradedType.QUOTA_EXHAUSTED,
                             fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                         )
-                    # 直接切换下一组，不再重试
-                    break
 
-                # 4xx 其他错误（除 429/403）：直接返回，不重试不降级
-                if 400 <= exc.status_code < 500:
+                # 4xx 其他错误（除 401/402/403/429）：直接返回，不重试不降级
+                elif 400 <= exc.status_code < 500:
                     raise exc
 
-                # 5xx：错误，记录并重试同组下一个
-                if degraded_cache:
-                    new_count = await degraded_cache.increment_fail_count(current_route_id)
-                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
-                        # 失败次数超限，标记为 degraded (unavailable)
-                        await degraded_cache.mark_degraded(
-                            route_id=current_route_id,
-                            degraded_type=DegradedType.UNAVAILABLE,
-                            fail_count=new_count,
-                        )
-                        logger.warning(
-                            f"Route {current_route_id} marked as unavailable after {new_count} failures"
-                        )
+                # 5xx：连通性错误，记录失败次数
+                else:
+                    if degraded_cache:
+                        new_count = await degraded_cache.increment_fail_count(current_route_id)
+                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                            # 失败次数超限，标记为 degraded (unavailable)
+                            await degraded_cache.mark_degraded(
+                                route_id=current_route_id,
+                                degraded_type=DegradedType.UNAVAILABLE,
+                                fail_count=new_count,
+                            )
+                            logger.warning(
+                                f"Route {current_route_id} marked as unavailable after {new_count} failures"
+                            )
 
-                # 重试：重新在组内选择（可能选到同一个，也可能选到其他）
+                # 重试：重新在组内选择其他 provider（当前 route 已被标记为 degraded，不会被选中）
                 if attempt < MAX_RETRY_PER_GROUP - 1:
                     selected = weighted_random_select(group.providers)
                     if selected:
                         current_provider = selected.provider
                         current_route_id = selected.route_id
                         context.logical_model_id = selected.logical_model_id
-                continue
+                        continue
+                    # 组内没有其他可用 provider，跳出重试循环，切换下一组
+                break
 
         # 当前组全部失败，切换下一组
         continue
@@ -265,38 +267,46 @@ async def handle_embedding_request(
             except HTTPException as exc:
                 last_error = exc
 
-                if exc.status_code == 429 or exc.status_code == 403:
+                # 401/402/403/429：上游 provider 自身问题（认证失败/余额不足/权限不足/限流），
+                # 标记当前 route 为 degraded，然后在组内重试其他 provider
+                if exc.status_code in (401, 402, 403, 429):
                     if degraded_cache:
                         await degraded_cache.mark_degraded(
                             route_id=current_route_id,
                             degraded_type=DegradedType.QUOTA_EXHAUSTED,
                             fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                         )
-                    break
 
-                if 400 <= exc.status_code < 500:
+                # 4xx 其他错误（除 401/402/403/429）：直接返回，不重试不降级
+                elif 400 <= exc.status_code < 500:
                     raise exc
 
-                if degraded_cache:
-                    new_count = await degraded_cache.increment_fail_count(current_route_id)
-                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
-                        await degraded_cache.mark_degraded(
-                            route_id=current_route_id,
-                            degraded_type=DegradedType.UNAVAILABLE,
-                            fail_count=new_count,
-                        )
-                        logger.warning(
-                            f"Route {current_route_id} marked as unavailable after {new_count} failures"
-                        )
+                # 5xx：连通性错误，记录失败次数
+                else:
+                    if degraded_cache:
+                        new_count = await degraded_cache.increment_fail_count(current_route_id)
+                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                            await degraded_cache.mark_degraded(
+                                route_id=current_route_id,
+                                degraded_type=DegradedType.UNAVAILABLE,
+                                fail_count=new_count,
+                            )
+                            logger.warning(
+                                f"Route {current_route_id} marked as unavailable after {new_count} failures"
+                            )
 
+                # 重试：重新在组内选择其他 provider（当前 route 已被标记为 degraded，不会被选中）
                 if attempt < MAX_RETRY_PER_GROUP - 1:
                     selected = weighted_random_select(openai_providers)
                     if selected:
                         current_provider = selected.provider
                         current_route_id = selected.route_id
                         context.logical_model_id = selected.logical_model_id
-                continue
+                        continue
+                    # 组内没有其他可用 provider，跳出重试循环，切换下一组
+                break
 
+        # 当前组全部失败，切换下一组
         continue
 
     if last_error is not None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, datetime as dt_datetime
 from decimal import Decimal
 from urllib.parse import urlparse
@@ -982,6 +983,20 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
             if logical_model:
                 logical_model_name = logical_model.name
 
+    def _format_body(body: str | None) -> str | None:
+        """Try to parse and pretty-print JSON; fall back to original text.
+
+        Uses strict=False to allow raw control characters (e.g. newlines) inside
+        JSON strings, which some upstreams include in request/response bodies.
+        """
+        if not body:
+            return body
+        try:
+            parsed = json.loads(body, strict=False)
+            return json.dumps(parsed, ensure_ascii=False, indent=2)
+        except Exception:
+            return body
+
     log_dict = {
         "id": log.id,
         "request_id": log.request_id,
@@ -991,8 +1006,8 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "latency_ms": log.latency_ms,
         "upstream_request_id": log.upstream_request_id,
         "created_at": log.created_at,
-        "request_body": log.body.request_body if log.body else None,
-        "response_body": log.body.response_body if log.body else None,
+        "request_body": _format_body(log.body.request_body) if log.body else None,
+        "response_body": _format_body(log.body.response_body) if log.body else None,
         "error_message": log.error_message,
         "call_type": log.call_type,
         "api_key_id": log.api_key_id,
