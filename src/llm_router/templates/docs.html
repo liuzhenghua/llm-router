@@ -369,14 +369,14 @@
               </button>
             </div>
             <div id="claude-code-env" class="bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 overflow-x-auto leading-6">
-              <span class="text-slate-400"># 将 base_url 替换为浏览器地址栏中显示的地址</span><br>
+              <span class="text-slate-400"># 将kimi-k2.6替换成你想用的模型</span><br>
               <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_BASE_URL</span>=<span class="text-emerald-400">{{ base_url }}/anthropic</span><br>
-              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_AUTH_TOKEN</span>=<span class="text-emerald-400">${YOUR_MOONSHOT_API_KEY}</span><br>
-              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_OPUS_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_SONNET_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_HAIKU_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
-              <span class="text-sky-300">export</span> <span class="text-amber-300">CLAUDE_CODE_SUBAGENT_MODEL</span>=<span class="text-emerald-400">${YOUR_LOGIC_MODEL}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_AUTH_TOKEN</span>=<span class="text-emerald-400">${YOUR_API_KEY}</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_MODEL</span>=<span class="text-emerald-400">kimi-k2.6</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_OPUS_MODEL</span>=<span class="text-emerald-400">kimi-k2.6</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_SONNET_MODEL</span>=<span class="text-emerald-400">kimi-k2.6</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">ANTHROPIC_DEFAULT_HAIKU_MODEL</span>=<span class="text-emerald-400">kimi-k2.6</span><br>
+              <span class="text-sky-300">export</span> <span class="text-amber-300">CLAUDE_CODE_SUBAGENT_MODEL</span>=<span class="text-emerald-400">kimi-k2.6</span><br>
               <span class="text-sky-300">export</span> <span class="text-amber-300">ENABLE_TOOL_SEARCH</span>=<span class="text-emerald-400">false</span><br>
               <span class="text-slate-400"># 启动 Claude Code</span><br>
               claude
@@ -573,19 +573,7 @@
             checkIcon.classList.add('hidden');
           }, 1800);
         }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(onCopied);
-        } else {
-          var ta = document.createElement('textarea');
-          ta.value = text;
-          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          try { document.execCommand('copy'); } catch (_) {}
-          document.body.removeChild(ta);
-          onCopied();
-        }
+        copyText(text, onCopied);
       });
     });
 
@@ -607,19 +595,7 @@
             checkIcon.classList.add('hidden');
           }, 1800);
         }
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(text).then(onCopied);
-        } else {
-          var ta = document.createElement('textarea');
-          ta.value = text;
-          ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          try { document.execCommand('copy'); } catch (_) {}
-          document.body.removeChild(ta);
-          onCopied();
-        }
+        copyText(text, onCopied);
       });
     });
   })();
