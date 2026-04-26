@@ -118,7 +118,8 @@
         setTimeout(function() { el.remove(); }, 300);
       }, 2500);
     }
-    function copyText(text, onCopied, onFailed) {
+    function copyText(text, onCopied, onFailed, options) {
+      options = options || {};
       if (navigator.clipboard && navigator.clipboard.writeText) {
         return navigator.clipboard.writeText(text).then(function() {
           if (typeof onCopied === 'function') onCopied();
@@ -130,15 +131,30 @@
       }
 
       var ta = document.createElement('textarea');
+      var container = options.container || document.body;
+      var activeElement = document.activeElement;
+      var copied = false;
       ta.value = text;
       ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
-      document.body.appendChild(ta);
+      container.appendChild(ta);
       ta.focus();
       ta.select();
-      try { document.execCommand('copy'); } catch (_) {}
-      document.body.removeChild(ta);
-      if (typeof onCopied === 'function') onCopied();
-      return Promise.resolve(true);
+      ta.setSelectionRange(0, ta.value.length);
+      try {
+        copied = document.execCommand('copy');
+      } catch (_) {
+        copied = false;
+      }
+      container.removeChild(ta);
+      if (activeElement && typeof activeElement.focus === 'function') {
+        activeElement.focus();
+      }
+      if (copied) {
+        if (typeof onCopied === 'function') onCopied();
+      } else if (typeof onFailed === 'function') {
+        onFailed();
+      }
+      return Promise.resolve(copied);
     }
     (function() {
       var sidebar = document.getElementById('admin-sidebar');

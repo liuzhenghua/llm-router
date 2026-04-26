@@ -605,7 +605,14 @@ function revealKey(id) {
 function copyRevealedKey() {
   const text = document.getElementById('reveal-key-value').textContent;
   if (!text || text === '载入中...') return;
-  copyText(text, () => {showToast('已复制到剪贴板')}, () => {showToast('复制失败', 'error')});
+  const modal = document.getElementById('reveal-key-modal');
+  copyText(text, function() {
+    showToast('已复制到剪贴板');
+  }, function() {
+    showToast('复制失败', 'error');
+  }, {
+    container: modal || document.body
+  });
 }
 
 // ---- Init create modal selector ----
