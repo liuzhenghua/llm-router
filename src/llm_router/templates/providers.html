@@ -37,6 +37,7 @@
     <form id="edit-provider-form-{{ item.id }}" method="post" action="/admin/provider-models/{{ item.id }}" class="grid gap-4 md:grid-cols-2">
       <label><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">OpenAI Endpoint <span class="text-slate-400">（与 Anthropic Endpoint 至少填一个）</span></span><input name="openai_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">Anthropic Endpoint <span class="text-slate-400">（与 OpenAI Endpoint 至少填一个）</span></span><input name="anthropic_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
@@ -65,6 +66,7 @@
     <form id="create-provider-form" method="post" action="/admin/provider-models" class="grid gap-4 md:grid-cols-2" onsubmit="return validateProviderForm(this)">
       <label><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
       <label><span class="mb-1 block text-xs text-slate-600">上游模型名</span><input name="upstream_model_name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
+      <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">OpenAI Endpoint <span class="text-slate-400">（与 Anthropic Endpoint 至少填一个）</span></span><input name="openai_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600">Anthropic Endpoint <span class="text-slate-400">（与 OpenAI Endpoint 至少填一个）</span></span><input name="anthropic_endpoint" placeholder="https://..." class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">API Key</span><input name="api_key_secret" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
@@ -107,7 +109,7 @@ function getFilters() {
 function renderTable() {
   const { name, status } = getFilters();
   const filteredProviders = allProviders.filter(provider => {
-    if (name && !provider.name.toLowerCase().includes(name)) return false;
+    if (name && !provider.name.toLowerCase().includes(name) && !(provider.description && provider.description.toLowerCase().includes(name))) return false;
     if (status === 'active' && !provider.is_active) return false;
     if (status === 'disabled' && provider.is_active) return false;
     return true;
@@ -133,6 +135,7 @@ function renderTable() {
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">描述</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">OpenAI Endpoint</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Anthropic Endpoint</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
@@ -148,6 +151,7 @@ function renderTable() {
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
+      <td class="px-2 py-2 text-xs">${item.description || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs">${item.openai_endpoint || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs">${item.anthropic_endpoint || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>

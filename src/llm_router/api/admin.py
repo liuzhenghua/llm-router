@@ -333,7 +333,7 @@ async def logical_models_page(request: Request, _: None = Depends(require_admin)
         for route in routes_result
     ]
     provider_models_result = (await session.execute(select(ProviderModel).where(ProviderModel.deleted_at.is_(None)).order_by(ProviderModel.name.asc()))).scalars().all()
-    provider_models = [{"id": pm.id, "name": pm.name} for pm in provider_models_result]
+    provider_models = [{"id": pm.id, "name": pm.name, "description": pm.description} for pm in provider_models_result]
     return _render_admin(
         request,
         "logical_models.html",
@@ -355,6 +355,7 @@ async def providers_page(request: Request, _: None = Depends(require_admin)):
         {
             "id": pm.id,
             "name": pm.name,
+            "description": pm.description,
             "openai_endpoint": pm.openai_endpoint or "",
             "anthropic_endpoint": pm.anthropic_endpoint or "",
             "upstream_model_name": pm.upstream_model_name,
@@ -601,6 +602,7 @@ async def update_logical_model(
 async def create_provider_model(
     request: Request,
     name: str = Form(...),
+    description: str = Form(default=""),
     openai_endpoint: str = Form(default=""),
     anthropic_endpoint: str = Form(default=""),
     upstream_model_name: str = Form(...),
@@ -621,6 +623,7 @@ async def create_provider_model(
     session.add(
         ProviderModel(
             name=name,
+            description=description.strip() or None,
             openai_endpoint=oe or None,
             anthropic_endpoint=ae or None,
             upstream_model_name=upstream_model_name,
@@ -642,6 +645,7 @@ async def update_provider_model(
     request: Request,
     provider_model_id: int,
     name: str = Form(...),
+    description: str = Form(default=""),
     openai_endpoint: str = Form(default=""),
     anthropic_endpoint: str = Form(default=""),
     upstream_model_name: str = Form(...),
@@ -664,6 +668,7 @@ async def update_provider_model(
     if provider_model is None:
         return _redirect("/admin/providers")
     provider_model.name = name
+    provider_model.description = description.strip() or None
     provider_model.openai_endpoint = oe or None
     provider_model.anthropic_endpoint = ae or None
     provider_model.upstream_model_name = upstream_model_name
@@ -995,6 +1000,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "provider_model_id": log.provider_model_id,
         "api_key_name": log.api_key.name if log.api_key else None,
         "provider_model_name": log.provider_model.name if log.provider_model else None,
+        "provider_model_description": log.provider_model.description if log.provider_model else None,
         "provider_model_protocol": log.protocol,
         "logical_model_name": logical_model_name,
         "end_user": log.end_user,

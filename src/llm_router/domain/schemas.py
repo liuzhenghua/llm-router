@@ -161,6 +161,7 @@ class CachedProvider:
     """Provider 缓存数据（encrypted_api_key 缓存后解密使用）"""
     id: int
     name: str
+    description: str | None
     openai_endpoint: str | None
     anthropic_endpoint: str | None
     encrypted_api_key: str  # 缓存加密后的，调用时解密
@@ -177,6 +178,7 @@ class CachedProvider:
         return {
             "id": self.id,
             "name": self.name,
+            "description": self.description,
             "openai_endpoint": self.openai_endpoint,
             "anthropic_endpoint": self.anthropic_endpoint,
             "encrypted_api_key": self.encrypted_api_key,
@@ -195,6 +197,7 @@ class CachedProvider:
         return cls(
             id=d["id"],
             name=d["name"],
+            description=d.get("description"),
             openai_endpoint=d.get("openai_endpoint"),
             anthropic_endpoint=d.get("anthropic_endpoint"),
             encrypted_api_key=d["encrypted_api_key"],

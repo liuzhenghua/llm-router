@@ -355,6 +355,7 @@ async def resolve_provider_candidates(
                     cached_provider = CachedProvider(
                         id=provider.id,
                         name=provider.name,
+                        description=provider.description,
                         openai_endpoint=provider.openai_endpoint,
                         anthropic_endpoint=provider.anthropic_endpoint,
                         encrypted_api_key=provider.encrypted_api_key,

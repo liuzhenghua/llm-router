@@ -117,6 +117,7 @@ class ProviderModel(Base, TimestampMixin):
     anthropic_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
     encrypted_api_key: Mapped[str] = mapped_column(Text)
     upstream_model_name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     input_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     output_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     supports_prompt_cache: Mapped[bool] = mapped_column(Boolean, default=False)
