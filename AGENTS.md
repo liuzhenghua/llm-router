@@ -248,6 +248,7 @@ migrations/
 
 - Always write to the folder that matches the **current** version in `VERSION`.
 - When the version is bumped, create a new folder for the new version before adding any SQL.
+- If the user explicitly says **not** to bump `VERSION`, keep writing to the current version's migration files and append the new SQL there instead of creating a new version folder.
 - Always create both files (MySQL + SQLite). Split the SQL when syntax differs.
 
 ### File header (required)
@@ -282,7 +283,8 @@ Every migration file **must** start with the following header block. Replace `{v
 
 - **Never** run `ALTER TABLE` or schema changes from Python application code.
 - **Never** rely on SQLAlchemy `create_all()` to add new columns — it only creates missing tables.
-- Each migration file is **append-only**: once committed, do not edit it. Add a new file for follow-up fixes.
+- By default, generated migration SQL should include **schema changes only**. Do **not** include data migration SQL (`UPDATE`, backfill, transform, copy, or cleanup statements) unless the user explicitly asks for it or confirms that it is needed.
+- Migration SQL should be appended to the current version's migration files while that version is still being worked on. Do not rewrite historical migrations for older released versions; use a new version folder for follow-up fixes after a version bump.
 - Keep migrations idempotent where possible (e.g. `ADD COLUMN IF NOT EXISTS` on MySQL 8+).
 - Default `TABLE_PREFIX` is `lr_`. All table names in migration files use this prefix unless overridden.
 

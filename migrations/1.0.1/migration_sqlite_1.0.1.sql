@@ -1,5 +1,5 @@
 -- Migration: 1.0.1
--- Description: (1) Drop UNIQUE constraint on lr_logical_models.name to allow duplicate names;
+-- Description: (1) Drop name UNIQUE constraints from soft-delete tables;
 --              (2) Convert allowed_logical_models_json in lr_api_keys from model names to model IDs.
 --
 -- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
@@ -35,29 +35,45 @@ ALTER TABLE lr_logical_models_new RENAME TO lr_logical_models;
 
 CREATE INDEX ix_lr_logical_models_name ON lr_logical_models (name);
 
-PRAGMA foreign_keys = ON;
+-- === Part 2: Remove UNIQUE constraint on lr_api_keys.name ===
+-- SQLite does not support DROP INDEX ... UNIQUE directly.
+-- We recreate the table without the unique constraint on name and keep UNIQUE(key_hash).
 
--- === Part 2: Data migration — allowed_logical_models_json names → IDs ===
--- The application performs this automatically on first startup.
--- If you prefer to do it manually, see the Python snippet below:
---
---   python - <<'EOF'
---   import asyncio
---   from sqlalchemy import select
---   from llm_router.core.database import SessionLocal
---   from llm_router.domain.models import ApiKey, LogicalModel
---
---   async def migrate():
---       async with SessionLocal() as session:
---           models = (await session.execute(select(LogicalModel))).scalars().all()
---           name_to_id = {m.name: m.id for m in models}
---           keys = (await session.execute(select(ApiKey))).scalars().all()
---           for key in keys:
---               values = key.allowed_logical_models_json or []
---               if values and any(isinstance(v, str) for v in values):
---                   key.allowed_logical_models_json = [name_to_id[v] for v in values if isinstance(v, str) and v in name_to_id]
---           await session.commit()
---           print("Migration complete")
---
---   asyncio.run(migrate())
--- EOF
+CREATE TABLE lr_api_keys_new (
+    id INTEGER NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    key_hash VARCHAR(64) NOT NULL,
+    encrypted_key TEXT,
+    status VARCHAR(16) NOT NULL,
+    balance NUMERIC(18, 6) NOT NULL,
+    daily_budget_limit NUMERIC(18, 6),
+    daily_spend_amount NUMERIC(18, 6) NOT NULL,
+    daily_spend_date DATE,
+    qps_limit INTEGER NOT NULL,
+    allowed_logical_models_json TEXT NOT NULL,
+    request_content_logging_enabled BOOLEAN,
+    response_content_logging_enabled BOOLEAN,
+    end_user VARCHAR(255),
+    timezone VARCHAR(64) NOT NULL,
+    default_channel VARCHAR(64),
+    deleted_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (key_hash)
+);
+
+INSERT INTO lr_api_keys_new SELECT * FROM lr_api_keys;
+
+DROP TABLE lr_api_keys;
+
+ALTER TABLE lr_api_keys_new RENAME TO lr_api_keys;
+
+CREATE INDEX ix_lr_api_keys_name ON lr_api_keys (name);
+CREATE INDEX ix_lr_api_keys_end_user ON lr_api_keys (end_user);
+CREATE INDEX ix_lr_api_keys_status ON lr_api_keys (status);
+
+-- === Part 3: Add index on lr_provider_models.name ===
+CREATE INDEX ix_lr_provider_models_name ON lr_provider_models (name);
+
+PRAGMA foreign_keys = ON;

@@ -63,7 +63,7 @@ class ApiKey(Base, TimestampMixin):
     __tablename__ = table_name("api_keys")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True)
+    name: Mapped[str] = mapped_column(String(100), index=True)
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     encrypted_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="active", index=True)
@@ -112,7 +112,7 @@ class ProviderModel(Base, TimestampMixin):
     __tablename__ = table_name("provider_models")
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), index=True)
     openai_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
     anthropic_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
     encrypted_api_key: Mapped[str] = mapped_column(Text)
