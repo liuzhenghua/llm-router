@@ -45,7 +45,7 @@ class RequestContext:
     api_key_id: int
     api_key_name: str
     api_key_timezone: str
-    logical_model_id: int
+    logical_model_id: int  # set to logical_model_ids[0] initially; overwritten in gateway with the actual route owner's ID before logging
     logical_model_ids: list[int] = field(default_factory=list)  # all matching model IDs for union-of-providers routing
     raw_authorization: str | None = None
     headers: dict[str, str] = field(default_factory=dict)
@@ -216,6 +216,7 @@ class CachedProvider:
 class RoutableProvider:
     """可路由的 provider，包含路由 ID 和权重信息"""
     route_id: int
+    logical_model_id: int  # the logical model that owns this route entry
     provider: RoutedProvider
     weight: int  # 权重，0 表示不参与路由
 

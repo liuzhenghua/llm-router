@@ -378,7 +378,7 @@ async def resolve_provider_candidates(
                 merged_routes_data.append(route_data)
 
     # === 2. 解析路由并构建 provider ===
-    all_routable: list[tuple[int, int, bool, int, RoutedProvider]] = []  # (route_id, priority, is_fallback, weight, provider)
+    all_routable: list[tuple[int, int, int, bool, int, RoutedProvider]] = []  # (route_id, logical_model_id, priority, is_fallback, weight, provider)
 
     for route_data in merged_routes_data:
         route = CachedRoute.from_dict(route_data)
@@ -438,15 +438,16 @@ async def resolve_provider_candidates(
             supports_prompt_cache=provider.supports_prompt_cache,
         )
 
-        all_routable.append((route.route_id, route.priority, route.is_fallback, route.weight, routed_provider))
+        all_routable.append((route.route_id, route.logical_model_id, route.priority, route.is_fallback, route.weight, routed_provider))
 
     # === 3. 按 is_fallback 和 priority 分组 ===
     main_groups: dict[int, list[RoutableProvider]] = {}  # priority -> providers
     fallback_groups: dict[int, list[RoutableProvider]] = {}
 
-    for route_id, priority, is_fallback, weight, provider in all_routable:
+    for route_id, logical_model_id, priority, is_fallback, weight, provider in all_routable:
         routable = RoutableProvider(
             route_id=route_id,
+            logical_model_id=logical_model_id,
             provider=provider,
             weight=weight,
         )

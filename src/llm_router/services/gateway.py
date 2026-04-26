@@ -99,6 +99,7 @@ async def handle_proxy_request(
         # 记录当前选中的 provider 和 route_id
         current_provider = selected.provider
         current_route_id = selected.route_id
+        context.logical_model_id = selected.logical_model_id
 
         # 组内重试逻辑
         for attempt in range(MAX_RETRY_PER_GROUP):
@@ -177,6 +178,7 @@ async def handle_proxy_request(
                     if selected:
                         current_provider = selected.provider
                         current_route_id = selected.route_id
+                        context.logical_model_id = selected.logical_model_id
                 continue
 
         # 当前组全部失败，切换下一组
@@ -248,6 +250,7 @@ async def handle_embedding_request(
 
         current_provider = selected.provider
         current_route_id = selected.route_id
+        context.logical_model_id = selected.logical_model_id
 
         for attempt in range(MAX_RETRY_PER_GROUP):
             try:
@@ -291,6 +294,7 @@ async def handle_embedding_request(
                     if selected:
                         current_provider = selected.provider
                         current_route_id = selected.route_id
+                        context.logical_model_id = selected.logical_model_id
                 continue
 
         continue
