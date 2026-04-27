@@ -66,7 +66,7 @@
 
       <!-- OpenAI Chat Completions -->
       <div id="openai-chat" class="mb-10">
-        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — Chat Completions</h3>
+        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — Chat Completions<a href="https://platform.openai.com/docs/api-reference/chat" target="_blank" rel="noopener" class="ml-2 text-xs font-normal text-sky-500 hover:text-sky-700">官方文档 ↗</a></h3>
         <p class="mb-3 text-slate-600">
           llm-router 完全兼容 OpenAI Chat Completions 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务即可使用任何支持 OpenAI 格式的客户端或 SDK。
         </p>
@@ -120,7 +120,7 @@
 
       <!-- OpenAI Models -->
       <div id="openai-models" class="mb-10">
-        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — List / Get Models</h3>
+        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — List / Get Models<a href="https://platform.openai.com/docs/api-reference/models" target="_blank" rel="noopener" class="ml-2 text-xs font-normal text-sky-500 hover:text-sky-700">官方文档 ↗</a></h3>
         <p class="mb-3 text-slate-600">
           获取当前 API Key 可访问的逻辑模型列表，或查询单个模型详情。响应格式与 OpenAI <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/v1/models</code> 完全兼容。
         </p>
@@ -174,7 +174,7 @@
 
       <!-- OpenAI Embeddings -->
       <div id="openai-embeddings" class="mb-10">
-        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — Embeddings</h3>
+        <h3 class="text-base font-semibold text-slate-800 mb-3">OpenAI — Embeddings<a href="https://platform.openai.com/docs/api-reference/embeddings" target="_blank" rel="noopener" class="ml-2 text-xs font-normal text-sky-500 hover:text-sky-700">官方文档 ↗</a></h3>
         <p class="mb-3 text-slate-600">
           llm-router 兼容 OpenAI Embeddings 协议，可将文本转换为向量表示。仅路由到配置了 OpenAI Endpoint 的 Provider。
         </p>
@@ -234,7 +234,7 @@
 
       <!-- Anthropic Messages -->
       <div id="anthropic-messages" class="mb-10">
-        <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — Messages</h3>
+        <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — Messages<a href="https://platform.claude.com/docs/en/build-with-claude/working-with-messages" target="_blank" rel="noopener" class="ml-2 text-xs font-normal text-sky-500 hover:text-sky-700">官方文档 ↗</a></h3>
         <p class="mb-3 text-slate-600">
           llm-router 同样兼容 Anthropic Messages 协议。将 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">base_url</code> 指向本服务的 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/anthropic</code> 前缀即可。
         </p>
@@ -291,7 +291,7 @@
 
       <!-- Anthropic Models -->
       <div id="anthropic-models">
-        <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — List / Get Models</h3>
+        <h3 class="text-base font-semibold text-slate-800 mb-3">Anthropic — List / Get Models<a href="https://docs.anthropic.com/en/api/models-list" target="_blank" rel="noopener" class="ml-2 text-xs font-normal text-sky-500 hover:text-sky-700">官方文档 ↗</a></h3>
         <p class="mb-3 text-slate-600">
           获取当前 API Key 可访问的逻辑模型列表，或查询单个模型详情。响应格式与 Anthropic <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/v1/models</code> 完全兼容。
         </p>
@@ -352,7 +352,7 @@
 
       <!-- Claude Code -->
       <div id="claude-code">
-        <h3 class="text-base font-semibold text-slate-800 mb-3">Claude Code</h3>
+        <h3 class="text-base font-semibold text-slate-800 mb-3">Claude Code<a href="https://docs.anthropic.com/en/docs/claude-code/overview" target="_blank" rel="noopener" class="ml-2 text-xs font-normal text-sky-500 hover:text-sky-700">官方文档 ↗</a></h3>
         <p class="mb-3 text-slate-600">
           通过环境变量将 Claude Code 的 API 请求代理到 llm-router，从而使用任意后端模型。
           <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">ANTHROPIC_BASE_URL</code> 需指向本服务的 <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono text-rose-600">/anthropic</code> 前缀。
