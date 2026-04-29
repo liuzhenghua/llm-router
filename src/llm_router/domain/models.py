@@ -17,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
+from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
 
@@ -221,8 +222,8 @@ class RequestLogBody(Base):
     __tablename__ = table_name("request_log_bodies")
 
     request_log_id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    request_body: Mapped[str | None] = mapped_column(Text, nullable=True)
-    response_body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    request_body: Mapped[str | None] = mapped_column(Text().with_variant(LONGTEXT(), "mysql"), nullable=True)
+    response_body: Mapped[str | None] = mapped_column(Text().with_variant(LONGTEXT(), "mysql"), nullable=True)
 
     request_log: Mapped["RequestLog"] = relationship(
         "RequestLog",

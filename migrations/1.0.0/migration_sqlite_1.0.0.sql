@@ -28,11 +28,12 @@ CREATE TABLE lr_api_keys (
 	deleted_at DATETIME,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	PRIMARY KEY (id),
-	UNIQUE (name)
+	PRIMARY KEY (id)
 );
 
 CREATE INDEX ix_lr_api_keys_end_user ON lr_api_keys (end_user);
+
+CREATE INDEX ix_lr_api_keys_name ON lr_api_keys (name);
 
 CREATE INDEX ix_lr_api_keys_status ON lr_api_keys (status);
 
@@ -99,6 +100,8 @@ CREATE TABLE lr_logical_models (
 	PRIMARY KEY (id)
 );
 
+CREATE INDEX ix_lr_logical_models_name ON lr_logical_models (name);
+
 CREATE TABLE lr_provider_models (
 	id INTEGER NOT NULL,
 	name VARCHAR(100) NOT NULL,
@@ -106,6 +109,7 @@ CREATE TABLE lr_provider_models (
 	anthropic_endpoint VARCHAR(255),
 	encrypted_api_key TEXT NOT NULL,
 	upstream_model_name VARCHAR(120) NOT NULL,
+	description VARCHAR(255),
 	input_token_price NUMERIC(18, 8) NOT NULL,
 	output_token_price NUMERIC(18, 8) NOT NULL,
 	supports_prompt_cache BOOLEAN NOT NULL,
@@ -118,6 +122,8 @@ CREATE TABLE lr_provider_models (
 	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	PRIMARY KEY (id)
 );
+
+CREATE INDEX ix_lr_provider_models_name ON lr_provider_models (name);
 
 CREATE TABLE lr_request_log_bodies (
 	request_log_id INTEGER NOT NULL,
@@ -159,6 +165,8 @@ CREATE INDEX ix_lr_request_logs_local_date ON lr_request_logs (local_date);
 CREATE INDEX ix_lr_request_logs_logical_model_id ON lr_request_logs (logical_model_id);
 
 CREATE INDEX ix_lr_request_logs_provider_model_id ON lr_request_logs (provider_model_id);
+
+CREATE INDEX ix_lr_request_logs_request_id ON lr_request_logs (request_id);
 
 CREATE INDEX ix_lr_request_logs_started_at ON lr_request_logs (started_at);
 
