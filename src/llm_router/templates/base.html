@@ -95,7 +95,8 @@
       });
     }
     function toggleCacheFields(checkbox) {
-      const cacheInputs = checkbox.closest('form').querySelector('#cache-inputs');
+      const form = checkbox.closest('form');
+      const cacheInputs = form && form.querySelector('[id^="cache-inputs"]');
       if (cacheInputs) {
         cacheInputs.classList.toggle('hidden', !checkbox.checked);
       }
