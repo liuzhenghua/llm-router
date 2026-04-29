@@ -157,6 +157,7 @@ function renderTable() {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
+        <button type="button" onclick="copyProvider(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">复制</button>
         <button type="button" onclick="deleteProvider(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
       </div></td>
     `;
@@ -206,6 +207,13 @@ function deleteProvider(id, name) {
       }
     })
     .catch(() => showToast('网络错误，请重试', 'error'));
+}
+
+function copyProvider(id) {
+  const item = allProviders.find(p => p.id === id);
+  if (!item) return;
+  fillForm('create-provider-form', item);
+  openModal('create-provider-modal');
 }
 
 function toggleCacheFieldsById(checkboxId, containerId, value) {
