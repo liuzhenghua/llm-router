@@ -247,6 +247,27 @@ response = client.chat.completions.create(
 )
 ```
 
+Usage with the Anthropic Python SDK:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic(
+    base_url="http://your-host/anthropic",
+    api_key="your-llm-router-key",  # sent as x-api-key header
+)
+
+message = client.messages.create(
+    model="claude-3-5-sonnet",   # your logical model name
+    max_tokens=1024,
+    messages=[{"role": "user", "content": "Hello"}],
+)
+```
+
+The Anthropic-compatible endpoints accept authentication via either:
+- `Authorization: Bearer <key>` — standard Bearer token
+- `x-api-key: <key>` — native Anthropic SDK style
+
 ---
 
 ## Project Structure

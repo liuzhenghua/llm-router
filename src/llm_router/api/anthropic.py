@@ -11,21 +11,28 @@ from llm_router.services.model_visibility import build_visible_logical_models_st
 router = APIRouter(prefix="/anthropic", tags=["anthropic"])
 
 
-def _extract_bearer_token(authorization: str | None) -> str:
-    if not authorization or not authorization.lower().startswith("bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    return authorization.split(" ", 1)[1].strip()
+def _extract_api_key(authorization: str | None, x_api_key: str | None) -> str:
+    """Extract the API key from either `Authorization: Bearer <key>` or `x-api-key: <key>` header."""
+    if x_api_key:
+        return x_api_key.strip()
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization.split(" ", 1)[1].strip()
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing API key")
 
 
 @router.get("/v1/models")
-async def list_models(request: Request, authorization: str | None = Header(default=None)):
+async def list_models(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+):
     from sqlalchemy import select
 
     from llm_router.domain.models import ApiKey
     from llm_router.core.security import hash_api_key
 
     session: AsyncSession = request.state.db
-    raw_api_key = _extract_bearer_token(authorization)
+    raw_api_key = _extract_api_key(authorization, x_api_key)
     api_key = (
         await session.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw_api_key), ApiKey.status == "active"))
     ).scalar_one_or_none()
@@ -50,14 +57,19 @@ async def list_models(request: Request, authorization: str | None = Header(defau
 
 
 @router.get("/v1/models/{model_id}")
-async def get_model(model_id: str, request: Request, authorization: str | None = Header(default=None)):
+async def get_model(
+    model_id: str,
+    request: Request,
+    authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
+):
     from sqlalchemy import select
 
     from llm_router.domain.models import ApiKey, LogicalModel
     from llm_router.core.security import hash_api_key
 
     session: AsyncSession = request.state.db
-    raw_api_key = _extract_bearer_token(authorization)
+    raw_api_key = _extract_api_key(authorization, x_api_key)
     api_key = (
         await session.execute(select(ApiKey).where(ApiKey.key_hash == hash_api_key(raw_api_key), ApiKey.status == "active"))
     ).scalar_one_or_none()
@@ -79,10 +91,11 @@ async def get_model(model_id: str, request: Request, authorization: str | None =
 async def messages(
     request: Request,
     authorization: str | None = Header(default=None),
+    x_api_key: str | None = Header(default=None),
 ):
     session: AsyncSession = request.state.db
     payload = await request.json()
-    raw_api_key = _extract_bearer_token(authorization)
+    raw_api_key = _extract_api_key(authorization, x_api_key)
     return await handle_proxy_request(
         session,
         protocol=ProviderProtocol.ANTHROPIC,
