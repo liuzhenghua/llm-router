@@ -207,9 +207,6 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
                 "role": "assistant",
                 "model": self._model or "",
                 "content": [],
-                "stop_reason": None,
-                "stop_sequence": None,
-                "usage": {"input_tokens": 0, "output_tokens": 0},
             },
         })]
 
@@ -341,7 +338,10 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         events.append(self._sse("message_delta", {
             "type": "message_delta",
             "delta": {"stop_reason": stop_reason, "stop_sequence": None},
-            "usage": {"output_tokens": usage_dict.get("completion_tokens", 0)},
+            "usage": {
+                "input_tokens": usage_dict.get("prompt_tokens", 0),
+                "output_tokens": usage_dict.get("completion_tokens", 0),
+            },
         }))
         events.append(self._sse("message_stop", {"type": "message_stop"}))
         return events
