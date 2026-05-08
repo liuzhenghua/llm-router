@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
+from llm_router.services.http_client import get_http_client
 from llm_router.services.non_stream_handlers.base import BaseNonStreamHandler
 from llm_router.services.post_request import RequestFinalizationData, schedule_post_request_tasks
 from llm_router.services.protocol_converter import (
@@ -141,8 +142,12 @@ class AnthropicOverOpenAINonStreamHandler(BaseNonStreamHandler):
         full_endpoint = provider.endpoint.rstrip("/") + self._UPSTREAM_PATH
 
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30)) as client:
-                response = await client.post(full_endpoint, json=payload, headers=headers)
+            response = await get_http_client().post(
+                full_endpoint,
+                json=payload,
+                headers=headers,
+                timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+            )
 
             if response.status_code >= 400:
                 latency_ms = int((time.perf_counter() - started) * 1000)
@@ -292,8 +297,12 @@ class OpenAIOverAnthropicNonStreamHandler(BaseNonStreamHandler):
         full_endpoint = provider.endpoint.rstrip("/") + self._UPSTREAM_PATH
 
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30)) as client:
-                response = await client.post(full_endpoint, json=payload, headers=headers)
+            response = await get_http_client().post(
+                full_endpoint,
+                json=payload,
+                headers=headers,
+                timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+            )
 
             if response.status_code >= 400:
                 latency_ms = int((time.perf_counter() - started) * 1000)

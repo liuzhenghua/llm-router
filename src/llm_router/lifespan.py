@@ -16,6 +16,7 @@ from llm_router.services.cache.redis_cache import RedisCache
 from llm_router.services.cache.redis_lock import RedisLockManager, set_lock_manager
 from llm_router.services.cache.spend_queue import SpendDeltaQueue, set_spend_queue
 from llm_router.services.degraded_route_recovery import run_recovery_task
+from llm_router.services.http_client import close_http_client, init_http_client
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -30,6 +31,8 @@ _degraded_recovery_task: asyncio.Task | None = None
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     global _dual_cache, _spend_queue, _db_writer, _redis_cache
+
+    init_http_client()
 
     try:
         await init_db()
@@ -109,4 +112,5 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         await _db_writer.stop()
     if _redis_cache:
         await _redis_cache.close()
+    await close_http_client()
     logger.info("Cache system shut down")

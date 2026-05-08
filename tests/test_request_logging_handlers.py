@@ -28,12 +28,6 @@ class _FakeAsyncClient:
     def __init__(self, response: _FakeResponse):
         self._response = response
 
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc, tb):
-        return False
-
     async def post(self, *args, **kwargs):
         return self._response
 
@@ -72,7 +66,7 @@ async def _assert_failure_is_logged(monkeypatch: pytest.MonkeyPatch, module_path
     captured = []
     response = _FakeResponse(429, "rate limited")
 
-    monkeypatch.setattr(f"{module_path}.httpx.AsyncClient", lambda timeout: _FakeAsyncClient(response))
+    monkeypatch.setattr(f"{module_path}.get_http_client", lambda: _FakeAsyncClient(response))
     monkeypatch.setattr(f"{module_path}.schedule_post_request_tasks", captured.append)
 
     with pytest.raises(HTTPException) as exc_info:

@@ -19,6 +19,7 @@ from llm_router.core.security import Encryptor
 from llm_router.domain.models import LogicalModelRoute, ProviderModel
 from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType, RouteDegradedStatus
 from llm_router.services.cache.dual_cache import get_dual_cache
+from llm_router.services.http_client import get_http_client
 
 
 if TYPE_CHECKING:
@@ -172,19 +173,18 @@ class DegradedRouteRecovery:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
-                response = await client.post(url, json=payload, headers=headers)
+            response = await get_http_client().post(url, json=payload, headers=headers, timeout=PROBE_TIMEOUT)
 
-                if response.status_code == 200:
-                    # 成功，配额已恢复
-                    return True
-                elif response.status_code == 429 or response.status_code == 403:
-                    # 仍然限流/无权限，配额未恢复
-                    return False
-                else:
-                    # 其他错误，可能是暂时性问题，继续保持降级
-                    logger.warning(f"Probe request for route {route_id} returned {response.status_code}")
-                    return False
+            if response.status_code == 200:
+                # 成功，配额已恢复
+                return True
+            elif response.status_code == 429 or response.status_code == 403:
+                # 仍然限流/无权限，配额未恢复
+                return False
+            else:
+                # 其他错误，可能是暂时性问题，继续保持降级
+                logger.warning(f"Probe request for route {route_id} returned {response.status_code}")
+                return False
         except httpx.TimeoutException:
             logger.warning(f"Probe request for route {route_id} timed out")
             return False
@@ -230,15 +230,14 @@ class DegradedRouteRecovery:
         }
 
         try:
-            async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
-                response = await client.get(url, headers=headers)
+            response = await get_http_client().get(url, headers=headers, timeout=PROBE_TIMEOUT)
 
-                if response.status_code == 200:
-                    # 连通性恢复
-                    return True
-                else:
-                    logger.warning(f"Health check for route {route_id} returned {response.status_code}")
-                    return False
+            if response.status_code == 200:
+                # 连通性恢复
+                return True
+            else:
+                logger.warning(f"Health check for route {route_id} returned {response.status_code}")
+                return False
         except httpx.TimeoutException:
             logger.warning(f"Health check for route {route_id} timed out")
             return False

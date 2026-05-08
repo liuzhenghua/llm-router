@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
+from llm_router.services.http_client import get_http_client
 from llm_router.services.post_request import (
     ProviderPricesData,
     RequestFinalizationData,
@@ -37,7 +38,6 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
         self._id: str | None = None
         self._type: str | None = None
         self._upstream_response = None
-        self._client = None
         self._started = None
         self._started_at = None
 
@@ -236,14 +236,15 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
         self._started_at = utcnow()
         full_endpoint = provider.endpoint.rstrip("/") + request_path
 
-        self._client = httpx.AsyncClient(timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30))
-        stream_cm = self._client.stream("POST", full_endpoint, json=payload, headers=headers)
+        stream_cm = get_http_client().stream(
+            "POST", full_endpoint, json=payload, headers=headers,
+            timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+        )
         self._upstream_response = await stream_cm.__aenter__()
 
         if self._upstream_response.status_code >= 400:
             detail = (await self._upstream_response.aread()).decode("utf-8")
             await stream_cm.__aexit__(None, None, None)
-            await self._client.aclose()
             latency_ms = int((time.perf_counter() - self._started) * 1000)
             schedule_post_request_tasks(
                 self._create_finalization_data(
@@ -321,7 +322,6 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
                     )
                 )
                 await stream_cm.__aexit__(None, None, None)
-                await self._client.aclose()
 
         return StreamingResponse(
             event_iterator(),
