@@ -145,13 +145,16 @@ async def handle_proxy_request(
                             handler = AnthropicStreamingHandler()
                         else:
                             handler = AnthropicOverOpenAIStreamingHandler()
-                    return await handler.proxy(
+                    result = await handler.proxy(
                         session,
                         api_key=api_key,
                         context=context,
                         provider=current_provider,
                         request_path=request_path,
                     )
+                    if degraded_cache:
+                        await degraded_cache.recover(current_route_id)
+                    return result
                 else:
                     if context.protocol == ProviderProtocol.OPENAI:
                         if current_provider.upstream_protocol == ProviderProtocol.OPENAI:
@@ -163,13 +166,16 @@ async def handle_proxy_request(
                             handler = AnthropicNonStreamHandler()
                         else:
                             handler = AnthropicOverOpenAINonStreamHandler()
-                    return await handler.proxy(
+                    result = await handler.proxy(
                         session,
                         api_key=api_key,
                         context=context,
                         provider=current_provider,
                         request_path=request_path,
                     )
+                    if degraded_cache:
+                        await degraded_cache.recover(current_route_id)
+                    return result
             except HTTPException as exc:
                 last_error = exc
                 attempted_route_ids.add(current_route_id)
@@ -291,13 +297,16 @@ async def handle_embedding_request(
         for attempt in range(MAX_RETRY_PER_GROUP):
             try:
                 handler = OpenAIEmbeddingNonStreamHandler()
-                return await handler.proxy(
+                result = await handler.proxy(
                     session,
                     api_key=api_key,
                     context=context,
                     provider=current_provider,
                     request_path="/embeddings",
                 )
+                if degraded_cache:
+                    await degraded_cache.recover(current_route_id)
+                return result
             except HTTPException as exc:
                 last_error = exc
                 attempted_route_ids.add(current_route_id)
