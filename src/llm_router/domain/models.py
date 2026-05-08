@@ -125,7 +125,7 @@ class ProviderModel(Base, TimestampMixin):
     cache_read_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     cache_write_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    timeout_seconds: Mapped[int] = mapped_column(Integer, default=120)
+    timeout_seconds: Mapped[int] = mapped_column(Integer, default=600)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
     routes: Mapped[list["LogicalModelRoute"]] = relationship(
