@@ -74,7 +74,7 @@ class AnthropicNonStreamHandler(BaseNonStreamHandler):
         full_endpoint = provider.endpoint.rstrip("/") + request_path
 
         try:
-            async with httpx.AsyncClient(timeout=provider.timeout_seconds) as client:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30)) as client:
                 response = await client.post(full_endpoint, json=payload, headers=headers)
 
             if response.status_code >= 400:
