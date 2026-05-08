@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, datetime as dt_datetime
+from datetime import date, datetime, datetime as dt_datetime
 from decimal import Decimal
 from urllib.parse import urlparse
 
@@ -237,7 +237,8 @@ async def dashboard(request: Request, _: None = Depends(require_admin)):
     ledgers = (await session.execute(select(BalanceLedger).order_by(desc(BalanceLedger.id)).limit(8))).scalars().all()
     daily_summaries = (await session.execute(select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(8))).scalars().all()
     total_balance = sum((Decimal(item.balance) for item in api_keys), Decimal("0"))
-    total_daily_spend = sum((Decimal(item.daily_spend_amount) for item in api_keys), Decimal("0"))
+    today = date.today()
+    total_daily_spend = sum((Decimal(item.daily_spend_amount) for item in api_keys if item.daily_spend_date == today), Decimal("0"))
     api_key_name_map = {key.id: key.name for key in api_keys}
     return _render_admin(
         request,
