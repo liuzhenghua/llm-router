@@ -614,7 +614,7 @@ async def create_provider_model(
     supports_prompt_cache: bool = Form(default=False),
     cache_read_token_price: Decimal = Form(default=Decimal("0")),
     cache_write_token_price: Decimal = Form(default=Decimal("0")),
-    timeout_seconds: int = Form(default=120),
+    timeout_seconds: int = Form(default=600),
     _: None = Depends(require_admin),
 ):
     oe = openai_endpoint.strip()
