@@ -62,6 +62,7 @@ def create_app() -> FastAPI:
     app.mount("/static", StaticFiles(directory=BASE_PATH / "static"), name="static")
     env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(str(BASE_PATH / "templates")),
+        autoescape=jinja2.select_autoescape(["html", "xml"]),
     )
     env.filters["format_decimal"] = _format_decimal
     env.filters["format_datetime"] = _format_datetime
