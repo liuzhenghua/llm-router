@@ -398,7 +398,7 @@ async def create_api_key(
 ):
     session = request.state.db
     raw_key = generate_api_key()
-    allowed = [int(item.strip()) for item in allowed_models.split(",")]
+    allowed = [int(item.strip()) for item in allowed_models.split(",") if item.strip()]
     tz_value = timezone.strip() or settings.tz
     session.add(
         ApiKey(
@@ -461,7 +461,7 @@ async def update_api_key(
     api_key.status = status_text
     api_key.daily_budget_limit = _to_decimal(daily_budget_limit)
     api_key.qps_limit = qps_limit
-    api_key.allowed_logical_models_json = [int(item.strip()) for item in allowed_models.split(",")]
+    api_key.allowed_logical_models_json = [int(item.strip()) for item in allowed_models.split(",") if item.strip()]
     api_key.request_content_logging_enabled = _parse_logging_flag(request_content_logging_enabled)
     api_key.response_content_logging_enabled = _parse_logging_flag(response_content_logging_enabled)
     api_key.end_user = end_user.strip() or None

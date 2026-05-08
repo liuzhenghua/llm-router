@@ -207,6 +207,9 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
                 "role": "assistant",
                 "model": self._model or "",
                 "content": [],
+                "stop_reason": None,
+                "stop_sequence": None,
+                "usage": {"input_tokens": 0, "output_tokens": 0},
             },
         })]
 
