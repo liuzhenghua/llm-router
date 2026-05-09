@@ -158,6 +158,8 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         if self._accumulated_content:
             content.append({"type": "text", "text": self._accumulated_content})
         for tc in self._current_tool_calls:
+            if not tc.get("id") and not tc.get("name") and not tc.get("arguments"):
+                continue
             content.append({
                 "type": "tool_use",
                 "id": tc.get("id", ""),
@@ -234,6 +236,11 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         self._text_block_open = False
         return [self._sse("content_block_stop", {"type": "content_block_stop", "index": idx})]
 
+    def _ensure_tool_call_slot(self, index: int) -> dict:
+        while len(self._current_tool_calls) <= index:
+            self._current_tool_calls.append({"id": "", "name": "", "arguments": ""})
+        return self._current_tool_calls[index]
+
     def _process_openai_chunk(self, chunk: dict) -> list[bytes]:
         """Convert a single OpenAI SSE chunk to a list of Anthropic SSE event bytes."""
         events: list[bytes] = []
@@ -281,7 +288,7 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
                 block_idx = self._next_block_index
                 self._next_block_index += 1
                 self._tool_block_map[tc_idx] = block_idx
-                self._current_tool_calls.append({"id": "", "name": "", "arguments": ""})
+                self._ensure_tool_call_slot(tc_idx)
 
                 events.append(self._sse("content_block_start", {
                     "type": "content_block_start",
@@ -295,7 +302,7 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
                 }))
 
             block_idx = self._tool_block_map[tc_idx]
-            tc = self._current_tool_calls[tc_idx]
+            tc = self._ensure_tool_call_slot(tc_idx)
 
             if tc_delta.get("id"):
                 tc["id"] = tc_delta["id"]
