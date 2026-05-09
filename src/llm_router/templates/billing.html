@@ -2,7 +2,7 @@
 {% block page_content %}
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-6 border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
   <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Billing</p>
-  <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900">账单与账本</h1>
+  <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="billing.title">账单与账本</h1>
 </div>
 
 <!-- ── API Key filter ── -->
@@ -11,15 +11,15 @@
     <div>
       <label class="mb-1 block text-xs text-slate-500">API Key</label>
       <select name="api_key_id" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-        <option value="">全部 API Key</option>
+        <option value="" data-i18n="billing.all_keys">全部 API Key</option>
         {% for api_key in api_keys %}
         <option value="{{ api_key.id }}" {% if selected_api_key_id == api_key.id %}selected{% endif %}>{{ api_key.name }}</option>
         {% endfor %}
       </select>
     </div>
-    <button class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">筛选</button>
+    <button class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700" data-i18n="billing.btn_filter">筛选</button>
     {% if selected_api_key_id %}
-    <a href="/admin/billing" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">重置</a>
+    <a href="/admin/billing" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="billing.btn_reset">重置</a>
     {% endif %}
   </form>
 </div>
@@ -28,23 +28,23 @@
 
   <!-- 账本 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">账本流水</p>
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.ledger_title">账本流水</p>
     <div class="mb-3 flex flex-wrap gap-2 items-end">
       <div class="min-w-[160px] flex-1">
-        <input type="text" id="ledgers-search" placeholder="搜索备注..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+        <input type="text" id="ledgers-search" placeholder="搜索备注..." data-i18n-placeholder="billing.search_remark" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       </div>
       <div class="shrink-0">
         <select id="ledgers-change-type" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-          <option value="">全部类型</option>
-          <option value="topup">充値 (topup)</option>
-          <option value="charge">扣费 (charge)</option>
-          <option value="adjust">调整 (adjust)</option>
-          <option value="refund">退款 (refund)</option>
+          <option value="" data-i18n="billing.all_types">全部类型</option>
+          <option value="topup" data-i18n="billing.topup_label">充値 (topup)</option>
+          <option value="charge" data-i18n="billing.charge_label">扣费 (charge)</option>
+          <option value="adjust" data-i18n="billing.adjust_label">调整 (adjust)</option>
+          <option value="refund" data-i18n="billing.refund_label">退款 (refund)</option>
         </select>
       </div>
       <div class="flex gap-2 shrink-0">
-        <button id="ledgers-search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
-        <button id="ledgers-reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+        <button id="ledgers-search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
+        <button id="ledgers-reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</button>
       </div>
     </div>
     <div id="ledgers-table-container" class="overflow-x-auto"></div>
@@ -53,9 +53,9 @@
 
   <!-- 费用记录 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">请求费用记录</p>
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.usage_title">请求费用记录</p>
     <div class="mb-3">
-      <input type="text" id="usage-search" placeholder="搜索 Request ID..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <input type="text" id="usage-search" placeholder="搜索 Request ID..." data-i18n-placeholder="billing.search_request" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="usage-table-container" class="overflow-x-auto"></div>
     <div id="usage-pagination-container" class="mt-3 flex items-center justify-between"></div>
@@ -63,9 +63,9 @@
 
   <!-- 日报 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">每日费用日报</p>
+    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.daily_title">每日费用日报</p>
     <div class="mb-3">
-      <input type="text" id="summaries-search" placeholder="搜索日期或 API Key..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <input type="text" id="summaries-search" placeholder="搜索日期或 API Key..." data-i18n-placeholder="billing.search_daily" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
     </div>
     <div id="summaries-table-container" class="overflow-x-auto"></div>
     <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between"></div>
@@ -88,8 +88,9 @@ function createPaginatedTable(config) {
     tableContainer.innerHTML = '';
     paginationContainer.innerHTML = '';
 
+    const noData = typeof config.noDataText === 'function' ? config.noDataText() : config.noDataText;
     if (filteredData.length === 0) {
-      tableContainer.innerHTML = `<p class="text-center text-slate-500 p-4">${config.noDataText}</p>`;
+      tableContainer.innerHTML = `<p class="text-center text-slate-500 p-4">${noData}</p>`;
       return;
     }
 
@@ -98,10 +99,11 @@ function createPaginatedTable(config) {
 
     const table = document.createElement('table');
     table.className = 'w-full text-sm text-left text-slate-500';
+    const hdrs = typeof config.headers === 'function' ? config.headers() : config.headers;
     table.innerHTML = `
       <thead class="text-xs text-slate-700 uppercase bg-slate-50">
         <tr>
-          ${config.headers.map(h => `<th scope="col" class="px-2 py-3 whitespace-nowrap">${h}</th>`).join('')}
+          ${hdrs.map(h => `<th scope="col" class="px-2 py-3 whitespace-nowrap">${h}</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -114,19 +116,19 @@ function createPaginatedTable(config) {
     paginDiv.className = 'flex items-center gap-2';
 
     const prevButton = document.createElement('button');
-    prevButton.textContent = '上一页';
+    prevButton.textContent = t('common.prev_page');
     prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === 1 ? ' text-slate-400' : '');
     prevButton.disabled = currentPage === 1;
     prevButton.onclick = () => { currentPage--; render(); };
     paginDiv.appendChild(prevButton);
 
     const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+    pageInfo.textContent = t('common.page_info').replace('{cur}', currentPage).replace('{total}', totalPages);
     pageInfo.className = 'text-xs text-slate-500';
     paginDiv.appendChild(pageInfo);
 
     const nextButton = document.createElement('button');
-    nextButton.textContent = '下一页';
+    nextButton.textContent = t('common.next_page');
     nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === totalPages ? ' text-slate-400' : '');
     nextButton.disabled = currentPage === totalPages;
     nextButton.onclick = () => { currentPage++; render(); };
@@ -150,8 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     searchId: 'ledgers-search',
     tableContainerId: 'ledgers-table-container',
     paginationContainerId: 'ledgers-pagination-container',
-    noDataText: '没有找到相关账本。',
-    headers: ['类型', '金额', 'API Key', '变动前', '变动后', '备注'],
+    noDataText: () => t('billing.no_ledger'),
+    headers: () => [t('billing.col_type'), t('billing.col_amount'), 'API Key', t('billing.col_before'), t('billing.col_after'), t('billing.col_remark')],
     filterFn: (item, term) => {
       const changeType = document.getElementById('ledgers-change-type').value;
       if (changeType && item.change_type !== changeType) return false;
@@ -185,12 +187,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('ledgers-change-type').addEventListener('change', () => { ledgersTable.resetPage(); ledgersTable.render(); });
 
-  createPaginatedTable({
+  const usageTable = createPaginatedTable({
     data: {{ usage_records|tojson }},
     searchId: 'usage-search',
     tableContainerId: 'usage-table-container',
     paginationContainerId: 'usage-pagination-container',
-    noDataText: '没有找到相关费用记录。',
+    noDataText: () => t('billing.no_usage'),
     headers: ['Request Log ID', 'Cost', 'Tokens (P/C/R)', 'Request ID'],
     filterFn: (item, term) => String(item.request_log_id).includes(term) || (item.request_log && item.request_log.request_id.toLowerCase().includes(term)),
     rowFn: item => `
@@ -201,13 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
     `
   });
 
-  createPaginatedTable({
+  const summariesTable = createPaginatedTable({
     data: {{ summaries|tojson }},
     searchId: 'summaries-search',
     tableContainerId: 'summaries-table-container',
     paginationContainerId: 'summaries-pagination-container',
-    noDataText: '没有找到相关日报。',
-    headers: ['API Key', '日期', '请求数', '总费用', 'Tokens (P/C/R)'],
+    noDataText: () => t('billing.no_daily'),
+    headers: () => ['API Key', t('statistics.col_date'), t('billing.col_requests'), t('billing.col_cost'), 'Tokens (P/C/R)'],
     filterFn: (item, term) => (item.api_key_name || String(item.api_key_id)).toLowerCase().includes(term) || item.summary_date.includes(term),
     rowFn: item => `
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_name || item.api_key_id}</td>
@@ -217,6 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
     `
   });
+  window.i18n && window.i18n.onLangChange(ledgersTable.render);
+  window.i18n && window.i18n.onLangChange(usageTable.render);
+  window.i18n && window.i18n.onLangChange(summariesTable.render);
 });
 </script>
 {% endblock %}

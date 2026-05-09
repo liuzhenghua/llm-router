@@ -2,7 +2,7 @@
 {% block page_content %}
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-6 border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
   <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Statistics</p>
-  <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900">请求统计</h1>
+  <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="statistics.title">请求统计</h1>
 </div>
 
 <!-- Filter section -->
@@ -13,19 +13,19 @@
 
       <!-- Date range (mirrors request_logs.html time-range block) -->
       <div class="min-w-[300px] flex-1">
-        <label class="mb-1 block text-xs text-slate-500">日期范围</label>
+        <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_date_range">日期范围</label>
         <div class="flex flex-col gap-1.5">
           <div class="flex items-center gap-1">
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="today">今天</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="7d">近7天</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="30d">近30天</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="month">本月</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="year">今年</button>
-            <button type="button" id="clear-date-range" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100">清除</button>
+            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="today" data-i18n="statistics.preset_today">今天</button>
+            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="7d" data-i18n="statistics.preset_7d">近7天</button>
+            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="30d" data-i18n="statistics.preset_30d">近30天</button>
+            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="month" data-i18n="statistics.preset_month">本月</button>
+            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="year" data-i18n="statistics.preset_year">今年</button>
+            <button type="button" id="clear-date-range" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100" data-i18n="statistics.clear">清除</button>
           </div>
           <div class="flex items-center gap-1.5">
             <input type="date" name="date_from" id="date-from" value="{{ filters.date_from }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
-            <span class="text-slate-400 shrink-0 text-xs">至</span>
+            <span class="text-slate-400 shrink-0 text-xs" data-i18n="statistics.to">至</span>
             <input type="date" name="date_to" id="date-to" value="{{ filters.date_to }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
           </div>
         </div>
@@ -33,7 +33,7 @@
 
       <!-- Granularity toggle -->
       <div>
-        <label class="mb-1 block text-xs text-slate-500">统计粒度</label>
+        <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_granularity">统计粒度</label>
         <div class="flex">
           <button type="button" data-gran="day" class="gran-btn rounded-l-lg border px-3 py-1.5 text-xs font-medium">Day</button>
           <button type="button" data-gran="month" class="gran-btn border-y border-r px-3 py-1.5 text-xs font-medium">Month</button>
@@ -43,9 +43,9 @@
 
       <!-- Group by -->
       <div>
-        <label class="mb-1 block text-xs text-slate-500">分组维度</label>
+        <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_group_by">分组维度</label>
         <select name="group_by" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-          <option value="none" {% if filters.group_by == 'none' %}selected{% endif %}>不分组</option>
+          <option value="none" {% if filters.group_by == 'none' %}selected{% endif %} data-i18n="statistics.group_none">不分组</option>
           <option value="api_key" {% if filters.group_by == 'api_key' %}selected{% endif %}>API Key</option>
           <option value="channel" {% if filters.group_by == 'channel' %}selected{% endif %}>Channel</option>
           <option value="end_user" {% if filters.group_by == 'end_user' %}selected{% endif %}>End User</option>
@@ -64,17 +64,17 @@
       </div>
       <div>
         <label class="mb-1 block text-xs text-slate-500">Channel</label>
-        <input type="text" name="channel" value="{{ filters.channel }}" placeholder="精确匹配..." class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-28">
+        <input type="text" name="channel" value="{{ filters.channel }}" placeholder="精确匹配..." data-i18n-placeholder="statistics.exact_match" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-28">
       </div>
       <div>
         <label class="mb-1 block text-xs text-slate-500">End User</label>
-        <input type="text" name="end_user" value="{{ filters.end_user }}" placeholder="精确匹配..." class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-28">
+        <input type="text" name="end_user" value="{{ filters.end_user }}" placeholder="精确匹配..." data-i18n-placeholder="statistics.exact_match" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-28">
       </div>
 
       <!-- Actions -->
       <div class="flex gap-2 shrink-0">
-        <button type="submit" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">查询</button>
-        <a href="/admin/statistics" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">重置</a>
+        <button type="submit" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700" data-i18n="statistics.btn_query">查询</button>
+        <a href="/admin/statistics" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="common.reset">重置</a>
       </div>
     </div>
   </form>
@@ -83,20 +83,20 @@
 <!-- Summary cards -->
 <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="text-xs text-slate-500">总请求数</p>
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_total">总请求数</p>
     <p class="mt-1 text-2xl font-semibold text-slate-900" id="card-total-requests">{{ summary.total_requests }}</p>
   </div>
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="text-xs text-slate-500">成功率</p>
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_success">成功率</p>
     <p class="mt-1 text-2xl font-semibold text-emerald-600" id="card-success-rate">{{ summary.success_rate }}%</p>
     <p class="text-xs text-slate-400 mt-0.5">{{ summary.total_success }} / {{ summary.total_requests }}</p>
   </div>
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="text-xs text-slate-500">总 Tokens</p>
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_tokens">总 Tokens</p>
     <p class="mt-1 text-2xl font-semibold text-slate-900" id="card-total-tokens">{{ "{:,}".format(summary.total_tokens) }}</p>
   </div>
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="text-xs text-slate-500">总费用 (USD)</p>
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_cost">总费用 (USD)</p>
     <p class="mt-1 text-2xl font-semibold text-slate-900" id="card-total-cost">{{ summary.total_cost }}</p>
   </div>
 </div>
@@ -104,9 +104,9 @@
 <!-- Stats table -->
 <div class="rounded-2xl bg-white p-4 shadow-sm">
   <div class="mb-3 flex flex-wrap gap-2 items-end justify-between">
-    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">明细数据</p>
+    <p class="text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="statistics.table_title">明细数据</p>
     <div class="flex gap-2 items-center">
-      <input type="text" id="table-search" placeholder="搜索..." class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-40">
+      <input type="text" id="table-search" placeholder="搜索..." data-i18n-placeholder="common.search" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-40">
     </div>
   </div>
   <div id="stats-table-container" class="overflow-x-auto"></div>
@@ -138,7 +138,7 @@ function createStatsTable() {
     paginContainer.innerHTML = '';
 
     if (filtered.length === 0) {
-      container.innerHTML = '<p class="text-center text-slate-500 p-6 text-xs">暂无数据。</p>';
+      container.innerHTML = `<p class="text-center text-slate-500 p-6 text-xs">${t('statistics.no_data')}</p>`;
       return;
     }
 
@@ -154,16 +154,16 @@ function createStatsTable() {
     table.innerHTML = `
       <thead class="text-xs text-slate-700 uppercase bg-slate-50">
         <tr>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">日期</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_date')}</th>
           ${dimHeader}
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">请求数</th>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">成功</th>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">失败</th>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">成功率</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_requests')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_success')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_failed')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_success_rate')}</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">Prompt Tokens</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">Completion Tokens</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">Total Tokens</th>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">费用 (USD)</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_cost')}</th>
         </tr>
       </thead>
       <tbody>
@@ -197,19 +197,19 @@ function createStatsTable() {
     paginDiv.className = 'flex items-center gap-2';
 
     const prevBtn = document.createElement('button');
-    prevBtn.textContent = '上一页';
+    prevBtn.textContent = t('common.prev_page');
     prevBtn.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === 1 ? ' text-slate-400' : '');
     prevBtn.disabled = currentPage === 1;
     prevBtn.onclick = () => { currentPage--; render(); };
     paginDiv.appendChild(prevBtn);
 
     const pageInfo = document.createElement('span');
-    pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页（共 ${filtered.length} 条）`;
+    pageInfo.textContent = t('common.page_info_count').replace('{cur}', currentPage).replace('{total}', totalPages).replace('{count}', filtered.length);
     pageInfo.className = 'text-xs text-slate-500';
     paginDiv.appendChild(pageInfo);
 
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = '下一页';
+    nextBtn.textContent = t('common.next_page');
     nextBtn.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === totalPages ? ' text-slate-400' : '');
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.onclick = () => { currentPage++; render(); };
@@ -220,6 +220,7 @@ function createStatsTable() {
 
   document.getElementById('table-search').addEventListener('input', () => { currentPage = 1; render(); });
   render();
+  return render;
 }
 
 function escHtml(str) {
@@ -345,7 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('date-from').addEventListener('change', highlightActivePreset);
   document.getElementById('date-to').addEventListener('change', highlightActivePreset);
 
-  createStatsTable();
+  const renderStatsTable = createStatsTable();
+  window.i18n && window.i18n.onLangChange(renderStatsTable);
 });
 </script>
 {% endblock %}

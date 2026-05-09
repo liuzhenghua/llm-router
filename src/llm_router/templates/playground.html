@@ -12,19 +12,19 @@
   <!-- Left: request controls -->
   <div class="w-56 shrink-0 space-y-4">
     <div class="rounded-2xl bg-white p-4 shadow-sm">
-      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">请求配置</p>
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="playground.lbl_config">请求配置</p>
       <div class="space-y-3">
 
         <!-- API Type -->
         <div>
-          <label for="api-type" class="block text-xs text-slate-500 mb-1">API 类型</label>
+          <label for="api-type" class="block text-xs text-slate-500 mb-1" data-i18n="playground.lbl_api_type">API 类型</label>
           <select id="api-type" name="api_type" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs" required>
-            <optgroup label="OpenAI 协议">
+            <optgroup data-i18n-label="playground.oai_protocol" label="OpenAI 协议">
               <option value="openai_chat">OAI Chat Completions</option>
               <option value="openai_embeddings">Embeddings</option>
               <option value="openai_models">List Models</option>
             </optgroup>
-            <optgroup label="Anthropic 协议">
+            <optgroup data-i18n-label="playground.ant_protocol" label="Anthropic 协议">
               <option value="anthropic_chat">Anthropic Messages</option>
               <option value="anthropic_models">List Models</option>
             </optgroup>
@@ -44,11 +44,11 @@
         <!-- Action buttons -->
         <div class="flex gap-2 pt-1">
           <button type="submit" id="send-btn"
-            class="flex-1 rounded-xl bg-slate-800 px-3 py-2 text-xs text-white font-medium hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            class="flex-1 rounded-xl bg-slate-800 px-3 py-2 text-xs text-white font-medium hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed" data-i18n="playground.btn_send">
             发送请求
           </button>
           <button type="button" id="clear-btn"
-            class="rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-700 font-medium hover:bg-slate-50 transition">
+            class="rounded-xl border border-slate-300 px-3 py-2 text-xs text-slate-700 font-medium hover:bg-slate-50 transition" data-i18n="playground.btn_clear">
             清空
           </button>
         </div>
@@ -64,15 +64,15 @@
       <!-- Tab bar -->
       <div class="flex items-center bg-slate-900 border-b border-slate-700">
         <button type="button" class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
-          data-tab="req-panel" data-group="req-res">请求体</button>
+          data-tab="req-panel" data-group="req-res" data-i18n="playground.tab_request">请求体</button>
         <button type="button" class="tab-btn px-4 py-2 text-xs font-medium text-slate-300 hover:text-white transition"
-          data-tab="res-panel" data-group="req-res">响应体</button>
+          data-tab="res-panel" data-group="req-res" data-i18n="playground.tab_response">响应体</button>
 
         <!-- Status, time, copy on the right -->
         <div class="ml-auto mr-2 flex items-center gap-3">
-          <span class="text-xs text-slate-500">耗时: <span id="response-time" class="font-medium text-slate-400">--</span></span>
+          <span class="text-xs text-slate-500" data-i18n="playground.lbl_elapsed">耗时: <span id="response-time" class="font-medium text-slate-400">--</span></span>
           <span id="response-status"
-            class="inline-flex items-center rounded-full bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-300">
+            class="inline-flex items-center rounded-full bg-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-300" data-i18n="playground.status_unsent">
             未发送
           </span>
           <button type="button" id="copy-btn"
@@ -96,7 +96,7 @@
             spellcheck="false">{{ default_openai_payload }}</textarea>
         </div>
         <div id="no-payload-msg" class="hidden bg-slate-950 flex items-center justify-center" style="height: 65vh;">
-          <p class="text-xs text-slate-500">GET 请求，无请求体</p>
+          <p class="text-xs text-slate-500" data-i18n="playground.no_payload">GET 请求，无请求体</p>
         </div>
       </div>
 
@@ -104,7 +104,7 @@
       <div class="tab-panel hidden" id="res-panel">
         <pre id="response-body"
           class="overflow-y-auto bg-slate-950 px-4 py-3 text-xs font-mono text-slate-300 whitespace-pre-wrap break-all leading-5"
-          style="height: 65vh;"><span class="text-slate-500">等待发送请求...</span></pre>
+          style="height: 65vh;"><span class="text-slate-500" data-i18n="playground.waiting">等待发送请求...</span></pre>
       </div>
 
     </div>
@@ -233,11 +233,11 @@
 
     // Switch to response tab and show "sending" state
     activateTab('req-res', 'res-panel');
-    responseBody.innerHTML = '<span class="text-slate-400 italic">发送中...</span>';
-    setStatus('发送中', 'blue');
+    responseBody.innerHTML = `<span class="text-slate-400 italic">${t('playground.status_sending')}...</span>`;
+    setStatus(t('playground.status_sending'), 'blue');
     responseTime.textContent = '--';
     sendBtn.disabled = true;
-    sendBtn.textContent = '发送中...';
+    sendBtn.textContent = t('playground.status_sending') + '...';
 
     const startTime = Date.now();
 
@@ -248,7 +248,7 @@
 
       if (!isModels) {
         try { JSON.parse(formData.get('payload')); }
-        catch { throw new Error('JSON 格式有误，请检查请求报文'); }
+        catch { throw new Error(t('playground.json_error')); }
       } else {
         formData.set('payload', '{}');
       }
@@ -262,7 +262,7 @@
       responseTime.textContent = `${Date.now() - startTime}ms`;
 
       if (response.headers.get('content-type')?.includes('text/event-stream')) {
-        setStatus('流式响应', 'emerald');
+        setStatus(t('playground.status_stream'), 'emerald');
         const reader  = response.body.getReader();
         const decoder = new TextDecoder();
         responseBody.innerHTML = '';
@@ -274,24 +274,24 @@
         }
       } else {
         const data = await response.json();
-        setStatus(response.ok ? '成功 ' + response.status : '失败 ' + response.status,
+        setStatus((response.ok ? t('detail.status_success') : t('detail.status_fail')) + ' ' + response.status,
                   response.ok ? 'emerald' : 'rose');
         responseBody.innerHTML = highlightJSON(JSON.stringify(data, null, 2));
       }
     } catch (error) {
       responseTime.textContent = `${Date.now() - startTime}ms`;
-      setStatus('错误', 'rose');
-      responseBody.innerHTML = '<span class="text-rose-400">错误: ' + escapeHtml(error.message) + '</span>';
+      setStatus(t('playground.status_err'), 'rose');
+      responseBody.innerHTML = `<span class="text-rose-400">${t('playground.status_err')}: ` + escapeHtml(error.message) + '</span>';
     } finally {
       sendBtn.disabled = false;
-      sendBtn.textContent = '发送请求';
+      sendBtn.textContent = t('playground.btn_send');
     }
   });
 
   clearBtn.addEventListener('click', () => {
     activateTab('req-res', 'req-panel');
-    responseBody.innerHTML = '<span class="text-slate-500">等待发送请求...</span>';
-    setStatus('未发送', 'slate');
+    responseBody.innerHTML = `<span class="text-slate-500">${t('playground.waiting')}</span>`;
+    setStatus(t('playground.status_unsent'), 'slate');
     responseTime.textContent = '--';
   });
 

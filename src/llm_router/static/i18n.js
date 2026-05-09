@@ -177,6 +177,7 @@
     'playground.waiting': '等待发送请求...',
     'playground.json_error': 'JSON 格式有误，请检查请求报文',
     'playground.oai_protocol': 'OpenAI 协议', 'playground.ant_protocol': 'Anthropic 协议',
+    'playground.status_err': '错误',
     'docs.title': '接入文档', 'docs.copy': '复制',
     'docs.toc': '目录', 'docs.example_code': '示例代码',
     'docs.section_api': 'API 接入文档', 'docs.section_dev': '编程工具集成',
@@ -353,6 +354,7 @@
     'playground.waiting': 'Waiting for request...',
     'playground.json_error': 'Invalid JSON format, please check the payload',
     'playground.oai_protocol': 'OpenAI Protocol', 'playground.ant_protocol': 'Anthropic Protocol',
+    'playground.status_err': 'Error',
     'docs.title': 'API Documentation', 'docs.copy': 'Copy',
     'docs.toc': 'Contents', 'docs.example_code': 'Example Code',
     'docs.section_api': 'API Integration', 'docs.section_dev': 'Developer Tools',
@@ -405,6 +407,10 @@
     document.querySelectorAll('[data-i18n-title]').forEach(function (el) {
       var v = t(el.getAttribute('data-i18n-title'));
       if (v !== undefined) el.title = v;
+    });
+    document.querySelectorAll('[data-i18n-label]').forEach(function (el) {
+      var v = t(el.getAttribute('data-i18n-label'));
+      if (v !== undefined) el.label = v;
     });
     // Server-side pagination spans with data-i18n-page + data-i18n-total
     document.querySelectorAll('[data-i18n-page]').forEach(function (el) {
