@@ -2,7 +2,7 @@
 {% block page_content %}
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-4 flex items-center justify-between border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
   <div>
-    <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Requests</p>
+    <p class="text-xs uppercase tracking-[0.35em] text-slate-400" data-i18n="requests.page_title">Requests</p>
     <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="requests.title">请求日志</h1>
   </div>
   <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="requests.back">返回控制台</a>
@@ -10,11 +10,11 @@
 
 <div class="mb-4 flex flex-wrap gap-2 items-end">
   <div class="min-w-[180px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_request_id">Request ID</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_request_id">请求 ID</label>
     <input type="text" id="search-request-id" data-i18n-placeholder="requests.placeholder_request_id" placeholder="搜索 Request ID..." value="{{ filters.request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[180px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_upstream_request_id">Upstream Request ID</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_upstream_request_id">上游请求 ID</label>
     <input type="text" id="search-upstream-request-id" data-i18n-placeholder="requests.placeholder_upstream_id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[160px] flex-1">
@@ -27,7 +27,7 @@
     </select>
   </div>
   <div class="min-w-[160px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_provider_model">Provider Model</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_provider_model">模型源</label>
     <select id="search-provider-model-id" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       <option value="" data-i18n="requests.opt_all">全部</option>
       {% for m in provider_models_list %}
@@ -36,7 +36,7 @@
     </select>
   </div>
   <div class="min-w-[160px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_end_user">End User</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_end_user">终端用户</label>
     <input type="text" id="search-end-user" data-i18n-placeholder="requests.placeholder_end_user" value="{{ filters.end_user }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[140px] flex-1">

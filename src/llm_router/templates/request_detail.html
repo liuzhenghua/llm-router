@@ -144,10 +144,10 @@
         </button>
       </div>
       <div class="tab-panel hidden" id="req-body-panel">
-        <pre id="request-body-pre" class="overflow-x-auto overflow-y-auto max-h-[70vh] bg-slate-950 p-4 text-xs text-slate-100">{{ log.request_body or "" }}<span {% if not log.request_body %}data-i18n="detail.no_request"{% endif %}>未记录请求内容</span></pre>
+        <pre id="request-body-pre" class="overflow-x-auto overflow-y-auto max-h-[70vh] bg-slate-950 p-4 text-xs text-slate-100">{% if log.request_body %}{{ log.request_body }}{% else %}<span data-i18n="detail.no_request">未记录请求内容</span>{% endif %}</pre>
       </div>
       <div class="tab-panel hidden" id="res-body-panel">
-        <pre id="response-body-pre" class="overflow-x-auto overflow-y-auto max-h-[70vh] bg-slate-950 p-4 text-xs text-slate-100">{{ log.response_body or log.error_message or "" }}<span {% if not (log.response_body or log.error_message) %}data-i18n="detail.no_response"{% endif %}>未记录响应内容</span></pre>
+        <pre id="response-body-pre" class="overflow-x-auto overflow-y-auto max-h-[70vh] bg-slate-950 p-4 text-xs text-slate-100">{% if log.response_body or log.error_message %}{{ log.response_body or log.error_message }}{% else %}<span data-i18n="detail.no_response">未记录响应内容</span>{% endif %}</pre>
       </div>
     </div>
   </div>

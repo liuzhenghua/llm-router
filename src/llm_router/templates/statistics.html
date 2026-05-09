@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block page_content %}
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-6 border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
-  <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Statistics</p>
+  <p class="text-xs uppercase tracking-[0.35em] text-slate-400" data-i18n="statistics.page_title">Statistics</p>
   <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="statistics.title">请求统计</h1>
 </div>
 
@@ -35,9 +35,9 @@
       <div>
         <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_granularity">统计粒度</label>
         <div class="flex">
-          <button type="button" data-gran="day" class="gran-btn rounded-l-lg border px-3 py-1.5 text-xs font-medium">Day</button>
-          <button type="button" data-gran="month" class="gran-btn border-y border-r px-3 py-1.5 text-xs font-medium">Month</button>
-          <button type="button" data-gran="year" class="gran-btn rounded-r-lg border-y border-r px-3 py-1.5 text-xs font-medium">Year</button>
+          <button type="button" data-gran="day" class="gran-btn rounded-l-lg border px-3 py-1.5 text-xs font-medium" data-i18n="statistics.gran_day">Day</button>
+          <button type="button" data-gran="month" class="gran-btn border-y border-r px-3 py-1.5 text-xs font-medium" data-i18n="statistics.gran_month">Month</button>
+          <button type="button" data-gran="year" class="gran-btn rounded-r-lg border-y border-r px-3 py-1.5 text-xs font-medium" data-i18n="statistics.gran_year">Year</button>
         </div>
       </div>
 
@@ -46,15 +46,15 @@
         <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_group_by">分组维度</label>
         <select name="group_by" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
           <option value="none" {% if filters.group_by == 'none' %}selected{% endif %} data-i18n="statistics.group_none">不分组</option>
-          <option value="api_key" {% if filters.group_by == 'api_key' %}selected{% endif %}>API Key</option>
-          <option value="channel" {% if filters.group_by == 'channel' %}selected{% endif %}>Channel</option>
-          <option value="end_user" {% if filters.group_by == 'end_user' %}selected{% endif %}>End User</option>
+          <option value="api_key" {% if filters.group_by == 'api_key' %}selected{% endif %} data-i18n="statistics.opt_api_key">API Key</option>
+          <option value="channel" {% if filters.group_by == 'channel' %}selected{% endif %} data-i18n="statistics.opt_channel">渠道</option>
+          <option value="end_user" {% if filters.group_by == 'end_user' %}selected{% endif %} data-i18n="statistics.opt_end_user">终端用户</option>
         </select>
       </div>
 
       <!-- Optional filters -->
       <div>
-        <label class="mb-1 block text-xs text-slate-500">API Key</label>
+        <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_api_key">API Key</label>
         <select name="api_key_id" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
           <option value="">全部</option>
           {% for k in api_keys_list %}
@@ -63,11 +63,11 @@
         </select>
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-500">Channel</label>
+        <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_channel">渠道</label>
         <input type="text" name="channel" value="{{ filters.channel }}" placeholder="精确匹配..." data-i18n-placeholder="statistics.exact_match" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-28">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-500">End User</label>
+        <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_end_user">终端用户</label>
         <input type="text" name="end_user" value="{{ filters.end_user }}" placeholder="精确匹配..." data-i18n-placeholder="statistics.exact_match" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs w-28">
       </div>
 
