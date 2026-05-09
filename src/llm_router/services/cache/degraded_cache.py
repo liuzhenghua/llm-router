@@ -42,10 +42,11 @@ class DegradedRouteCache:
     """
 
     KEY_ROUTE_DEGRADED = "route:degraded:{route_id}"
-    DEFAULT_TTL = 3600  # 1小时过期
+    DEFAULT_TTL = 3600  # Redis TTL: 1小时
+    IN_MEMORY_TTL = 60  # 内存 TTL: 60秒，确保跨 pod 恢复后其他节点能在短时间内感知
 
     # 降级阈值
-    FAIL_COUNT_THRESHOLD = 10  # 连续失败 x 次后降级
+    FAIL_COUNT_THRESHOLD = 10  # 单节点连续失败 x 次后降级
 
     def __init__(self, dual_cache: DualCache):
         self._cache = dual_cache
@@ -62,21 +63,21 @@ class DegradedRouteCache:
         """
         cache_key = self._get_key(route_id)
 
-        # 读取内存
-        data = await self._cache._memory.get(cache_key)
-        if data is not None:
-            return self._from_dict(route_id, data)
-
-        # 读取 Redis
+        # 优先读取 Redis（多 pod 环境下以 Redis 为权威数据源）
         if self._cache._redis and self._cache._redis.is_available:
             raw = await self._cache._redis.get(cache_key)
             if raw:
                 from llm_router.services.cache.serializer import CacheSerializer
                 serializer = CacheSerializer()
                 cached = serializer.deserialize(raw)
-                # 回填内存
-                await self._cache._memory.set(cache_key, cached, self.DEFAULT_TTL)
+                # 回填内存（短 TTL）
+                await self._cache._memory.set(cache_key, cached, self.IN_MEMORY_TTL)
                 return self._from_dict(route_id, cached)
+
+        # 回读内存
+        data = await self._cache._memory.get(cache_key)
+        if data is not None:
+            return self._from_dict(route_id, data)
 
         return None
 
@@ -102,10 +103,10 @@ class DegradedRouteCache:
 
         cache_key = self._get_key(route_id)
 
-        # 写内存
-        await self._cache._memory.set(cache_key, data, self.DEFAULT_TTL)
+        # 写内存（短 TTL，确保跨 pod 恢复后其他节点能在 IN_MEMORY_TTL 秒内感知）
+        await self._cache._memory.set(cache_key, data, self.IN_MEMORY_TTL)
 
-        # 写 Redis
+        # 写 Redis（长 TTL，作为权威状态，跨 pod 共享）
         if self._cache._redis and self._cache._redis.is_available:
             from llm_router.services.cache.serializer import CacheSerializer
             serializer = CacheSerializer()
@@ -198,7 +199,7 @@ class DegradedRouteCache:
         }
 
         cache_key = self._get_key(route_id)
-        await self._cache._memory.set(cache_key, data, self.DEFAULT_TTL)
+        await self._cache._memory.set(cache_key, data, self.IN_MEMORY_TTL)
 
         if self._cache._redis and self._cache._redis.is_available:
             from llm_router.services.cache.serializer import CacheSerializer
