@@ -35,7 +35,8 @@ def test_degraded_type_for_status_separates_auth_failures():
     assert _degraded_type_for_status(status.HTTP_401_UNAUTHORIZED) == DegradedType.AUTH_FAILED
     assert _degraded_type_for_status(status.HTTP_402_PAYMENT_REQUIRED) == DegradedType.QUOTA_EXHAUSTED
     assert _degraded_type_for_status(status.HTTP_403_FORBIDDEN) == DegradedType.QUOTA_EXHAUSTED
-    assert _degraded_type_for_status(status.HTTP_429_TOO_MANY_REQUESTS) == DegradedType.QUOTA_EXHAUSTED
+    # 429: 速率限制，与 5xx 一样通过连续失败计数降级，不在立即降级逻辑中处理
+    assert _degraded_type_for_status(status.HTTP_429_TOO_MANY_REQUESTS) is None
     assert _degraded_type_for_status(status.HTTP_500_INTERNAL_SERVER_ERROR) is None
 
 

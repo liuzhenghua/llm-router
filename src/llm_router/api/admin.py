@@ -849,7 +849,7 @@ async def request_logs_page(
     api_key_id: int | None = Query(default=None),
     provider_model_id: int | None = Query(default=None),
     end_user: str | None = Query(default=None),
-    channel: str | None = Query(default=None),
+    status: str | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     _: None = Depends(require_admin),
 ):
@@ -886,9 +886,15 @@ async def request_logs_page(
     if end_user:
         stmt = stmt.where(RequestLog.end_user.contains(end_user))
         count_stmt = count_stmt.where(RequestLog.end_user.contains(end_user))
-    if channel:
-        stmt = stmt.where(RequestLog.channel.contains(channel))
-        count_stmt = count_stmt.where(RequestLog.channel.contains(channel))
+    if status == "success":
+        stmt = stmt.where(RequestLog.success == True)  # noqa: E712
+        count_stmt = count_stmt.where(RequestLog.success == True)  # noqa: E712
+    elif status == "failed":
+        stmt = stmt.where(RequestLog.success == False)  # noqa: E712
+        count_stmt = count_stmt.where(RequestLog.success == False)  # noqa: E712
+    elif status == "error":
+        stmt = stmt.where(RequestLog.status_code >= 500)
+        count_stmt = count_stmt.where(RequestLog.status_code >= 500)
     total = (await session.execute(count_stmt)).scalar() or 0
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
@@ -944,7 +950,7 @@ async def request_logs_page(
                 "api_key_id": api_key_id or "",
                 "provider_model_id": provider_model_id or "",
                 "end_user": end_user or "",
-                "channel": channel or "",
+                "status": status or "",
             },
             "api_keys_list": [{"id": k.id, "name": k.name} for k in api_keys_list],
             "provider_models_list": [{"id": m.id, "name": m.name} for m in provider_models_list],

@@ -40,13 +40,17 @@ MAX_RETRY_PER_GROUP = 3
 
 
 def _degraded_type_for_status(status_code: int) -> DegradedType | None:
-    """Map upstream HTTP status codes to persistent degraded types."""
+    """Map upstream HTTP status codes to persistent degraded types.
+
+    - 401: 认证失败，立即降级
+    - 402/403: 配额/权限问题，立即降级
+    - 429: 速率限制，与 5xx 一样通过连续失败计数降级，不立即降级
+    """
     if status_code == status.HTTP_401_UNAUTHORIZED:
         return DegradedType.AUTH_FAILED
     if status_code in (
         status.HTTP_402_PAYMENT_REQUIRED,
         status.HTTP_403_FORBIDDEN,
-        status.HTTP_429_TOO_MANY_REQUESTS,
     ):
         return DegradedType.QUOTA_EXHAUSTED
     return None
@@ -180,8 +184,7 @@ async def handle_proxy_request(
                 last_error = exc
                 attempted_route_ids.add(current_route_id)
 
-                # 401/402/403/429：上游 provider 自身问题（认证失败/余额不足/权限不足/限流），
-                # 标记当前 route 为 degraded，然后在组内重试其他 provider
+                # 401/402/403：上游 provider 自身问题，立即标记 degraded
                 degraded_type = _degraded_type_for_status(exc.status_code)
                 if degraded_type is not None:
                     if degraded_cache:
@@ -191,7 +194,21 @@ async def handle_proxy_request(
                             fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                         )
 
-                # 4xx 其他错误（除 401/402/403/429）：直接返回，不重试不降级
+                # 429：速率限制，与 5xx 一样通过连续失败计数降级
+                elif exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+                    if degraded_cache:
+                        new_count = await degraded_cache.increment_fail_count(current_route_id)
+                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                            await degraded_cache.mark_degraded(
+                                route_id=current_route_id,
+                                degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                                fail_count=new_count,
+                            )
+                            logger.warning(
+                                f"Route {current_route_id} marked as quota_exhausted after {new_count} 429 errors"
+                            )
+
+                # 4xx 其他错误：直接返回，不重试不降级
                 elif 400 <= exc.status_code < 500:
                     raise exc
 
@@ -311,8 +328,7 @@ async def handle_embedding_request(
                 last_error = exc
                 attempted_route_ids.add(current_route_id)
 
-                # 401/402/403/429：上游 provider 自身问题（认证失败/余额不足/权限不足/限流），
-                # 标记当前 route 为 degraded，然后在组内重试其他 provider
+                # 401/402/403：上游 provider 自身问题，立即标记 degraded
                 degraded_type = _degraded_type_for_status(exc.status_code)
                 if degraded_type is not None:
                     if degraded_cache:
@@ -322,7 +338,21 @@ async def handle_embedding_request(
                             fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                         )
 
-                # 4xx 其他错误（除 401/402/403/429）：直接返回，不重试不降级
+                # 429：速率限制，与 5xx 一样通过连续失败计数降级
+                elif exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+                    if degraded_cache:
+                        new_count = await degraded_cache.increment_fail_count(current_route_id)
+                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                            await degraded_cache.mark_degraded(
+                                route_id=current_route_id,
+                                degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                                fail_count=new_count,
+                            )
+                            logger.warning(
+                                f"Route {current_route_id} marked as quota_exhausted after {new_count} 429 errors"
+                            )
+
+                # 4xx 其他错误：直接返回，不重试不降级
                 elif 400 <= exc.status_code < 500:
                     raise exc
 

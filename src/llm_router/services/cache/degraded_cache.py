@@ -45,7 +45,7 @@ class DegradedRouteCache:
     DEFAULT_TTL = 3600  # 1小时过期
 
     # 降级阈值
-    FAIL_COUNT_THRESHOLD = 5  # 连续失败 5 次后降级
+    FAIL_COUNT_THRESHOLD = 10  # 连续失败 x 次后降级
 
     def __init__(self, dual_cache: DualCache):
         self._cache = dual_cache
