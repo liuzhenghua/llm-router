@@ -30,7 +30,7 @@
     <input type="text" id="search-name" placeholder="搜索名称..." data-i18n-placeholder="api_keys.search_name" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[150px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1" data-i18n="api_keys.col_user">用户 (End User)</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="api_keys.col_user">用户</label>
     <input type="text" id="search-user" placeholder="搜索用户..." data-i18n-placeholder="api_keys.search_user" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="shrink-0 w-[130px]">
@@ -94,9 +94,9 @@
           <option value="false" data-i18n="api_keys.log_off">关闭</option>
         </select>
       </label>
-      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">时区 <span class="text-slate-400">（IANA 格式，例如 Asia/Shanghai，留空则不修改）</span></span><input name="timezone" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">默认渠道 (Channel) <span class="text-slate-400">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_end_user">End User</span> <span class="text-slate-400" data-i18n="api_keys.lbl_end_user_hint">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" data-i18n-placeholder="api_keys.placeholder_example_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_timezone">时区</span> <span class="text-slate-400" data-i18n="api_keys.lbl_timezone_hint">（IANA 格式，例如 Asia/Shanghai，留空则不修改）</span></span><input name="timezone" data-i18n-placeholder="api_keys.placeholder_example_tz" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_channel">默认渠道 (Channel)</span> <span class="text-slate-400" data-i18n="api_keys.lbl_channel_hint">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" data-i18n-placeholder="api_keys.placeholder_example_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="common.save">保存</button>
     </form>
   </div>
@@ -112,7 +112,7 @@
     <form id="topup-api-key-form" class="grid gap-4">
       <input type="hidden" name="id" id="topup-id">
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_topup_amount">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_remark">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_remark">备注</span><input name="remark" data-i18n-placeholder="api_keys.placeholder_example_remark" placeholder="例如 手动充值" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700" data-i18n="api_keys.btn_confirm_topup">确认充值</button>
     </form>
   </div>
@@ -128,18 +128,18 @@
     <form method="post" action="/admin/api-keys" class="grid gap-4 md:grid-cols-2" id="create-api-key-form">
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.name">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_initial_balance">初始余额</span><input name="balance" type="number" step="0.01" min="0" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" value="5" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_daily_limit">日限额</span> <span class="text-slate-400" data-i18n="api_keys.lbl_daily_limit_hint">留空不限制</span></span><input name="daily_budget_limit" data-i18n-placeholder="api_keys.placeholder_example_100" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_qps">QPS 限制</span><input name="qps_limit" type="number" min="1" value="5" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="block md:col-span-2">
-        <span class="mb-1 block text-xs text-slate-600">允许访问的逻辑模型</span>
+        <span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_allowed_models">允许访问的逻辑模型</span>
         <div class="model-selector" id="model-selector-create">
           <div class="selected-tags flex flex-wrap gap-2 mb-2 min-h-[32px]"></div>
           <div class="dropdown-wrapper relative">
             <input type="text" class="model-search w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="搜索模型...">
             <div class="dropdown hidden absolute bottom-full left-0 right-0 z-10 mb-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div class="sticky top-0 flex gap-2 border-b border-slate-100 bg-white px-3 py-2">
-                <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800">全选</button>
-                <button type="button" class="clear-all text-xs text-slate-500 hover:text-slate-700">清空</button>
+                <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800" data-i18n="common.select_all">全选</button>
+                <button type="button" class="clear-all text-xs text-slate-500 hover:text-slate-700" data-i18n="common.clear_all">清空</button>
               </div>
               <div class="dropdown-items"></div>
             </div>
@@ -147,9 +147,9 @@
           <input type="hidden" name="allowed_models" class="hidden-input" value="">
         </div>
       </div>
-      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">时区 <span class="text-slate-400">（IANA 格式，留空使用系统默认值 {{ default_tz }}）</span></span><input name="timezone" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">默认渠道 (Channel) <span class="text-slate-400">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_end_user">End User</span> <span class="text-slate-400" data-i18n="api_keys.lbl_end_user_hint">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" data-i18n-placeholder="api_keys.placeholder_example_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_timezone">时区</span> <span class="text-slate-400">（IANA 格式，留空使用系统默认值 {{ default_tz }}）</span></span><input name="timezone" data-i18n-placeholder="api_keys.placeholder_example_tz" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_channel">默认渠道 (Channel)</span> <span class="text-slate-400" data-i18n="api_keys.lbl_channel_hint">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" data-i18n-placeholder="api_keys.placeholder_example_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="api_keys.btn_create">创建 API Key</button>
     </form>
   </div>
