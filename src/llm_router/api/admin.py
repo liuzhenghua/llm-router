@@ -115,6 +115,11 @@ async def require_admin(request: Request) -> None:
         )
 
 
+def _get_lang(request: Request) -> str:
+    lang = request.cookies.get("llm-router-lang", "en")
+    return lang if lang in ("zh", "en") else "en"
+
+
 def _render_admin(
     request: Request,
     template: str,
@@ -124,7 +129,7 @@ def _render_admin(
     title: str,
     status_code: int = 200,
 ):
-    payload = {"request": request, "nav_active": nav_active, "title": title}
+    payload = {"request": request, "nav_active": nav_active, "title": title, "lang": _get_lang(request)}
     payload.update(context)
     return request.app.state.templates.TemplateResponse(request, template, payload, status_code=status_code)
 
@@ -142,6 +147,7 @@ async def setup_page(request: Request):
         "setup.html",
         {
             "request": request,
+            "lang": _get_lang(request),
             "error": None,
             "table_missing": table_missing,
             "create_sql_mysql": create_sql_mysql,
@@ -200,7 +206,7 @@ async def login_page(request: Request):
     session = request.state.db
     if not await _admin_user_service.has_any_user(session):
         return _redirect("/admin/setup")
-    return request.app.state.templates.TemplateResponse(request, "login.html", {"request": request, "error": None})
+    return request.app.state.templates.TemplateResponse(request, "login.html", {"request": request, "lang": _get_lang(request), "error": None})
 
 
 @public_router.post("/login")
@@ -212,7 +218,7 @@ async def login_action(request: Request, username: str = Form(...), password: st
     return request.app.state.templates.TemplateResponse(
         request,
         "login.html",
-        {"request": request, "error": "用户名或密码错误"},
+        {"request": request, "lang": _get_lang(request), "error": "用户名或密码错误"},
         status_code=400,
     )
 
@@ -1293,6 +1299,18 @@ async def docs_page(request: Request, _: None = Depends(require_admin)):
     return _render_admin(
         request,
         "docs.html",
+        {"base_url": base_url},
+        nav_active="docs",
+        title="Docs",
+    )
+
+
+@protected_router.get("/docs/en")
+async def docs_page_en(request: Request, _: None = Depends(require_admin)):
+    base_url = str(request.base_url).rstrip("/")
+    return _render_admin(
+        request,
+        "docs_en.html",
         {"base_url": base_url},
         nav_active="docs",
         title="Docs",

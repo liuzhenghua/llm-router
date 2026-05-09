@@ -13,37 +13,37 @@
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-4 flex items-center justify-between border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">API Keys</p>
-    <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900">API Key 管理</h1>
+    <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="api_keys.title">API Key 管理</h1>
   </div>
-  <button type="button" onclick="openModal('create-api-key-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增 API Key</button>
+  <button type="button" onclick="openModal('create-api-key-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white" data-i18n="api_keys.add">新增 API Key</button>
 </div>
 
 {% if raw_api_key %}
 <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
-  新建 API Key 明文，仅展示一次：<code class="font-semibold">{{ raw_api_key }}</code>
+  <span data-i18n="api_keys.new_key_notice">新建 API Key 明文，仅展示一次：</span><code class="font-semibold">{{ raw_api_key }}</code>
 </div>
 {% endif %}
 
 <div class="mb-4 flex flex-wrap gap-2 items-end">
   <div class="min-w-[180px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">名称</label>
-    <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="common.name">名称</label>
+    <input type="text" id="search-name" placeholder="搜索名称..." data-i18n-placeholder="api_keys.search_name" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[150px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">用户 (End User)</label>
-    <input type="text" id="search-user" placeholder="搜索用户..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="api_keys.col_user">用户 (End User)</label>
+    <input type="text" id="search-user" placeholder="搜索用户..." data-i18n-placeholder="api_keys.search_user" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="shrink-0 w-[130px]">
-    <label class="block text-xs text-slate-500 mb-1">状态</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="common.status">状态</label>
     <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      <option value="">全部</option>
+      <option value="" data-i18n="common.all">全部</option>
       <option value="active">active</option>
       <option value="disabled">disabled</option>
     </select>
   </div>
   <div class="flex gap-2 shrink-0">
-    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
-    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</button>
   </div>
 </div>
 
@@ -54,25 +54,25 @@
 <dialog id="edit-api-key-modal" class="w-full max-w-3xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
-      <h3 class="text-lg font-semibold text-slate-800">编辑 API Key</h3>
+      <h3 class="text-lg font-semibold text-slate-800" data-i18n="api_keys.modal_edit_title">编辑 API Key</h3>
       <button type="button" onclick="closeModal('edit-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form id="edit-api-key-form" class="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="id" id="edit-id">
-      <label class="block"><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="block"><span class="mb-1 block text-xs text-slate-600">状态</span><select name="status" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="active">active</option><option value="disabled">disabled</option></select></label>
-      <label class="block"><span class="mb-1 block text-xs text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="block"><span class="mb-1 block text-xs text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600" data-i18n="common.name">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600" data-i18n="common.status">状态</span><select name="status" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="active">active</option><option value="disabled">disabled</option></select></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600"><span data-i18n="api_keys.lbl_daily_limit">日限额</span> <span class="text-slate-400" data-i18n="api_keys.lbl_daily_limit_hint">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_qps">QPS 限制</span><input name="qps_limit" type="number" min="1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="block md:col-span-2">
-        <span class="mb-1 block text-xs text-slate-600">允许访问的逻辑模型</span>
+        <span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_allowed_models">允许访问的逻辑模型</span>
         <div class="model-selector" id="model-selector-edit">
           <div class="selected-tags flex flex-wrap gap-2 mb-2 min-h-[32px]"></div>
           <div class="dropdown-wrapper relative">
-            <input type="text" class="model-search w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="搜索模型...">
+            <input type="text" class="model-search w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="搜索模型..." data-i18n-placeholder="api_keys.search_model">
             <div class="dropdown hidden absolute bottom-full left-0 right-0 z-10 mb-1 max-h-60 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
               <div class="sticky top-0 flex gap-2 border-b border-slate-100 bg-white px-3 py-2">
-                <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800">全选</button>
-                <button type="button" class="clear-all text-xs text-slate-500 hover:text-slate-700">清空</button>
+                <button type="button" class="select-all text-xs text-sky-600 hover:text-sky-800" data-i18n="common.select_all">全选</button>
+                <button type="button" class="clear-all text-xs text-slate-500 hover:text-slate-700" data-i18n="common.clear_all">清空</button>
               </div>
               <div class="dropdown-items"></div>
             </div>
@@ -80,24 +80,24 @@
           <input type="hidden" name="allowed_models" class="hidden-input" value="">
         </div>
       </div>
-      <label class="block"><span class="mb-1 block text-xs text-slate-600">记录请求内容</span>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_req_logging">记录请求内容</span>
         <select name="request_content_logging_enabled" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-          <option value="">默认（跟随全局配置）</option>
-          <option value="true">开启</option>
-          <option value="false">关闭</option>
+          <option value="" data-i18n="api_keys.log_default">默认（跟随全局配置）</option>
+          <option value="true" data-i18n="api_keys.log_on">开启</option>
+          <option value="false" data-i18n="api_keys.log_off">关闭</option>
         </select>
       </label>
-      <label class="block"><span class="mb-1 block text-xs text-slate-600">记录响应内容</span>
+      <label class="block"><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_res_logging">记录响应内容</span>
         <select name="response_content_logging_enabled" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
-          <option value="">默认（跟随全局配置）</option>
-          <option value="true">开启</option>
-          <option value="false">关闭</option>
+          <option value="" data-i18n="api_keys.log_default">默认（跟随全局配置）</option>
+          <option value="true" data-i18n="api_keys.log_on">开启</option>
+          <option value="false" data-i18n="api_keys.log_off">关闭</option>
         </select>
       </label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">时区 <span class="text-slate-400">（IANA 格式，例如 Asia/Shanghai，留空则不修改）</span></span><input name="timezone" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">默认渠道 (Channel) <span class="text-slate-400">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">保存</button>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="common.save">保存</button>
     </form>
   </div>
 </dialog>
@@ -106,14 +106,14 @@
 <dialog id="topup-api-key-modal" class="w-full max-w-xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
-      <h3 class="text-lg font-semibold text-slate-800">充值</h3>
+      <h3 class="text-lg font-semibold text-slate-800" data-i18n="api_keys.modal_topup_title">充值</h3>
       <button type="button" onclick="closeModal('topup-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form id="topup-api-key-form" class="grid gap-4">
       <input type="hidden" name="id" id="topup-id">
-      <label><span class="mb-1 block text-xs text-slate-600">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700">确认充值</button>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_topup_amount">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_remark">备注</span><input name="remark" placeholder="例如 手动充值" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700" data-i18n="api_keys.btn_confirm_topup">确认充值</button>
     </form>
   </div>
 </dialog>
@@ -122,12 +122,12 @@
 <dialog id="create-api-key-modal" class="w-full max-w-3xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
-      <h3 class="text-lg font-semibold text-slate-800">创建 API Key</h3>
+      <h3 class="text-lg font-semibold text-slate-800" data-i18n="api_keys.modal_create_title">创建 API Key</h3>
       <button type="button" onclick="closeModal('create-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form method="post" action="/admin/api-keys" class="grid gap-4 md:grid-cols-2" id="create-api-key-form">
-      <label><span class="mb-1 block text-xs text-slate-600">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">初始余额</span><input name="balance" type="number" step="0.01" min="0" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.name">名称</span><input name="name" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_initial_balance">初始余额</span><input name="balance" type="number" step="0.01" min="0" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">日限额 <span class="text-slate-400">留空不限制</span></span><input name="daily_budget_limit" placeholder="例如 100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600">QPS 限制</span><input name="qps_limit" type="number" min="1" value="5" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="block md:col-span-2">
@@ -150,7 +150,7 @@
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">End User <span class="text-slate-400">（可选，作为此 Key 的默认 x-end-user 值）</span></span><input name="end_user" placeholder="例如 user-123" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">时区 <span class="text-slate-400">（IANA 格式，留空使用系统默认值 {{ default_tz }}）</span></span><input name="timezone" placeholder="例如 Asia/Shanghai" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="block md:col-span-2"><span class="mb-1 block text-xs text-slate-600">默认渠道 (Channel) <span class="text-slate-400">（可选，作为此 Key 的默认 x-channel 值，例如 PERSONAL）</span></span><input name="default_channel" placeholder="例如 PERSONAL" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">创建 API Key</button>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="api_keys.btn_create">创建 API Key</button>
     </form>
   </div>
 </dialog>
@@ -159,13 +159,13 @@
 <dialog id="reveal-key-modal" class="w-full max-w-xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
-      <h3 class="text-lg font-semibold text-slate-800">查看 API Key</h3>
+      <h3 class="text-lg font-semibold text-slate-800" data-i18n="api_keys.modal_reveal_title">查看 API Key</h3>
       <button type="button" onclick="closeModal('reveal-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
-    <div class="mb-2 text-xs text-slate-500">请注意保持此 Key 的机密，不要泄露给无关人员。</div>
+    <div class="mb-2 text-xs text-slate-500" data-i18n="api_keys.reveal_notice">请注意保持此 Key 的机密，不要泄露给无关人员。</div>
     <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
       <code id="reveal-key-value" class="flex-1 break-all text-sm font-semibold text-slate-800 select-all"></code>
-      <button type="button" onclick="copyRevealedKey()" class="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs hover:bg-slate-100">复制</button>
+      <button type="button" onclick="copyRevealedKey()" class="shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-xs hover:bg-slate-100" data-i18n="api_keys.btn_copy_key">复制</button>
     </div>
   </div>
 </dialog>
@@ -198,7 +198,7 @@ function renderTable() {
   paginationContainer.innerHTML = '';
 
   if (filteredKeys.length === 0) {
-    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关 API Key。</p>';
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">' + t('api_keys.no_data') + '</p>';
     return;
   }
 
@@ -210,13 +210,13 @@ function renderTable() {
   table.innerHTML = `
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">用户</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">余额</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">今日消费</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.name')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('api_keys.col_user')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.status')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('api_keys.col_balance')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('api_keys.col_daily_spend')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">QPS</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.actions')}</th>
       </tr>
     </thead>
     <tbody>
@@ -234,11 +234,11 @@ function renderTable() {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.daily_spend_amount}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.qps_limit}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
-        <button type="button" onclick='openEditModal(${JSON.stringify(item)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
-        <button type="button" onclick='openTopupModal(${JSON.stringify(item)})' class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">充值</button>
-        ${item.has_key ? `<button type="button" onclick="revealKey(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">查看 Key</button>` : ''}
-        ${item.status === 'active' ? `<button type="button" onclick="disableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">禁用</button>` : `<button type="button" onclick="enableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">启用</button>`}
-        <button type="button" onclick="destroyApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs text-rose-800">删除</button>
+        <button type="button" onclick='openEditModal(${JSON.stringify(item)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
+        <button type="button" onclick='openTopupModal(${JSON.stringify(item)})' class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">${t('api_keys.btn_topup')}</button>
+        ${item.has_key ? `<button type="button" onclick="revealKey(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">${t('api_keys.btn_reveal')}</button>` : ''}
+        ${item.status === 'active' ? `<button type="button" onclick="disableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">${t('common.disable')}</button>` : `<button type="button" onclick="enableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">${t('common.enable')}</button>`}
+        <button type="button" onclick="destroyApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs text-rose-800">${t('common.delete')}</button>
       </div></td>
     `;
     tbody.appendChild(tr);
@@ -250,19 +250,19 @@ function renderTable() {
   paginDiv.className = 'flex items-center gap-2';
 
   const prevButton = document.createElement('button');
-  prevButton.textContent = '上一页';
+  prevButton.textContent = t('common.prev_page');
   prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === 1 ? ' text-slate-400' : '');
   prevButton.disabled = currentPage === 1;
   prevButton.onclick = () => { currentPage--; renderTable(); };
   paginDiv.appendChild(prevButton);
 
   const pageInfo = document.createElement('span');
-  pageInfo.textContent = `第 ${currentPage} / ${totalPages} 页`;
+  pageInfo.textContent = t('common.page_info').replace('{cur}', currentPage).replace('{total}', totalPages);
   pageInfo.className = 'text-xs text-slate-500';
   paginDiv.appendChild(pageInfo);
 
   const nextButton = document.createElement('button');
-  nextButton.textContent = '下一页';
+  nextButton.textContent = t('common.next_page');
   nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === totalPages ? ' text-slate-400' : '');
   nextButton.disabled = currentPage === totalPages;
   nextButton.onclick = () => { currentPage++; renderTable(); };
@@ -295,6 +295,7 @@ document.getElementById('search-user').addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   renderTable();
 });
+window.i18n && window.i18n.onLangChange(renderTable);
 
 var logicalModels = {{ logical_models|tojson }};
 
@@ -365,7 +366,7 @@ function createModelSelector(selector, initialSelected) {
     );
 
     if (!list.length) {
-      els.items.innerHTML = '<div class="px-4 py-2 text-slate-400">无匹配模型</div>';
+      els.items.innerHTML = '<div class="px-4 py-2 text-slate-400">' + t('api_keys.no_match_model') + '</div>';
       return;
     }
 
@@ -498,18 +499,18 @@ document.getElementById('edit-api-key-form').addEventListener('submit', function
         }
         renderTable();
         closeModal('edit-api-key-modal');
-        showToast('保存成功');
+        showToast(t('api_keys.toast_saved'));
       } else {
-        showToast(result.error || '保存失败', 'error');
+        showToast(result.error || t('common.save_fail'), 'error');
       }
     })
-    .catch(() => showToast('网络错误，请重试', 'error'));
+    .catch(() => showToast(t('common.network_error'), 'error'));
 });
 
 // ---- Topup Modal ----
 function openTopupModal(item) {
   document.getElementById('topup-id').value = item.id;
-  document.getElementById('topup-api-key-modal').querySelector('h3').textContent = '为 ' + item.name + ' 充值';
+  document.getElementById('topup-api-key-modal').querySelector('h3').textContent = t('api_keys.modal_topup_title') + ' — ' + item.name;
   document.getElementById('topup-api-key-form').querySelector('[name="amount"]').value = '10';
   document.getElementById('topup-api-key-form').querySelector('[name="remark"]').value = '';
   openModal('topup-api-key-modal');
@@ -525,31 +526,31 @@ document.getElementById('topup-api-key-form').addEventListener('submit', functio
       if (res.ok || res.redirected) {
         window.location.reload();
       } else {
-        showToast('充值失败', 'error');
+        showToast(t('api_keys.toast_topup_fail'), 'error');
       }
     })
-    .catch(() => showToast('网络错误，请重试', 'error'));
+    .catch(() => showToast(t('common.network_error'), 'error'));
 });
 
 // ---- Disable/Enable API Key ----
 function disableApiKey(id, name) {
-  if (!confirm('确认禁用 ' + name + ' 吗？')) return;
+  if (!confirm(t('api_keys.confirm_disable').replace('{name}', name))) return;
   fetch('/admin/api-keys/' + id + '/delete', { method: 'POST' })
     .then(res => {
       if (res.ok || res.redirected) {
         const keyIndex = allApiKeys.findIndex(k => k.id == id);
         if (keyIndex > -1) allApiKeys[keyIndex].status = 'disabled';
         renderTable();
-        showToast(name + ' 已禁用');
+        showToast(t('api_keys.toast_disabled').replace('{name}', name));
       } else {
-        showToast('操作失败', 'error');
+        showToast(t('common.op_fail'), 'error');
       }
     })
-    .catch(() => showToast('网络错误，请重试', 'error'));
+    .catch(() => showToast(t('common.network_error'), 'error'));
 }
 
 function enableApiKey(id, name) {
-  if (!confirm('确认启用 ' + name + ' 吗？')) return;
+  if (!confirm(t('api_keys.confirm_enable').replace('{name}', name))) return;
   fetch('/admin/api-keys/' + id + '/enable', { method: 'POST' })
     .then(res => res.json())
     .then(result => {
@@ -557,17 +558,17 @@ function enableApiKey(id, name) {
         const keyIndex = allApiKeys.findIndex(k => k.id == id);
         if (keyIndex > -1) allApiKeys[keyIndex].status = 'active';
         renderTable();
-        showToast(name + ' 已启用');
+        showToast(t('api_keys.toast_enabled').replace('{name}', name));
       } else {
-        showToast(result.error || '操作失败', 'error');
+        showToast(result.error || t('common.op_fail'), 'error');
       }
     })
-    .catch(() => showToast('网络错误，请重试', 'error'));
+    .catch(() => showToast(t('common.network_error'), 'error'));
 }
 
 // ---- Destroy (hard delete) API Key ----
 function destroyApiKey(id, name) {
-  if (!confirm('确认删除 「' + name + '」 吗？\n\n该 API Key 将被软删除（保留历史账单和日志），立即失效无法继续使用。')) return;
+  if (!confirm(t('api_keys.confirm_delete').replace('{name}', name))) return;
   fetch('/admin/api-keys/' + id + '/destroy', { method: 'POST' })
     .then(res => res.json())
     .then(result => {
@@ -576,19 +577,19 @@ function destroyApiKey(id, name) {
         const totalPages = Math.ceil(allApiKeys.length / rowsPerPage);
         if (currentPage > 1 && currentPage > totalPages) currentPage = Math.max(1, totalPages);
         renderTable();
-        showToast('「' + name + '」 已永久删除');
+        showToast(t('api_keys.toast_deleted').replace('{name}', name));
       } else {
-        showToast(result.error || '删除失败', 'error');
+        showToast(result.error || t('common.delete_fail'), 'error');
       }
     })
-    .catch(() => showToast('网络错误，请重试', 'error'));
+    .catch(() => showToast(t('common.network_error'), 'error'));
 }
 
 // ---- Reveal API Key ----
 function revealKey(id) {
   const modal = document.getElementById('reveal-key-modal');
   const display = document.getElementById('reveal-key-value');
-  display.textContent = '载入中...';
+  display.textContent = t('common.loading');
   openModal('reveal-key-modal');
   fetch('/admin/api-keys/' + id + '/reveal')
     .then(res => res.json())
@@ -596,10 +597,10 @@ function revealKey(id) {
       if (result.ok) {
         display.textContent = result.key;
       } else {
-        display.textContent = result.error || '获取失败';
+        display.textContent = result.error || t('common.op_fail');
       }
     })
-    .catch(() => { display.textContent = '网络错误，请重试'; });
+    .catch(() => { display.textContent = t('common.network_error'); });
 }
 
 function copyRevealedKey() {
@@ -607,9 +608,9 @@ function copyRevealedKey() {
   if (!text || text === '载入中...') return;
   const modal = document.getElementById('reveal-key-modal');
   copyText(text, function() {
-    showToast('已复制到剪贴板');
+    showToast(t('api_keys.toast_copied'));
   }, function() {
-    showToast('复制失败', 'error');
+    showToast(t('api_keys.toast_copy_fail'), 'error');
   }, {
     container: modal || document.body
   });

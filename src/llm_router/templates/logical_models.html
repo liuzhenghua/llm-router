@@ -3,27 +3,27 @@
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-4 flex items-center justify-between border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Logical Models</p>
-    <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900">逻辑模型</h1>
+    <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="logical.title">逻辑模型</h1>
   </div>
-  <button type="button" onclick="openModal('create-logical-model-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增逻辑模型</button>
+  <button type="button" onclick="openModal('create-logical-model-modal')" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white" data-i18n="logical.add">新增逻辑模型</button>
 </div>
 
 <div class="mb-4 flex flex-wrap gap-2 items-end">
   <div class="min-w-[180px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">名称</label>
-    <input type="text" id="search-name" placeholder="搜索名称..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="common.name">名称</label>
+    <input type="text" id="search-name" placeholder="搜索名称..." data-i18n-placeholder="api_keys.search_name" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="shrink-0 w-[130px]">
-    <label class="block text-xs text-slate-500 mb-1">状态</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="common.status">状态</label>
     <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      <option value="">全部</option>
+      <option value="" data-i18n="common.all">全部</option>
       <option value="active">active</option>
       <option value="disabled">disabled</option>
     </select>
   </div>
   <div class="flex gap-2 shrink-0">
-    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
-    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</button>
   </div>
 </div>
 
@@ -33,12 +33,12 @@
 {% for item in logical_models %}
 <dialog id="edit-logical-model-modal-{{ item.id }}" class="w-full max-w-2xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">编辑逻辑模型</h3><button type="button" onclick='closeModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800" data-i18n="logical.modal_edit_title">编辑逻辑模型</h3><button type="button" onclick='closeModal("edit-logical-model-modal-{{ item.id }}")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
     <form id="edit-logical-model-form-{{ item.id }}" method="post" action="/admin/logical-models/{{ item.id }}" class="grid gap-4">
-      <label><span class="mb-1 block text-xs text-slate-600">模型名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_active" value="true">启用</label>
-      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white">保存</button>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_model_name">模型名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.description">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_active" value="true"><span data-i18n="logical.lbl_enable">启用</span></label>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white" data-i18n="common.save">保存</button>
     </form>
   </div>
 </dialog>
@@ -46,22 +46,22 @@
 
 <dialog id="create-logical-model-modal" class="w-full max-w-2xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">创建逻辑模型</h3><button type="button" onclick='closeModal("create-logical-model-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800" data-i18n="logical.modal_create_title">创建逻辑模型</h3><button type="button" onclick='closeModal("create-logical-model-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
     <form method="post" action="/admin/logical-models" class="grid gap-4">
-      <label><span class="mb-1 block text-xs text-slate-600">模型名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
-      <label><span class="mb-1 block text-xs text-slate-600">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <button type="submit" class="rounded-xl bg-sky-600 px-4 py-2 text-sm text-white">创建</button>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_model_name">模型名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.description">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <button type="submit" class="rounded-xl bg-sky-600 px-4 py-2 text-sm text-white" data-i18n="logical.modal_create_title">创建</button>
     </form>
   </div>
 </dialog>
 <dialog id="routes-modal" class="w-full max-w-5xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">路由规则</h3><button type="button" onclick='closeModal("routes-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800" data-i18n="logical.modal_routes_title">路由规则</h3><button type="button" onclick='closeModal("routes-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <input type="text" id="routes-search" placeholder="搜索..." class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       </div>
-      <button type="button" onclick="openCreateRouteModal()" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white">新增路由</button>
+      <button type="button" onclick="openCreateRouteModal()" class="rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-medium text-white" data-i18n="logical.btn_add_route">新增路由</button>
     </div>
     <div id="routes-table-container" class="overflow-x-auto rounded-2xl bg-white shadow-sm"></div>
     <div id="routes-pagination-container" class="mt-2 flex items-center justify-between"></div>
@@ -69,28 +69,28 @@
 </dialog>
 <dialog id="create-route-modal" class="w-full max-w-3xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">新增路由</h3><button type="button" onclick='closeModal("create-route-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800" data-i18n="logical.modal_create_route_title">新增路由</h3><button type="button" onclick='closeModal("create-route-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
     <form id="create-route-form" method="post" action="/admin/routes" class="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="logical_model_id">
       <label><span class="mb-1 block text-xs text-slate-600">Provider</span><select name="provider_model_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">{% for item in provider_models %}<option value="{{ item.id }}">{{ item.name }}{% if item.description %} <span class="text-slate-400">({{ item.description }})</span>{% endif %}</option>{% endfor %}</select></label>
-      <label><span class="mb-1 block text-xs text-slate-600">优先级</span><input name="priority" value="100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">权重</span><input name="weight" value="1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 md:col-span-2"><input type="checkbox" name="is_fallback" value="true">后备路由</label>
-      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">创建路由</button>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_priority">优先级</span><input name="priority" value="100" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_weight">权重</span><input name="weight" value="1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 md:col-span-2"><input type="checkbox" name="is_fallback" value="true"><span data-i18n="logical.lbl_fallback">后备路由</span></label>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="logical.btn_create_route">创建路由</button>
     </form>
   </div>
 </dialog>
 <dialog id="edit-route-modal" class="w-full max-w-3xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
-    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800">编辑路由</h3><button type="button" onclick='closeModal("edit-route-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
+    <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4"><h3 class="text-lg font-semibold text-slate-800" data-i18n="logical.modal_edit_route_title">编辑路由</h3><button type="button" onclick='closeModal("edit-route-modal")' class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button></div>
     <form id="edit-route-form" method="post" class="grid gap-4 md:grid-cols-2">
       <input type="hidden" name="logical_model_id">
       <label><span class="mb-1 block text-xs text-slate-600">Provider</span><select name="provider_model_id" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">{% for item in provider_models %}<option value="{{ item.id }}">{{ item.name }}{% if item.description %} <span class="text-slate-400">({{ item.description }})</span>{% endif %}</option>{% endfor %}</select></label>
-      <label><span class="mb-1 block text-xs text-slate-600">优先级</span><input name="priority" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">权重</span><input name="weight" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label><span class="mb-1 block text-xs text-slate-600">状态</span><select name="status" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="active">active</option><option value="disabled">disabled</option></select></label>
-      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_fallback" value="true">后备路由</label>
-      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2">保存</button>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_priority">优先级</span><input name="priority" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_weight">权重</span><input name="weight" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.status">状态</span><select name="status" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"><option value="active">active</option><option value="disabled">disabled</option></select></label>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_fallback" value="true"><span data-i18n="logical.lbl_fallback">后备路由</span></label>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="common.save">保存</button>
     </form>
   </div>
 </dialog>
@@ -122,7 +122,7 @@ function renderLogicalModelsTable() {
   paginationContainer.innerHTML = '';
 
   if (filteredModels.length === 0) {
-    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关模型。</p>';
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">' + t('logical.no_data') + '</p>';
     return;
   }
 
@@ -134,10 +134,10 @@ function renderLogicalModelsTable() {
   table.innerHTML = `
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">名称</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">描述</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.name')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.description')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.status')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.actions')}</th>
       </tr>
     </thead>
     <tbody>
@@ -149,12 +149,12 @@ function renderLogicalModelsTable() {
     tr.className = 'bg-white border-b';
     tr.innerHTML = `
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
-      <td class="px-2 py-2 text-xs">${item.description || "无描述"}</td>
+      <td class="px-2 py-2 text-xs">${item.description || t('logical.no_desc')}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
-        <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">路由</button>
-        <button type="button" onclick='fillForm("edit-logical-model-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-logical-model-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
-        <button type="button" onclick="deleteLogicalModel(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
+        <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">${t('logical.btn_routes')}</button>
+        <button type="button" onclick='fillForm("edit-logical-model-form-${item.id}", ${JSON.stringify(item)}); openModal("edit-logical-model-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
+        <button type="button" onclick="deleteLogicalModel(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">${t('common.delete')}</button>
       </div></td>
     `;
     tbody.appendChild(tr);
@@ -166,19 +166,19 @@ function renderLogicalModelsTable() {
   paginDiv.className = 'flex items-center gap-2';
 
   const prevButton = document.createElement('button');
-  prevButton.textContent = '上一页';
+  prevButton.textContent = t('common.prev_page');
   prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentLogicalModelPage === 1 ? ' text-slate-400' : '');
   prevButton.disabled = currentLogicalModelPage === 1;
   prevButton.onclick = () => { currentLogicalModelPage--; renderLogicalModelsTable(); };
   paginDiv.appendChild(prevButton);
 
   const pageInfo = document.createElement('span');
-  pageInfo.textContent = `第 ${currentLogicalModelPage} / ${totalPages} 页`;
+  pageInfo.textContent = t('common.page_info').replace('{cur}', currentLogicalModelPage).replace('{total}', totalPages);
   pageInfo.className = 'text-xs text-slate-500';
   paginDiv.appendChild(pageInfo);
 
   const nextButton = document.createElement('button');
-  nextButton.textContent = '下一页';
+  nextButton.textContent = t('common.next_page');
   nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentLogicalModelPage === totalPages ? ' text-slate-400' : '');
   nextButton.disabled = currentLogicalModelPage === totalPages;
   nextButton.onclick = () => { currentLogicalModelPage++; renderLogicalModelsTable(); };
@@ -188,7 +188,7 @@ function renderLogicalModelsTable() {
 }
 
 function deleteLogicalModel(id, name) {
-  if (!confirm('确认删除逻辑模型「' + name + '」吗？\n\n请确保已删除该模型下的所有路由。')) return;
+  if (!confirm(t('logical.confirm_delete').replace('{name}', name))) return;
   fetch('/admin/logical-models/' + id + '/delete', { method: 'POST' })
     .then(res => res.json())
     .then(result => {
@@ -198,12 +198,12 @@ function deleteLogicalModel(id, name) {
         const totalPages = Math.ceil(allLogicalModels.length / logicalModelsPerPage);
         if (currentLogicalModelPage > 1 && currentLogicalModelPage > totalPages) currentLogicalModelPage = Math.max(1, totalPages);
         renderLogicalModelsTable();
-        showToast('「' + name + '」 已删除');
+        showToast(t('logical.toast_deleted') + '「' + name + '」');
       } else {
-        showToast(result.error || '删除失败', 'error');
+        showToast(result.error || t('common.delete_fail'), 'error');
       }
     })
-    .catch(() => showToast('网络错误，请重试', 'error'));
+    .catch(() => showToast(t('common.network_error'), 'error'));
 }
 
 document.getElementById('search-btn').addEventListener('click', () => {
@@ -225,6 +225,7 @@ document.getElementById('search-name').addEventListener('keydown', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   renderLogicalModelsTable();
 });
+window.i18n && window.i18n.onLangChange(renderLogicalModelsTable);
 
 
 let currentLogicalModelId = null;
@@ -258,10 +259,10 @@ async function recoverRoute(routeId) {
       routeHealthMap[routeId] = { degraded: false };
       renderRoutesTable();
     } else {
-      alert(data.detail || '恢复失败');
+      alert(data.detail || t('logical.recover_failed'));
     }
   } catch (e) {
-    alert('请求失败，请重试');
+    alert(t('logical.request_failed'));
   }
 }
 
@@ -293,7 +294,7 @@ function renderRoutesTable() {
   paginationContainer.innerHTML = '';
 
   if (filteredRoutes.length === 0) {
-    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">没有找到相关路由。</p>';
+    tableContainer.innerHTML = '<p class="text-center text-slate-500 p-4">' + t('logical.no_routes') + '</p>';
     return;
   }
 
@@ -306,12 +307,12 @@ function renderRoutesTable() {
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Provider</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">优先级</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">权重</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">状态</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">后备</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">健康状态</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">操作</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('logical.col_priority')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('logical.col_weight')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.status')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('logical.col_fallback')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('logical.col_health')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.actions')}</th>
       </tr>
     </thead>
     <tbody>
@@ -325,18 +326,18 @@ function renderRoutesTable() {
     if (health === undefined) {
       healthBadge = '<span class="text-slate-300 text-xs">--</span>';
     } else if (!health.degraded) {
-      healthBadge = '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">健康</span>';
+      healthBadge = `<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">${t('logical.health_ok')}</span>`;
     } else {
       const degradedTypeLabels = {
-        auth_failed: '认证失败',
-        quota_exhausted: '配额耗尽',
-        unavailable: '不可用',
+        auth_failed: t('logical.degraded_auth'),
+        quota_exhausted: t('logical.degraded_quota'),
+        unavailable: t('logical.degraded_unavailable'),
       };
-      const typeLabel = degradedTypeLabels[health.degraded_type] || health.degraded_type || '异常';
-      healthBadge = `<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">降级</span><span class="ml-1 text-xs text-slate-400">${typeLabel}</span>`;
+      const typeLabel = degradedTypeLabels[health.degraded_type] || health.degraded_type || t('logical.degraded_error');
+      healthBadge = `<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">${t('logical.health_degraded')}</span><span class="ml-1 text-xs text-slate-400">${typeLabel}</span>`;
     }
     const recoverBtn = (health && health.degraded)
-      ? `<button type="button" onclick="recoverRoute(${route.id})" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">立即恢复</button>`
+      ? `<button type="button" onclick="recoverRoute(${route.id})" class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">${t('logical.btn_recover')}</button>`
       : '';
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
@@ -345,13 +346,13 @@ function renderRoutesTable() {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${route.priority}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${route.weight}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${route.status}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${route.is_fallback ? '是' : '否'}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${route.is_fallback ? t('logical.fallback_yes') : t('logical.fallback_no')}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${healthBadge}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         ${recoverBtn}
-        <button type="button" onclick='openEditRouteModal(${JSON.stringify(route)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">编辑</button>
-        <form method="post" action="/admin/routes/${route.id}/delete" onsubmit="return confirm('确认删除这个路由吗？');">
-          <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">删除</button>
+        <button type="button" onclick='openEditRouteModal(${JSON.stringify(route)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
+        <form method="post" action="/admin/routes/${route.id}/delete" onsubmit="return confirm(t('logical.confirm_delete_route'));">
+          <button class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">${t('common.delete')}</button>
         </form>
       </div></td>
     `;
@@ -364,19 +365,19 @@ function renderRoutesTable() {
   rPaginDiv.className = 'flex items-center gap-2';
 
   const rPrevButton = document.createElement('button');
-  rPrevButton.textContent = '上一页';
+  rPrevButton.textContent = t('common.prev_page');
   rPrevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentRoutePage === 1 ? ' text-slate-400' : '');
   rPrevButton.disabled = currentRoutePage === 1;
   rPrevButton.onclick = () => { currentRoutePage--; renderRoutesTable(); };
   rPaginDiv.appendChild(rPrevButton);
 
   const rPageInfo = document.createElement('span');
-  rPageInfo.textContent = `第 ${currentRoutePage} / ${totalPages} 页`;
+  rPageInfo.textContent = t('common.page_info').replace('{cur}', currentRoutePage).replace('{total}', totalPages);
   rPageInfo.className = 'text-xs text-slate-500';
   rPaginDiv.appendChild(rPageInfo);
 
   const rNextButton = document.createElement('button');
-  rNextButton.textContent = '下一页';
+  rNextButton.textContent = t('common.next_page');
   rNextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentRoutePage === totalPages ? ' text-slate-400' : '');
   rNextButton.disabled = currentRoutePage === totalPages;
   rNextButton.onclick = () => { currentRoutePage++; renderRoutesTable(); };

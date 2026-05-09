@@ -3,8 +3,8 @@
 <div class="mx-auto mt-16 {% if table_missing %}max-w-3xl{% else %}max-w-xl{% endif %} rounded-[2rem] bg-white p-9 shadow-2xl shadow-slate-200/70">
   <div class="mb-8">
     <p class="text-sm uppercase tracking-[0.35em] text-sky-500">First-Time Setup</p>
-    <h1 class="mt-3 text-3xl font-bold text-slate-900">初始化超管账号</h1>
-    <p class="mt-3 text-xs leading-6 text-slate-500">系统尚未配置任何管理员账号。请设置一个超级管理员账号以继续使用控制台。</p>
+    <h1 class="mt-3 text-3xl font-bold text-slate-900" data-i18n="setup.title">初始化超管账号</h1>
+    <p class="mt-3 text-xs leading-6 text-slate-500" data-i18n="setup.subtitle">系统尚未配置任何管理员账号。请设置一个超级管理员账号以继续使用控制台。</p>
   </div>
 
   {% if error %}
@@ -20,8 +20,8 @@
           d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
       </svg>
       <div class="min-w-0 flex-1">
-        <p class="text-xs font-semibold text-amber-800">数据库表不存在</p>
-        <p class="mt-1 text-xs leading-5 text-amber-700">
+        <p class="text-xs font-semibold text-amber-800" data-i18n="setup.db_missing">数据库表不存在</p>
+        <p class="mt-1 text-xs leading-5 text-amber-700" data-i18n="setup.db_missing_desc">
           检测到数据库中尚未建表。
           如果数据库账号没有 DDL 权限，请将下方完整建表 SQL 提交给 DBA 执行后刷新此页面。
         </p>
@@ -41,7 +41,7 @@
         <!-- Copy button (SVG icons, same as docs.html) -->
         <button type="button" id="copy-sql-btn"
           class="ml-auto mr-2 flex items-center gap-1 rounded px-2 py-1 text-slate-400 hover:text-white transition"
-          title="复制全部 SQL">
+          title="复制全部 SQL" data-i18n-title="setup.copy_sql">
           <svg class="copy-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -58,29 +58,29 @@
       <pre id="sql-sqlite" class="sql-panel hidden max-h-[480px] overflow-y-auto overflow-x-auto bg-slate-950 px-4 py-3 font-mono text-xs text-slate-200 leading-5 whitespace-pre">{{ create_sql_sqlite }}</pre>
     </div>
 
-    <p class="mt-3 text-xs text-amber-600">执行建表 SQL 后，请刷新页面继续初始化。</p>
+    <p class="mt-3 text-xs text-amber-600" data-i18n="setup.sql_after">执行建表 SQL 后，请刷新页面继续初始化。</p>
   </div>
   {% endif %}
 
   {% if not table_missing %}
   <form method="post" action="/admin/setup" class="space-y-5">
     <label class="block">
-      <span class="mb-2 block text-xs font-medium text-slate-600">用户名</span>
+      <span class="mb-2 block text-xs font-medium text-slate-600" data-i18n="setup.username">用户名</span>
       <input name="username" autocomplete="username" autofocus
              class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400"
              required placeholder="admin">
     </label>
     <label class="block">
-      <span class="mb-2 block text-xs font-medium text-slate-600">密码</span>
+      <span class="mb-2 block text-xs font-medium text-slate-600" data-i18n="setup.password">密码</span>
       <input type="password" name="password" autocomplete="new-password"
              class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400"
-             required placeholder="至少 6 位">
+             required data-i18n-placeholder="setup.password_placeholder" placeholder="至少 6 位">
     </label>
     <label class="block">
-      <span class="mb-2 block text-xs font-medium text-slate-600">确认密码</span>
+      <span class="mb-2 block text-xs font-medium text-slate-600" data-i18n="setup.confirm_password">确认密码</span>
       <input type="password" name="confirm_password" autocomplete="new-password"
              class="w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-sky-400"
-             required placeholder="再次输入密码">
+             required data-i18n-placeholder="setup.confirm_placeholder" placeholder="再次输入密码">
     </label>
     <button type="submit"
             class="w-full rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800">
@@ -89,7 +89,7 @@
   </form>
   {% else %}
   <a href="/admin/setup"
-     class="block w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+     class="block w-full rounded-2xl border border-slate-200 px-4 py-2.5 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-50" data-i18n="setup.refresh">
     刷新 — 检查表是否已创建
   </a>
   {% endif %}

@@ -3,9 +3,9 @@
 <div class="sticky top-0 z-10 -mx-3 lg:-mx-5 -mt-4 lg:-mt-5 mb-4 flex items-center justify-between border-b border-slate-200/70 bg-white/90 px-3 py-2.5 backdrop-blur-sm lg:px-5">
   <div>
     <p class="text-xs uppercase tracking-[0.35em] text-slate-400">Requests</p>
-    <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900">请求日志</h1>
+    <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="requests.title">请求日志</h1>
   </div>
-  <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50">返回控制台</a>
+  <a href="/admin" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="requests.back">返回控制台</a>
 </div>
 
 <div class="mb-4 flex flex-wrap gap-2 items-end">
@@ -40,34 +40,34 @@
     <input type="text" id="search-end-user" placeholder="搜索 End User..." value="{{ filters.end_user }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[140px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">请求状态</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_status">请求状态</label>
     <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      <option value="">全部</option>
-      <option value="success" {% if filters.status == 'success' %}selected{% endif %}>成功</option>
-      <option value="failed" {% if filters.status == 'failed' %}selected{% endif %}>失败 (≥400)</option>
-      <option value="error" {% if filters.status == 'error' %}selected{% endif %}>失败 (≥500)</option>
+      <option value="" data-i18n="requests.opt_all">全部</option>
+      <option value="success" {% if filters.status == 'success' %}selected{% endif %} data-i18n="requests.opt_success">成功</option>
+      <option value="failed" {% if filters.status == 'failed' %}selected{% endif %} data-i18n="requests.opt_failed">失败 (≥400)</option>
+      <option value="error" {% if filters.status == 'error' %}selected{% endif %} data-i18n="requests.opt_error">失败 (≥500)</option>
     </select>
   </div>
   <div class="min-w-[300px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">开始时间范围</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_time_range">开始时间范围</label>
     <div class="flex flex-col gap-1.5">
       <div class="flex items-center gap-1">
-        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="60">近1小时</button>
-        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="360">近6小时</button>
-        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="1440">近24小时</button>
-        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="10080">近7天</button>
-        <button type="button" id="clear-time-range" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100">清除</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="60" data-i18n="requests.preset_1h">近1小时</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="360" data-i18n="requests.preset_6h">近6小时</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="1440" data-i18n="requests.preset_24h">近24小时</button>
+        <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-minutes="10080" data-i18n="requests.preset_7d">近7天</button>
+        <button type="button" id="clear-time-range" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100" data-i18n="requests.clear">清除</button>
       </div>
       <div class="flex items-center gap-1.5">
         <input type="datetime-local" id="search-started-after" data-utc="{{ filters.started_after or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
-        <span class="text-slate-400 shrink-0 text-xs">至</span>
+        <span class="text-slate-400 shrink-0 text-xs" data-i18n="requests.to">至</span>
         <input type="datetime-local" id="search-started-before" data-utc="{{ filters.started_before or '' }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">
       </div>
     </div>
   </div>
   <div class="flex gap-2 shrink-0">
-    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700">搜索</button>
-    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50">重置</button>
+    <button id="search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
+    <button id="reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</button>
   </div>
 </div>
 
@@ -83,7 +83,7 @@
         <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Provider Model</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">End User</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">费用</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.col_cost">费用</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap"></th>
       </tr>
     </thead>
@@ -123,12 +123,12 @@
           {% endif %}
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
-          <a href="/admin/requests/{{ log.id }}" class="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs">详情</a>
+          <a href="/admin/requests/{{ log.id }}" class="whitespace-nowrap rounded-lg border border-slate-200 px-3 py-1.5 text-xs" data-i18n="requests.btn_detail">详情</a>
         </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="10" class="text-center text-slate-500 p-4">没有找到相关日志。</td>
+        <td colspan="10" class="text-center text-slate-500 p-4" data-i18n="requests.no_data">没有找到相关日志。</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -143,17 +143,17 @@
 <div id="logs-pagination-container" class="mt-2 flex items-center justify-between">
   <div class="flex items-center gap-2">
     {% if pagination.has_prev %}
-    <a href="{{ build_query_string(pagination.prev_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs">上一页</a>
+    <a href="{{ build_query_string(pagination.prev_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs" data-i18n="requests.prev">上一页</a>
     {% else %}
-    <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400">上一页</button>
+    <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400" data-i18n="requests.prev">上一页</button>
     {% endif %}
 
-    <span class="text-xs text-slate-500">第 {{ pagination.page }} / {{ pagination.pages }} 页</span>
+    <span class="text-xs text-slate-500" data-i18n-page="{{ pagination.page }}" data-i18n-total="{{ pagination.pages }}">第 {{ pagination.page }} / {{ pagination.pages }} 页</span>
 
     {% if pagination.has_next %}
-    <a href="{{ build_query_string(pagination.next_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs">下一页</a>
+    <a href="{{ build_query_string(pagination.next_num, filters) }}" class="rounded-lg border px-3 py-1.5 text-xs" data-i18n="requests.next">下一页</a>
     {% else %}
-    <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400">下一页</button>
+    <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400" data-i18n="requests.next">下一页</button>
     {% endif %}
   </div>
 </div>
