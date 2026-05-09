@@ -1,0 +1,47 @@
+from llm_router.services.protocol_converter import anthropic_to_openai_request
+
+
+def test_anthropic_to_openai_preserves_openai_style_image_url_blocks():
+    payload = {
+        "model": "glm-5.1",
+        "messages": [{
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "OCR the following image into Markdown.",
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": "data:image/png;base64,abc123",
+                        "detail": "high",
+                    },
+                },
+            ],
+        }],
+        "max_tokens": 4096,
+        "stream": False,
+    }
+
+    result = anthropic_to_openai_request(payload, "z-ai/glm-5.1")
+
+    assert result["model"] == "z-ai/glm-5.1"
+    assert result["messages"] == [{
+        "role": "user",
+        "content": [
+            {
+                "type": "text",
+                "text": "OCR the following image into Markdown.",
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": "data:image/png;base64,abc123",
+                    "detail": "high",
+                },
+            },
+        ],
+    }]
+    assert result["max_tokens"] == 4096
+    assert result["stream"] is False

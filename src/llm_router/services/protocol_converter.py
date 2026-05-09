@@ -354,6 +354,12 @@ def _anthropic_content_blocks_to_openai_messages(role: str, blocks: list) -> lis
                     "type": "image_url",
                     "image_url": {"url": source["url"]},
                 })
+        elif btype == "image_url":
+            image_url = block.get("image_url")
+            if isinstance(image_url, dict):
+                text_parts.append({"type": "image_url", "image_url": image_url})
+            elif isinstance(image_url, str):
+                text_parts.append({"type": "image_url", "image_url": {"url": image_url}})
         elif btype == "tool_use" and role == "assistant":
             tool_calls.append({
                 "id": block["id"],
