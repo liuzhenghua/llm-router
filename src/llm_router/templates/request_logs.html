@@ -10,34 +10,34 @@
 
 <div class="mb-4 flex flex-wrap gap-2 items-end">
   <div class="min-w-[180px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">Request ID</label>
-    <input type="text" id="search-request-id" placeholder="搜索 Request ID..." value="{{ filters.request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_request_id">Request ID</label>
+    <input type="text" id="search-request-id" data-i18n-placeholder="requests.placeholder_request_id" placeholder="搜索 Request ID..." value="{{ filters.request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[180px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">Upstream Request ID</label>
-    <input type="text" id="search-upstream-request-id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_upstream_request_id">Upstream Request ID</label>
+    <input type="text" id="search-upstream-request-id" data-i18n-placeholder="requests.placeholder_upstream_id" placeholder="搜索 Upstream Request ID..." value="{{ filters.upstream_request_id }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[160px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">API Key</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_api_key">API Key</label>
     <select id="search-api-key-id" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      <option value="">全部</option>
+      <option value="" data-i18n="requests.opt_all">全部</option>
       {% for k in api_keys_list %}
       <option value="{{ k.id }}" {% if filters.api_key_id == k.id %}selected{% endif %}>{{ k.name }}</option>
       {% endfor %}
     </select>
   </div>
   <div class="min-w-[160px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">Provider Model</label>
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_provider_model">Provider Model</label>
     <select id="search-provider-model-id" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      <option value="">全部</option>
+      <option value="" data-i18n="requests.opt_all">全部</option>
       {% for m in provider_models_list %}
       <option value="{{ m.id }}" {% if filters.provider_model_id == m.id %}selected{% endif %}>{{ m.name }}</option>
       {% endfor %}
     </select>
   </div>
   <div class="min-w-[160px] flex-1">
-    <label class="block text-xs text-slate-500 mb-1">End User</label>
-    <input type="text" id="search-end-user" placeholder="搜索 End User..." value="{{ filters.end_user }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+    <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_end_user">End User</label>
+    <input type="text" id="search-end-user" data-i18n-placeholder="requests.placeholder_end_user" value="{{ filters.end_user }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
   </div>
   <div class="min-w-[140px] flex-1">
     <label class="block text-xs text-slate-500 mb-1" data-i18n="requests.lbl_status">请求状态</label>
@@ -75,14 +75,14 @@
   <table class="w-full text-sm text-left text-slate-500">
     <thead class="text-xs text-slate-700 uppercase bg-slate-50">
       <tr>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Started At</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Request ID</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Upstream Request ID</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Status</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Latency</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">Provider Model</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">End User</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_started_at">开始时间</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_request_id">Request ID</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_upstream_request_id">Upstream Request ID</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_status">状态</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_latency">延迟</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_api_key">API Key</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_provider_model">Provider Model</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.lbl_end_user">End User</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="requests.col_cost">费用</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap"></th>
       </tr>
