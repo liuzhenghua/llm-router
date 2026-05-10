@@ -123,13 +123,17 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         self._model: str | None = None
         self._finish_reason: str | None = None
         self._usage_dict: dict | None = None
+        self._accumulated_reasoning_content: str = ""
         self._accumulated_content: str = ""
         self._current_tool_calls: list[dict] = []  # [{id, name, arguments}]
 
         # SSE state tracking
         self._message_started: bool = False
         self._next_block_index: int = 0        # Anthropic block index counter
+        self._thinking_block_open: bool = False
+        self._thinking_block_index: int | None = None
         self._text_block_open: bool = False
+        self._text_block_index: int | None = None
         self._tool_block_map: dict[int, int] = {}  # openai_tc_index → anthropic_block_index
 
         # httpx handles
@@ -157,6 +161,8 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
 
     def get_accumulated_response(self) -> str:
         content: list[dict] = []
+        if self._accumulated_reasoning_content:
+            content.append({"type": "thinking", "thinking": self._accumulated_reasoning_content})
         if self._accumulated_content:
             content.append({"type": "text", "text": self._accumulated_content})
         for tc in self._current_tool_calls:
@@ -217,6 +223,28 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
             },
         })]
 
+    def _ensure_thinking_block_open(self) -> list[bytes]:
+        """Open a thinking content block if none is open."""
+        if self._thinking_block_open:
+            return []
+        idx = self._next_block_index
+        self._next_block_index += 1
+        self._thinking_block_open = True
+        self._thinking_block_index = idx
+        return [self._sse("content_block_start", {
+            "type": "content_block_start",
+            "index": idx,
+            "content_block": {"type": "thinking", "thinking": ""},
+        })]
+
+    def _close_thinking_block_if_open(self) -> list[bytes]:
+        if not self._thinking_block_open or self._thinking_block_index is None:
+            return []
+        idx = self._thinking_block_index
+        self._thinking_block_open = False
+        self._thinking_block_index = None
+        return [self._sse("content_block_stop", {"type": "content_block_stop", "index": idx})]
+
     def _ensure_text_block_open(self) -> list[bytes]:
         """Open a text content block if none is open."""
         if self._text_block_open:
@@ -224,6 +252,7 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         idx = self._next_block_index
         self._next_block_index += 1
         self._text_block_open = True
+        self._text_block_index = idx
         return [self._sse("content_block_start", {
             "type": "content_block_start",
             "index": idx,
@@ -231,11 +260,11 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         })]
 
     def _close_text_block_if_open(self) -> list[bytes]:
-        if not self._text_block_open:
+        if not self._text_block_open or self._text_block_index is None:
             return []
-        # The text block index is (next_block_index - 1) if we allocated one
-        idx = self._next_block_index - 1
+        idx = self._text_block_index
         self._text_block_open = False
+        self._text_block_index = None
         return [self._sse("content_block_stop", {"type": "content_block_stop", "index": idx})]
 
     def _ensure_tool_call_slot(self, index: int) -> dict:
@@ -264,17 +293,28 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         finish_reason = choice.get("finish_reason")
 
         # Ensure message_start is emitted before any content
-        if delta.get("role") or delta.get("content") or delta.get("tool_calls") or finish_reason:
+        if delta.get("role") or delta.get("reasoning_content") or delta.get("content") or delta.get("tool_calls") or finish_reason:
             events.extend(self._ensure_message_started())
+
+        # --- Thinking content ---
+        if delta.get("reasoning_content"):
+            events.extend(self._close_text_block_if_open())
+            events.extend(self._ensure_thinking_block_open())
+            self._accumulated_reasoning_content += delta["reasoning_content"]
+            events.append(self._sse("content_block_delta", {
+                "type": "content_block_delta",
+                "index": self._thinking_block_index,
+                "delta": {"type": "thinking_delta", "thinking": delta["reasoning_content"]},
+            }))
 
         # --- Text content ---
         if delta.get("content"):
+            events.extend(self._close_thinking_block_if_open())
             events.extend(self._ensure_text_block_open())
             self._accumulated_content += delta["content"]
-            # Use (next_block_index - 1) as the current text block index
             events.append(self._sse("content_block_delta", {
                 "type": "content_block_delta",
-                "index": self._next_block_index - 1,
+                "index": self._text_block_index,
                 "delta": {"type": "text_delta", "text": delta["content"]},
             }))
 
@@ -283,7 +323,8 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
             tc_idx = tc_delta.get("index", 0)
 
             if tc_idx not in self._tool_block_map:
-                # Close text block if open before starting tool block
+                # Close open content blocks before starting tool block.
+                events.extend(self._close_thinking_block_if_open())
                 events.extend(self._close_text_block_if_open())
 
                 # Allocate new Anthropic block for this tool call
@@ -333,7 +374,9 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         events.extend(self._ensure_message_started())
 
         # Close last open block
-        if self._text_block_open:
+        if self._thinking_block_open:
+            events.extend(self._close_thinking_block_if_open())
+        elif self._text_block_open:
             events.extend(self._close_text_block_if_open())
         elif self._tool_block_map:
             last_tool_block_idx = max(self._tool_block_map.values())
@@ -494,6 +537,7 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
         self._model: str | None = None
         self._stop_reason: str | None = None
         self._usage_dict: dict | None = None
+        self._accumulated_reasoning_content: str = ""
         self._accumulated_content: str = ""
         self._tool_call_counter: int = 0  # number of tool_use blocks seen so far
 
@@ -540,6 +584,8 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
         }.get(self._stop_reason or "end_turn", "stop")
 
         msg: dict[str, Any] = {"role": "assistant"}
+        if self._accumulated_reasoning_content:
+            msg["reasoning_content"] = self._accumulated_reasoning_content
         if message_content:
             msg["content"] = message_content
         if self._tool_calls:
@@ -634,6 +680,12 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
                 self._accumulated_content += text
                 chunk = self._base_chunk()
                 chunk["choices"] = [{"index": 0, "delta": {"content": text}, "finish_reason": None}]
+                chunks.append(self._openai_sse(chunk))
+            elif delta.get("type") == "thinking_delta":
+                thinking = delta.get("thinking", "")
+                self._accumulated_reasoning_content += thinking
+                chunk = self._base_chunk()
+                chunk["choices"] = [{"index": 0, "delta": {"reasoning_content": thinking}, "finish_reason": None}]
                 chunks.append(self._openai_sse(chunk))
             elif delta.get("type") == "input_json_delta":
                 partial = delta.get("partial_json", "")

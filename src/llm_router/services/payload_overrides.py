@@ -6,18 +6,18 @@ from typing import Any
 from llm_router.domain.enums import ProviderProtocol
 
 
-def deep_merge_payload(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
-    """Recursively merge provider payload overrides into a copied request payload."""
-    merged = deepcopy(base)
-    _merge_into(merged, overrides)
-    return merged
-
-
 def apply_provider_payload_overrides(payload: dict[str, Any], provider: Any) -> dict[str, Any]:
     overrides = _overrides_for_provider_protocol(provider)
     if not overrides:
         return payload
-    return deep_merge_payload(payload, overrides)
+    return _deep_merge_payload(payload, overrides)
+
+
+def _deep_merge_payload(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge provider payload overrides into a copied request payload."""
+    merged = deepcopy(base)
+    _merge_into(merged, overrides)
+    return merged
 
 
 def _overrides_for_provider_protocol(provider: Any) -> dict[str, Any]:

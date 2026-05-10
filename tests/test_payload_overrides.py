@@ -3,7 +3,7 @@ from decimal import Decimal
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.schemas import RoutedProvider
 from llm_router.services.non_stream_handlers.openai import OpenAINonStreamHandler
-from llm_router.services.payload_overrides import deep_merge_payload
+from llm_router.services.payload_overrides import _deep_merge_payload
 
 
 def _provider(**overrides) -> RoutedProvider:
@@ -36,7 +36,7 @@ def test_deep_merge_payload_preserves_nested_request_fields():
         "chat_template_kwargs": {"thinking": False},
     }
 
-    result = deep_merge_payload(payload, overrides)
+    result = _deep_merge_payload(payload, overrides)
 
     assert result == {
         "model": "logical-model",
@@ -58,7 +58,7 @@ def test_deep_merge_payload_preserves_non_json_scalar_types():
         "metadata": {"limit": Decimal("1.25")},
     }
 
-    result = deep_merge_payload(payload, overrides)
+    result = _deep_merge_payload(payload, overrides)
 
     assert result["metadata"]["price"] == Decimal("0.10")
     assert result["metadata"]["limit"] == Decimal("1.25")

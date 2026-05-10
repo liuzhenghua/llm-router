@@ -95,6 +95,7 @@ def openai_to_anthropic_request(payload: dict, upstream_model: str) -> dict:
         role = msg["role"]
         content = msg.get("content")
         tool_calls = msg.get("tool_calls")
+        reasoning_content = msg.get("reasoning_content")
 
         if role == "system":
             if isinstance(content, str):
@@ -118,6 +119,8 @@ def openai_to_anthropic_request(payload: dict, upstream_model: str) -> dict:
         elif role == "assistant" and tool_calls:
             # Assistant with tool_calls -> tool_use content blocks
             blocks: list[dict] = []
+            if reasoning_content:
+                blocks.append({"type": "thinking", "thinking": reasoning_content})
             if content:
                 blocks.append({"type": "text", "text": content})
             for tc in tool_calls:
@@ -135,6 +138,14 @@ def openai_to_anthropic_request(payload: dict, upstream_model: str) -> dict:
                     "name": tc["function"]["name"],
                     "input": input_data,
                 })
+            messages.append({"role": "assistant", "content": blocks})
+
+        elif role == "assistant" and reasoning_content:
+            blocks = [{"type": "thinking", "thinking": reasoning_content}]
+            if isinstance(content, str) and content:
+                blocks.append({"type": "text", "text": content})
+            elif isinstance(content, list):
+                blocks.extend(_openai_content_parts_to_anthropic(content))
             messages.append({"role": "assistant", "content": blocks})
 
         else:
@@ -190,6 +201,8 @@ def openai_to_anthropic_response(body: dict, logical_model_name: str) -> dict:
     message = choice.get("message") or {}
 
     content: list[dict] = []
+    if message.get("reasoning_content"):
+        content.append({"type": "thinking", "thinking": message["reasoning_content"]})
     if message.get("content"):
         content.append({"type": "text", "text": message["content"]})
     for tc in message.get("tool_calls") or []:
@@ -236,11 +249,15 @@ def anthropic_to_openai_response(body: dict) -> dict:
     """Convert an Anthropic Messages API response to OpenAI Chat Completions format."""
     content_blocks = body.get("content") or []
     message_content: str | None = None
+    reasoning_parts: list[str] = []
     tool_calls: list[dict] = []
 
     for block in content_blocks:
         if block.get("type") == "text":
             message_content = block["text"]
+        elif block.get("type") == "thinking":
+            if block.get("thinking"):
+                reasoning_parts.append(block["thinking"])
         elif block.get("type") == "tool_use":
             tool_calls.append({
                 "id": block["id"],
@@ -262,6 +279,8 @@ def anthropic_to_openai_response(body: dict) -> dict:
     message: dict[str, Any] = {"role": "assistant"}
     if message_content is not None:
         message["content"] = message_content
+    if reasoning_parts:
+        message["reasoning_content"] = "".join(reasoning_parts)
     if tool_calls:
         message["tool_calls"] = tool_calls
 
@@ -335,6 +354,7 @@ def _anthropic_content_blocks_to_openai_messages(role: str, blocks: list) -> lis
     """Convert Anthropic content blocks to one or more OpenAI messages."""
     text_parts: list[dict] = []
     tool_calls: list[dict] = []
+    reasoning_parts: list[str] = []
     text_content: str | None = None
 
     for block in blocks:
@@ -342,6 +362,9 @@ def _anthropic_content_blocks_to_openai_messages(role: str, blocks: list) -> lis
         if btype == "text":
             text_parts.append({"type": "text", "text": block["text"]})
             text_content = block["text"]
+        elif btype == "thinking" and role == "assistant":
+            if block.get("thinking"):
+                reasoning_parts.append(block["thinking"])
         elif btype == "image":
             source = block.get("source", {})
             if source.get("type") == "base64":
@@ -381,12 +404,23 @@ def _anthropic_content_blocks_to_openai_messages(role: str, blocks: list) -> lis
 
     if tool_calls:
         msg: dict[str, Any] = {"role": role, "content": text_content, "tool_calls": tool_calls}
+        if reasoning_parts:
+            msg["reasoning_content"] = "".join(reasoning_parts)
         return [msg]
     if len(text_parts) == 1 and text_parts[0].get("type") == "text":
-        return [{"role": role, "content": text_parts[0]["text"]}]
+        msg = {"role": role, "content": text_parts[0]["text"]}
+        if reasoning_parts:
+            msg["reasoning_content"] = "".join(reasoning_parts)
+        return [msg]
     if text_parts:
-        return [{"role": role, "content": text_parts}]
-    return [{"role": role, "content": ""}]
+        msg = {"role": role, "content": text_parts}
+        if reasoning_parts:
+            msg["reasoning_content"] = "".join(reasoning_parts)
+        return [msg]
+    msg = {"role": role, "content": ""}
+    if reasoning_parts:
+        msg["reasoning_content"] = "".join(reasoning_parts)
+    return [msg]
 
 
 def _openai_content_parts_to_anthropic(parts: list) -> list[dict]:
