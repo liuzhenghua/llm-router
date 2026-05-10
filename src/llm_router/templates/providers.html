@@ -41,14 +41,14 @@
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_oai_endpoint">OpenAI Endpoint</span> <span class="text-slate-400" data-i18n="providers.lbl_oai_hint">（与 Anthropic Endpoint 至少填一个）</span></span><input name="openai_endpoint" data-i18n-placeholder="providers.placeholder_oai_endpoint" placeholder="https://api.openai.com/v1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_ant_endpoint">Anthropic Endpoint</span> <span class="text-slate-400" data-i18n="providers.lbl_ant_hint">（与 OpenAI Endpoint 至少填一个）</span></span><input name="anthropic_endpoint" data-i18n-placeholder="providers.placeholder_ant_endpoint" placeholder="https://api.anthropic.com" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="md:col-span-2 grid gap-4 md:grid-cols-2">
-        <label><span class="mb-1 block text-xs text-slate-600">OpenAI Payload 覆盖</span><textarea name="openai_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
-        <label><span class="mb-1 block text-xs text-slate-600">Anthropic Payload 覆盖</span><textarea name="anthropic_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
+        <label data-payload-group="openai_payload_overrides"><span class="mb-1 flex items-center gap-1 text-xs text-slate-600">OpenAI Payload 覆盖 <span class="group relative inline-flex"><span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500">?</span><span class="pointer-events-none absolute left-1/2 top-5 z-20 hidden w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-5 text-white shadow-lg group-hover:block" data-i18n="providers.payload_overrides_help">按实际请求模型源的协议进行 Payload 覆盖。</span></span></span><textarea name="openai_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
+        <label data-payload-group="anthropic_payload_overrides"><span class="mb-1 flex items-center gap-1 text-xs text-slate-600">Anthropic Payload 覆盖 <span class="group relative inline-flex"><span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500">?</span><span class="pointer-events-none absolute left-1/2 top-5 z-20 hidden w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-5 text-white shadow-lg group-hover:block" data-i18n="providers.payload_overrides_help">按实际请求模型源的协议进行 Payload 覆盖。</span></span></span><textarea name="anthropic_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
       </div>
       <div class="md:col-span-2 flex flex-wrap gap-2">
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'openai_disable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">OpenAI 关闭 thinking</button>
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'enable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">Anthropic 开启 thinking</button>
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">OpenAI 限制输出</button>
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">Anthropic 限制输出</button>
+        <button type="button" data-payload-field="openai_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'openai_disable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">OpenAI 关闭 thinking</button>
+        <button type="button" data-payload-field="anthropic_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'enable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">Anthropic 开启 thinking</button>
+        <button type="button" data-payload-field="openai_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">OpenAI 限制输出</button>
+        <button type="button" data-payload-field="anthropic_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">Anthropic 限制输出</button>
       </div>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_new_api_key">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" data-i18n-placeholder="providers.lbl_no_update" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_input_price">输入单价 / 1M</span><input name="input_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
@@ -80,14 +80,14 @@
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_oai_endpoint">OpenAI Endpoint</span> <span class="text-slate-400" data-i18n="providers.lbl_oai_hint">（与 Anthropic Endpoint 至少填一个）</span></span><input name="openai_endpoint" data-i18n-placeholder="providers.placeholder_oai_endpoint" placeholder="https://api.openai.com/v1" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="md:col-span-2"><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_ant_endpoint">Anthropic Endpoint</span> <span class="text-slate-400" data-i18n="providers.lbl_ant_hint">（与 OpenAI Endpoint 至少填一个）</span></span><input name="anthropic_endpoint" data-i18n-placeholder="providers.placeholder_ant_endpoint" placeholder="https://api.anthropic.com" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <div class="md:col-span-2 grid gap-4 md:grid-cols-2">
-        <label><span class="mb-1 block text-xs text-slate-600">OpenAI Payload 覆盖</span><textarea name="openai_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
-        <label><span class="mb-1 block text-xs text-slate-600">Anthropic Payload 覆盖</span><textarea name="anthropic_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
+        <label data-payload-group="openai_payload_overrides"><span class="mb-1 flex items-center gap-1 text-xs text-slate-600">OpenAI Payload 覆盖 <span class="group relative inline-flex"><span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500">?</span><span class="pointer-events-none absolute left-1/2 top-5 z-20 hidden w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-5 text-white shadow-lg group-hover:block" data-i18n="providers.payload_overrides_help">按实际请求模型源的协议进行 Payload 覆盖。</span></span></span><textarea name="openai_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
+        <label data-payload-group="anthropic_payload_overrides"><span class="mb-1 flex items-center gap-1 text-xs text-slate-600">Anthropic Payload 覆盖 <span class="group relative inline-flex"><span class="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-slate-300 text-[10px] font-semibold text-slate-500">?</span><span class="pointer-events-none absolute left-1/2 top-5 z-20 hidden w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-normal leading-5 text-white shadow-lg group-hover:block" data-i18n="providers.payload_overrides_help">按实际请求模型源的协议进行 Payload 覆盖。</span></span></span><textarea name="anthropic_payload_overrides" rows="7" spellcheck="false" class="font-mono w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" placeholder='{"max_tokens": 1024}'></textarea></label>
       </div>
       <div class="md:col-span-2 flex flex-wrap gap-2">
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'openai_disable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">OpenAI 关闭 thinking</button>
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'enable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">Anthropic 开启 thinking</button>
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">OpenAI 限制输出</button>
-        <button type="button" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">Anthropic 限制输出</button>
+        <button type="button" data-payload-field="openai_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'openai_disable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">OpenAI 关闭 thinking</button>
+        <button type="button" data-payload-field="anthropic_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'enable_thinking')" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">Anthropic 开启 thinking</button>
+        <button type="button" data-payload-field="openai_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'openai_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">OpenAI 限制输出</button>
+        <button type="button" data-payload-field="anthropic_payload_overrides" onclick="applyPayloadOverrideTemplate(this.form, 'anthropic_payload_overrides', 'limit_output')" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">Anthropic 限制输出</button>
       </div>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_new_api_key">API Key</span><input name="api_key_secret" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_input_price">输入单价 / 1M</span><input name="input_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
@@ -167,6 +167,10 @@ function deepMerge(target, source) {
 
 function applyPayloadOverrideTemplate(form, fieldName, templateName) {
   const input = form.querySelector(`[name="${fieldName}"]`);
+  if (input.readOnly) {
+    showToast(t('providers.payload_overrides_disabled'), 'info');
+    return;
+  }
   const template = payloadOverrideTemplates[templateName][fieldName];
   let current = {};
   if (input.value.trim()) {
@@ -179,6 +183,44 @@ function applyPayloadOverrideTemplate(form, fieldName, templateName) {
     }
   }
   input.value = JSON.stringify(deepMerge(current, template), null, 2);
+}
+
+function updatePayloadOverrideState(form) {
+  if (!form) return;
+  const pairs = [
+    { endpoint: 'openai_endpoint', field: 'openai_payload_overrides' },
+    { endpoint: 'anthropic_endpoint', field: 'anthropic_payload_overrides' },
+  ];
+  pairs.forEach(({ endpoint, field }) => {
+    const endpointInput = form.querySelector(`[name="${endpoint}"]`);
+    const payloadInput = form.querySelector(`[name="${field}"]`);
+    const group = form.querySelector(`[data-payload-group="${field}"]`);
+    const buttons = form.querySelectorAll(`[data-payload-field="${field}"]`);
+    if (!endpointInput || !payloadInput) return;
+
+    const enabled = !!endpointInput.value.trim();
+    payloadInput.readOnly = !enabled;
+    payloadInput.setAttribute('aria-disabled', String(!enabled));
+    payloadInput.classList.toggle('bg-slate-50', !enabled);
+    payloadInput.classList.toggle('text-slate-400', !enabled);
+    payloadInput.classList.toggle('cursor-not-allowed', !enabled);
+    payloadInput.classList.toggle('focus:ring-0', !enabled);
+    if (group) group.classList.toggle('opacity-60', !enabled);
+    buttons.forEach(button => {
+      button.disabled = !enabled;
+      button.classList.toggle('opacity-50', !enabled);
+      button.classList.toggle('cursor-not-allowed', !enabled);
+    });
+  });
+}
+
+function setupPayloadOverrideControls(form) {
+  if (!form) return;
+  ['openai_endpoint', 'anthropic_endpoint'].forEach(name => {
+    const input = form.querySelector(`[name="${name}"]`);
+    if (input) input.addEventListener('input', () => updatePayloadOverrideState(form));
+  });
+  updatePayloadOverrideState(form);
 }
 
 function getFilters() {
@@ -238,7 +280,7 @@ function renderTable() {
       <td class="px-2 py-2 text-xs">${item.anthropic_endpoint || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
-        <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
+        <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); updatePayloadOverrideState(document.getElementById("edit-provider-form-${item.id}")); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
         <button type="button" onclick="copyProvider(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">${t('providers.btn_copy')}</button>
         <button type="button" onclick="deleteProvider(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">${t('common.delete')}</button>
       </div></td>
@@ -295,6 +337,7 @@ function copyProvider(id) {
   const item = allProviders.find(p => p.id === id);
   if (!item) return;
   fillForm('create-provider-form', item);
+  updatePayloadOverrideState(document.getElementById('create-provider-form'));
   openModal('create-provider-modal');
 }
 
@@ -324,6 +367,7 @@ document.getElementById('search-name').addEventListener('keydown', (e) => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('form[id^="create-provider-form"], form[id^="edit-provider-form-"]').forEach(setupPayloadOverrideControls);
   renderTable();
 });
 window.i18n && window.i18n.onLangChange(renderTable);

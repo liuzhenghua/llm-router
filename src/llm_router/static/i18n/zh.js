@@ -190,6 +190,8 @@ window.i18nDATA.zh = {
   'providers.toast_deleted': '模型源已删除',
   'providers.lbl_oai_endpoint': 'OpenAI Endpoint',
   'providers.lbl_ant_endpoint': 'Anthropic Endpoint',
+  'providers.payload_overrides_help': '按实际请求模型源的协议进行 Payload 覆盖。',
+  'providers.payload_overrides_disabled': '请先填写对应协议的 Endpoint，再编辑该 Payload 覆盖。',
   'providers.lbl_cache_read_price': 'Cache Read / 1M',
   'providers.lbl_cache_write_price': 'Cache Write / 1M',
   'providers.placeholder_oai_endpoint': 'https://api.openai.com/v1',

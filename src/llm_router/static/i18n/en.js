@@ -189,6 +189,8 @@ window.i18nDATA.en = {
   'providers.toast_deleted': 'Model source deleted',
   'providers.lbl_oai_endpoint': 'OpenAI Endpoint',
   'providers.lbl_ant_endpoint': 'Anthropic Endpoint',
+  'providers.payload_overrides_help': 'Applied to the actual upstream protocol. During cross-protocol forwarding, the matched model source uses the override for its own protocol.',
+  'providers.payload_overrides_disabled': 'Fill in the matching protocol endpoint before editing this payload override.',
   'providers.lbl_cache_read_price': 'Cache Read / 1M',
   'providers.lbl_cache_write_price': 'Cache Write / 1M',
   'providers.placeholder_oai_endpoint': 'https://api.openai.com/v1',
