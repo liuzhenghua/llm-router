@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal
 from types import SimpleNamespace
 
@@ -11,6 +12,10 @@ from llm_router.services.non_stream_handlers.cross_protocol import (
 from llm_router.services.non_stream_handlers.openai import (
     OpenAIEmbeddingNonStreamHandler,
     OpenAINonStreamHandler,
+)
+from llm_router.services.streaming_handlers.cross_protocol import (
+    AnthropicOverOpenAIStreamingHandler,
+    OpenAIOverAnthropicStreamingHandler,
 )
 
 
@@ -30,6 +35,35 @@ class _FakeAsyncClient:
 
     async def post(self, *args, **kwargs):
         return self._response
+
+
+class _FakeStreamResponse:
+    def __init__(self, status_code: int, body: str = "upstream failed"):
+        self.status_code = status_code
+        self._body = body
+        self.headers = {}
+
+    async def aread(self):
+        return self._body.encode("utf-8")
+
+
+class _FakeStreamContext:
+    def __init__(self, response: _FakeStreamResponse):
+        self._response = response
+
+    async def __aenter__(self):
+        return self._response
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return None
+
+
+class _FakeStreamingClient:
+    def __init__(self, response: _FakeStreamResponse):
+        self._response = response
+
+    def stream(self, *args, **kwargs):
+        return _FakeStreamContext(self._response)
 
 
 def _make_provider() -> SimpleNamespace:
@@ -85,6 +119,40 @@ async def _assert_failure_is_logged(monkeypatch: pytest.MonkeyPatch, module_path
     assert captured[0].error_message == "rate limited"
 
 
+async def _assert_streaming_cross_protocol_failure_logs_original_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    handler,
+    payload: dict,
+    request_path: str,
+):
+    captured = []
+    response = _FakeStreamResponse(429, "rate limited")
+
+    monkeypatch.setattr(
+        "llm_router.services.streaming_handlers.cross_protocol.get_http_client",
+        lambda: _FakeStreamingClient(response),
+    )
+    monkeypatch.setattr(
+        "llm_router.services.streaming_handlers.cross_protocol.schedule_post_request_tasks",
+        captured.append,
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await handler.proxy(
+            None,
+            api_key=None,
+            context=_make_context(payload),
+            provider=_make_provider(),
+            request_path=request_path,
+        )
+
+    assert exc_info.value.status_code == 429
+    assert len(captured) == 1
+    assert captured[0].status_code == 429
+    assert captured[0].success is False
+    assert json.loads(captured[0].request_body) == payload
+
+
 @pytest.mark.asyncio
 async def test_openai_non_stream_logs_upstream_http_failure(monkeypatch: pytest.MonkeyPatch):
     await _assert_failure_is_logged(
@@ -125,5 +193,25 @@ async def test_openai_over_anthropic_logs_upstream_http_failure(monkeypatch: pyt
         "llm_router.services.non_stream_handlers.cross_protocol",
         OpenAIOverAnthropicNonStreamHandler(),
         {"model": "ignored", "messages": [{"role": "user", "content": "hi"}]},
+        "/chat/completions",
+    )
+
+
+@pytest.mark.asyncio
+async def test_anthropic_over_openai_streaming_logs_original_payload(monkeypatch: pytest.MonkeyPatch):
+    await _assert_streaming_cross_protocol_failure_logs_original_payload(
+        monkeypatch,
+        AnthropicOverOpenAIStreamingHandler(),
+        {"model": "client-model", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]},
+        "/messages",
+    )
+
+
+@pytest.mark.asyncio
+async def test_openai_over_anthropic_streaming_logs_original_payload(monkeypatch: pytest.MonkeyPatch):
+    await _assert_streaming_cross_protocol_failure_logs_original_payload(
+        monkeypatch,
+        OpenAIOverAnthropicStreamingHandler(),
+        {"model": "client-model", "messages": [{"role": "user", "content": "hi"}]},
         "/chat/completions",
     )

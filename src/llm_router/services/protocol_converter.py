@@ -11,6 +11,8 @@ import json
 import time
 from typing import Any
 
+from fastapi import HTTPException, status
+
 
 # ==================== Request Converters ====================
 
@@ -76,7 +78,7 @@ def anthropic_to_openai_request(payload: dict, upstream_model: str) -> dict:
 
     # Convert tools
     if payload.get("tools"):
-        result["tools"] = [_anthropic_tool_to_openai(t) for t in payload["tools"]]
+        result["tools"] = [_anthropic_tool_to_openai(t, index=i) for i, t in enumerate(payload["tools"])]
     if payload.get("tool_choice"):
         result["tool_choice"] = _anthropic_tool_choice_to_openai(payload["tool_choice"])
 
@@ -412,11 +414,19 @@ def _openai_content_parts_to_anthropic(parts: list) -> list[dict]:
     return result
 
 
-def _anthropic_tool_to_openai(tool: dict) -> dict:
+def _anthropic_tool_to_openai(tool: dict, *, index: int | None = None) -> dict:
+    name = tool.get("name")
+    if not isinstance(name, str) or not name.strip():
+        field = f"tools[{index}].name" if index is not None else "tool.name"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field} is required",
+        )
+
     return {
         "type": "function",
         "function": {
-            "name": tool["name"],
+            "name": name,
             "description": tool.get("description", ""),
             "parameters": tool.get("input_schema", {"type": "object", "properties": {}}),
         },

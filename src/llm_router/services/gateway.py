@@ -55,6 +55,34 @@ def _degraded_type_for_status(status_code: int) -> DegradedType | None:
     return None
 
 
+def _protocol_error_response(protocol: ProviderProtocol, status_code: int, message: str) -> JSONResponse:
+    """Return a protocol-shaped gateway error response."""
+    if protocol == ProviderProtocol.ANTHROPIC:
+        error_type = "api_error" if status_code >= 500 else "invalid_request_error"
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "type": "error",
+                "error": {
+                    "type": error_type,
+                    "message": message,
+                },
+            },
+        )
+
+    error_type = "server_error" if status_code >= 500 else "invalid_request_error"
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": {
+                "message": message,
+                "type": error_type,
+                "code": error_type,
+            }
+        },
+    )
+
+
 def _select_group_provider(
     candidates: list[RoutableProvider],
     excluded_route_ids: set[int] | None = None,
@@ -82,7 +110,7 @@ async def handle_proxy_request(
 ) -> JSONResponse | StreamingResponse:
     logical_model_name = payload.get("model")
     if not logical_model_name:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="model is required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="model is required")
     stream = bool(payload.get("stream", False))
     request_id = headers.get("x-request-id") or uuid.uuid4().hex
     headers = {**headers, "x-request-id": request_id}
@@ -229,6 +257,17 @@ async def handle_proxy_request(
                         continue
                     # 组内没有其他可用 provider，跳出重试循环，切换下一组
                 break
+            except Exception:
+                logger.exception(
+                    "Unexpected gateway error while proxying request via route %s/provider %s",
+                    current_route_id,
+                    current_provider.id,
+                )
+                return _protocol_error_response(
+                    context.protocol,
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "Internal server error",
+                )
 
         # 当前组全部失败，切换下一组
         continue
@@ -254,7 +293,7 @@ async def handle_embedding_request(
     """
     logical_model_name = payload.get("model")
     if not logical_model_name:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="model is required")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="model is required")
 
     request_id = headers.get("x-request-id") or uuid.uuid4().hex
     headers = {**headers, "x-request-id": request_id}
@@ -367,6 +406,17 @@ async def handle_embedding_request(
                         continue
                     # 组内没有其他可用 provider，跳出重试循环，切换下一组
                 break
+            except Exception:
+                logger.exception(
+                    "Unexpected gateway error while proxying embedding request via route %s/provider %s",
+                    current_route_id,
+                    current_provider.id,
+                )
+                return _protocol_error_response(
+                    ProviderProtocol.OPENAI,
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    "Internal server error",
+                )
 
         # 当前组全部失败，切换下一组
         continue
