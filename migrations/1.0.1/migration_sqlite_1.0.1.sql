@@ -1,5 +1,5 @@
 -- Migration: 1.0.1
--- Description: Add public logical model visibility flag and request log upstream protocol
+-- Description: Add public model visibility, upstream protocol logs, and provider payload overrides
 --
 -- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
 -- !! replace every occurrence of "lr_" in this file with your prefix
@@ -14,3 +14,7 @@
 ALTER TABLE lr_logical_models ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0;
 
 ALTER TABLE lr_request_logs ADD COLUMN provider_model_protocol VARCHAR(32);
+
+ALTER TABLE lr_provider_models ADD COLUMN openai_payload_overrides TEXT;
+
+ALTER TABLE lr_provider_models ADD COLUMN anthropic_payload_overrides TEXT;

@@ -117,6 +117,8 @@ class ProviderModel(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(100), index=True)
     openai_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
     anthropic_endpoint: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    openai_payload_overrides: Mapped[str | None] = mapped_column(Text, nullable=True)
+    anthropic_payload_overrides: Mapped[str | None] = mapped_column(Text, nullable=True)
     encrypted_api_key: Mapped[str] = mapped_column(Text)
     upstream_model_name: Mapped[str] = mapped_column(String(120))
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)

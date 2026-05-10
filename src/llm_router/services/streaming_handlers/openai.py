@@ -11,6 +11,7 @@ from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.http_client import get_http_client
+from llm_router.services.payload_overrides import apply_provider_payload_overrides
 from llm_router.services.post_request import (
     ProviderPricesData,
     RequestFinalizationData,
@@ -41,7 +42,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
         patched["model"] = provider.upstream_model_name
         stream_options = patched.setdefault("stream_options", {})
         stream_options["include_usage"] = True
-        return patched
+        return apply_provider_payload_overrides(patched, provider)
 
     def build_upstream_headers(self, provider: Any, context: Any) -> dict:
         return {

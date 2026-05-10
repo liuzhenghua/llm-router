@@ -24,6 +24,7 @@ from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.http_client import get_http_client
 from llm_router.services.non_stream_handlers.base import BaseNonStreamHandler
+from llm_router.services.payload_overrides import apply_provider_payload_overrides
 from llm_router.services.post_request import RequestFinalizationData, schedule_post_request_tasks
 from llm_router.services.protocol_converter import (
     anthropic_to_openai_request,
@@ -110,7 +111,10 @@ class AnthropicOverOpenAINonStreamHandler(BaseNonStreamHandler):
     _UPSTREAM_PATH = "/chat/completions"
 
     def prepare_payload(self, payload: dict, provider: Any) -> dict:
-        return anthropic_to_openai_request(payload, provider.upstream_model_name)
+        return apply_provider_payload_overrides(
+            anthropic_to_openai_request(payload, provider.upstream_model_name),
+            provider,
+        )
 
     def build_upstream_headers(self, provider: Any, context: Any) -> dict:
         return {
@@ -264,7 +268,10 @@ class OpenAIOverAnthropicNonStreamHandler(BaseNonStreamHandler):
     _UPSTREAM_PATH = "/v1/messages"
 
     def prepare_payload(self, payload: dict, provider: Any) -> dict:
-        return openai_to_anthropic_request(payload, provider.upstream_model_name)
+        return apply_provider_payload_overrides(
+            openai_to_anthropic_request(payload, provider.upstream_model_name),
+            provider,
+        )
 
     def build_upstream_headers(self, provider: Any, context: Any) -> dict:
         return {

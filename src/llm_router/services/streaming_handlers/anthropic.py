@@ -11,6 +11,7 @@ from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.http_client import get_http_client
+from llm_router.services.payload_overrides import apply_provider_payload_overrides
 from llm_router.services.post_request import (
     ProviderPricesData,
     RequestFinalizationData,
@@ -44,7 +45,7 @@ class AnthropicStreamingHandler(BaseStreamingHandler):
     def prepare_payload(self, payload: dict, provider: Any) -> dict:
         patched = json.loads(json.dumps(payload))
         patched["model"] = provider.upstream_model_name
-        return patched
+        return apply_provider_payload_overrides(patched, provider)
 
     def build_upstream_headers(self, provider: Any, context: Any) -> dict:
         headers = {

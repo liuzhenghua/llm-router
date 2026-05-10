@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 from datetime import date
 from typing import Sequence
@@ -12,7 +13,7 @@ from sqlalchemy.orm import joinedload
 from llm_router.core.config import get_settings, local_date_for
 from llm_router.core.security import Encryptor, hash_api_key
 from llm_router.domain.enums import ProviderProtocol
-from llm_router.domain.models import ApiKey, LogicalModel, LogicalModelRoute
+from llm_router.domain.models import ApiKey, LogicalModel, LogicalModelRoute, ProviderModel
 from llm_router.domain.schemas import (
     CachedApiKey,
     CachedProvider,
@@ -25,13 +26,113 @@ from llm_router.domain.schemas import (
 from llm_router.services.billing import check_balance_and_budget
 from llm_router.services.cache.api_key_cache import get_api_key_cache
 from llm_router.services.cache.degraded_cache import get_degraded_route_cache
-from llm_router.services.cache.provider_cache import get_provider_cache
+from llm_router.services.cache.provider_cache import ProviderCache, get_provider_cache
 from llm_router.services.cache.public_logical_model_cache import get_public_logical_model_cache
-from llm_router.services.cache.route_cache import get_route_cache
+from llm_router.services.cache.route_cache import RouteCache, get_route_cache
 from llm_router.services.rate_limit import rate_limiter
 
 settings = get_settings()
 encryptor = Encryptor(settings.app_encryption_key)
+
+
+def _loads_json_object(value: str | None) -> dict:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _cached_provider_from_model(provider: ProviderModel) -> CachedProvider:
+    return CachedProvider(
+        id=provider.id,
+        name=provider.name,
+        description=provider.description,
+        openai_endpoint=provider.openai_endpoint,
+        anthropic_endpoint=provider.anthropic_endpoint,
+        encrypted_api_key=provider.encrypted_api_key,
+        upstream_model_name=provider.upstream_model_name,
+        input_token_price=provider.input_token_price,
+        output_token_price=provider.output_token_price,
+        cache_read_token_price=provider.cache_read_token_price,
+        cache_write_token_price=provider.cache_write_token_price,
+        supports_prompt_cache=provider.supports_prompt_cache,
+        timeout_seconds=provider.timeout_seconds,
+        is_active=provider.is_active,
+        openai_payload_overrides=_loads_json_object(provider.openai_payload_overrides),
+        anthropic_payload_overrides=_loads_json_object(provider.anthropic_payload_overrides),
+    )
+
+
+async def _get_provider_data(
+    session: AsyncSession,
+    provider_model_id: int,
+    provider_cache: ProviderCache,
+) -> dict | None:
+    cached_provider_data = await provider_cache.get(provider_model_id)
+    if cached_provider_data is not None:
+        return cached_provider_data
+
+    provider_model = await session.get(ProviderModel, provider_model_id)
+    if provider_model is None or provider_model.deleted_at is not None:
+        return None
+
+    cached_provider_data = _cached_provider_from_model(provider_model).to_dict()
+    await provider_cache.set(provider_model.id, cached_provider_data)
+    return cached_provider_data
+
+
+async def _get_routes_data(
+    session: AsyncSession,
+    logical_model_id: int,
+    route_cache: RouteCache,
+    provider_cache: ProviderCache,
+) -> list[dict]:
+    cached_routes_data = await route_cache.get_by_logical_model(logical_model_id)
+    if cached_routes_data:
+        return cached_routes_data
+
+    stmt = (
+        select(LogicalModelRoute)
+        .options(joinedload(LogicalModelRoute.provider_model))
+        .where(
+            LogicalModelRoute.logical_model_id == logical_model_id,
+            LogicalModelRoute.status == "active",
+        )
+        .order_by(LogicalModelRoute.priority.asc(), LogicalModelRoute.id.asc())
+    )
+    db_routes = (await session.execute(stmt)).scalars().all()
+
+    routes_data = []
+    for route in db_routes:
+        provider = route.provider_model
+        if not provider.is_active:
+            continue
+
+        # Include provider if it has at least one endpoint (may need protocol conversion)
+        if not provider.openai_endpoint and not provider.anthropic_endpoint:
+            continue
+
+        cached_route = CachedRoute(
+            route_id=route.id,
+            logical_model_id=route.logical_model_id,
+            provider_model_id=provider.id,
+            priority=route.priority,
+            weight=route.weight,
+            is_fallback=route.is_fallback,
+            status=route.status,
+        )
+        routes_data.append(cached_route.to_dict())
+
+        cached_provider = _cached_provider_from_model(provider)
+        await provider_cache.set(provider.id, cached_provider.to_dict())
+
+    if routes_data:
+        await route_cache.set_by_logical_model(logical_model_id, routes_data)
+
+    return routes_data
 
 
 async def _get_public_logical_models_data(session: AsyncSession) -> list[dict]:
@@ -307,72 +408,7 @@ async def resolve_provider_candidates(
     merged_routes_data: list[dict] = []
 
     for logical_model_id in logical_model_ids:
-        # === 1. 获取路由数据 ===
-        cached_routes_data = await route_cache.get_by_logical_model(logical_model_id)
-
-        if cached_routes_data:
-            routes_data = cached_routes_data
-        else:
-            # 缓存 miss：从 DB 查询
-            stmt = (
-                select(LogicalModelRoute)
-                .options(joinedload(LogicalModelRoute.provider_model))
-                .where(
-                    LogicalModelRoute.logical_model_id == logical_model_id,
-                    LogicalModelRoute.status == "active",
-                )
-                .order_by(LogicalModelRoute.priority.asc(), LogicalModelRoute.id.asc())
-            )
-            db_routes = (await session.execute(stmt)).scalars().all()
-
-            routes_data = []
-            routes_to_cache: list[dict] = []
-
-            for route in db_routes:
-                provider = route.provider_model
-                if not provider.is_active:
-                    continue
-
-                # Include provider if it has at least one endpoint (may need protocol conversion)
-                if not provider.openai_endpoint and not provider.anthropic_endpoint:
-                    continue
-
-                # 构建缓存数据
-                cached_route = CachedRoute(
-                    route_id=route.id,
-                    logical_model_id=route.logical_model_id,
-                    provider_model_id=provider.id,
-                    priority=route.priority,
-                    weight=route.weight,
-                    is_fallback=route.is_fallback,
-                    status=route.status,
-                )
-                routes_data.append(cached_route.to_dict())
-
-                routes_to_cache.append(cached_route.to_dict())
-
-                cached_provider = CachedProvider(
-                    id=provider.id,
-                    name=provider.name,
-                    description=provider.description,
-                    openai_endpoint=provider.openai_endpoint,
-                    anthropic_endpoint=provider.anthropic_endpoint,
-                    encrypted_api_key=provider.encrypted_api_key,
-                    upstream_model_name=provider.upstream_model_name,
-                    input_token_price=provider.input_token_price,
-                    output_token_price=provider.output_token_price,
-                    cache_read_token_price=provider.cache_read_token_price,
-                    cache_write_token_price=provider.cache_write_token_price,
-                    supports_prompt_cache=provider.supports_prompt_cache,
-                    timeout_seconds=provider.timeout_seconds,
-                    is_active=provider.is_active,
-                )
-                await provider_cache.set(provider.id, cached_provider.to_dict())
-
-            # 回填路由列表缓存
-            if routes_to_cache:
-                await route_cache.set_by_logical_model(logical_model_id, routes_to_cache)
-
+        routes_data = await _get_routes_data(session, logical_model_id, route_cache, provider_cache)
         merged_routes_data.extend(routes_data)
 
     # === 2. 解析路由并构建 provider ===
@@ -392,11 +428,9 @@ async def resolve_provider_candidates(
             continue
 
         # 获取 provider 数据
-        cached_provider_data = await provider_cache.get(route.provider_model_id)
-
-        if not cached_provider_data:
+        cached_provider_data = await _get_provider_data(session, route.provider_model_id, provider_cache)
+        if cached_provider_data is None:
             continue
-
         provider = CachedProvider.from_dict(cached_provider_data)
         if not provider.is_active:
             continue
@@ -431,6 +465,8 @@ async def resolve_provider_candidates(
             cache_read_token_price=provider.cache_read_token_price,
             cache_write_token_price=provider.cache_write_token_price,
             supports_prompt_cache=provider.supports_prompt_cache,
+            openai_payload_overrides=provider.openai_payload_overrides,
+            anthropic_payload_overrides=provider.anthropic_payload_overrides,
         )
 
         all_routable.append((route.route_id, route.logical_model_id, route.priority, route.is_fallback, route.weight, routed_provider))

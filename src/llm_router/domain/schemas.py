@@ -31,6 +31,8 @@ class RoutedProvider:
     cache_read_token_price: Decimal
     cache_write_token_price: Decimal
     supports_prompt_cache: bool
+    openai_payload_overrides: dict[str, Any] = field(default_factory=dict)
+    anthropic_payload_overrides: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -173,6 +175,8 @@ class CachedProvider:
     supports_prompt_cache: bool
     timeout_seconds: int
     is_active: bool
+    openai_payload_overrides: dict[str, Any] = field(default_factory=dict)
+    anthropic_payload_overrides: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -190,6 +194,8 @@ class CachedProvider:
             "supports_prompt_cache": self.supports_prompt_cache,
             "timeout_seconds": self.timeout_seconds,
             "is_active": self.is_active,
+            "openai_payload_overrides": self.openai_payload_overrides,
+            "anthropic_payload_overrides": self.anthropic_payload_overrides,
         }
 
     @classmethod
@@ -209,6 +215,8 @@ class CachedProvider:
             supports_prompt_cache=d.get("supports_prompt_cache", False),
             timeout_seconds=d.get("timeout_seconds", 60),
             is_active=d["is_active"],
+            openai_payload_overrides=d.get("openai_payload_overrides") or {},
+            anthropic_payload_overrides=d.get("anthropic_payload_overrides") or {},
         )
 
 

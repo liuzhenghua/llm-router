@@ -25,6 +25,7 @@ from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
 from llm_router.services.http_client import get_http_client
+from llm_router.services.payload_overrides import apply_provider_payload_overrides
 from llm_router.services.post_request import RequestFinalizationData, schedule_post_request_tasks
 from llm_router.services.protocol_converter import (
     anthropic_to_openai_request,
@@ -142,7 +143,7 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
         openai_payload = anthropic_to_openai_request(payload, provider.upstream_model_name)
         openai_payload["stream"] = True
         openai_payload.setdefault("stream_options", {})["include_usage"] = True
-        return openai_payload
+        return apply_provider_payload_overrides(openai_payload, provider)
 
     def build_upstream_headers(self, provider: Any, context: Any) -> dict:
         return {
@@ -518,7 +519,7 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
     def prepare_payload(self, payload: dict, provider: Any) -> dict:
         anthropic_payload = openai_to_anthropic_request(payload, provider.upstream_model_name)
         anthropic_payload["stream"] = True
-        return anthropic_payload
+        return apply_provider_payload_overrides(anthropic_payload, provider)
 
     def build_upstream_headers(self, provider: Any, context: Any) -> dict:
         return {

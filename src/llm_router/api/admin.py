@@ -84,6 +84,48 @@ def _parse_logging_flag(value: str) -> bool | None:
     return None
 
 
+def _parse_payload_overrides(value: str, field_name: str) -> dict:
+    stripped = value.strip()
+    if not stripped:
+        return {}
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{field_name} must be valid JSON",
+        ) from exc
+    if not isinstance(parsed, dict):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"{field_name} must be a JSON object",
+        )
+    return parsed
+
+
+async def _invalidate_provider_route_caches(session, provider_model_id: int) -> None:
+    logical_model_ids = (
+        await session.execute(
+            select(LogicalModelRoute.logical_model_id)
+            .where(LogicalModelRoute.provider_model_id == provider_model_id)
+            .distinct()
+        )
+    ).scalars().all()
+    route_cache = get_route_cache()
+    for logical_model_id in logical_model_ids:
+        await route_cache.invalidate(logical_model_id)
+
+
+def _dump_payload_overrides(value: str | None) -> str:
+    if not value:
+        return ""
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return value
+    return json.dumps(parsed, ensure_ascii=False, indent=2)
+
+
 async def require_admin(request: Request) -> None:
     session = request.state.db
     if not await _admin_user_service.has_any_user(session):
@@ -353,6 +395,8 @@ async def providers_page(request: Request, _: None = Depends(require_admin)):
             "description": pm.description,
             "openai_endpoint": pm.openai_endpoint or "",
             "anthropic_endpoint": pm.anthropic_endpoint or "",
+            "openai_payload_overrides": _dump_payload_overrides(pm.openai_payload_overrides),
+            "anthropic_payload_overrides": _dump_payload_overrides(pm.anthropic_payload_overrides),
             "upstream_model_name": pm.upstream_model_name,
             "input_token_price": _format_decimal(pm.input_token_price),
             "output_token_price": _format_decimal(pm.output_token_price),
@@ -609,6 +653,8 @@ async def create_provider_model(
     description: str = Form(default=""),
     openai_endpoint: str = Form(default=""),
     anthropic_endpoint: str = Form(default=""),
+    openai_payload_overrides: str = Form(default=""),
+    anthropic_payload_overrides: str = Form(default=""),
     upstream_model_name: str = Form(...),
     api_key_secret: str = Form(...),
     input_token_price: Decimal = Form(default=Decimal("0")),
@@ -623,6 +669,8 @@ async def create_provider_model(
     ae = anthropic_endpoint.strip()
     if not oe and not ae:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="At least one of openai_endpoint or anthropic_endpoint is required")
+    openai_overrides = _parse_payload_overrides(openai_payload_overrides, "openai_payload_overrides")
+    anthropic_overrides = _parse_payload_overrides(anthropic_payload_overrides, "anthropic_payload_overrides")
     session = request.state.db
     session.add(
         ProviderModel(
@@ -630,6 +678,8 @@ async def create_provider_model(
             description=description.strip() or None,
             openai_endpoint=oe or None,
             anthropic_endpoint=ae or None,
+            openai_payload_overrides=json.dumps(openai_overrides, ensure_ascii=False) if openai_overrides else None,
+            anthropic_payload_overrides=json.dumps(anthropic_overrides, ensure_ascii=False) if anthropic_overrides else None,
             upstream_model_name=upstream_model_name,
             encrypted_api_key=encryptor.encrypt(api_key_secret),
             input_token_price=input_token_price,
@@ -652,6 +702,8 @@ async def update_provider_model(
     description: str = Form(default=""),
     openai_endpoint: str = Form(default=""),
     anthropic_endpoint: str = Form(default=""),
+    openai_payload_overrides: str = Form(default=""),
+    anthropic_payload_overrides: str = Form(default=""),
     upstream_model_name: str = Form(...),
     api_key_secret: str = Form(default=""),
     input_token_price: Decimal = Form(default=Decimal("0")),
@@ -667,6 +719,8 @@ async def update_provider_model(
     ae = anthropic_endpoint.strip()
     if not oe and not ae:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="At least one of openai_endpoint or anthropic_endpoint is required")
+    openai_overrides = _parse_payload_overrides(openai_payload_overrides, "openai_payload_overrides")
+    anthropic_overrides = _parse_payload_overrides(anthropic_payload_overrides, "anthropic_payload_overrides")
     session = request.state.db
     provider_model = await session.get(ProviderModel, provider_model_id)
     if provider_model is None:
@@ -675,6 +729,8 @@ async def update_provider_model(
     provider_model.description = description.strip() or None
     provider_model.openai_endpoint = oe or None
     provider_model.anthropic_endpoint = ae or None
+    provider_model.openai_payload_overrides = json.dumps(openai_overrides, ensure_ascii=False) if openai_overrides else None
+    provider_model.anthropic_payload_overrides = json.dumps(anthropic_overrides, ensure_ascii=False) if anthropic_overrides else None
     provider_model.upstream_model_name = upstream_model_name
     if api_key_secret.strip():
         provider_model.encrypted_api_key = encryptor.encrypt(api_key_secret)
@@ -687,6 +743,7 @@ async def update_provider_model(
     provider_model.is_active = is_active
     await session.commit()
     await get_provider_cache().invalidate(provider_model_id)
+    await _invalidate_provider_route_caches(session, provider_model_id)
     return _redirect_back(request, "/admin/providers")
 
 
@@ -701,6 +758,7 @@ async def delete_provider_model(request: Request, provider_model_id: int, _: Non
     provider_model.is_active = False
     await session.commit()
     await get_provider_cache().invalidate(provider_model_id)
+    await _invalidate_provider_route_caches(session, provider_model_id)
     return JSONResponse({"ok": True})
 
 
