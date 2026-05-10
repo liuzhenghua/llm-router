@@ -99,6 +99,7 @@ class LogicalModel(Base, TimestampMixin):
     description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     routing_strategy: Mapped[str] = mapped_column(String(32), default="priority")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, default=None)
 
     routes: Mapped[list["LogicalModelRoute"]] = relationship(

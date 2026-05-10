@@ -3,17 +3,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections import defaultdict
-from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from sqlalchemy import update
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
 from llm_router.core.database import SessionLocal
 from llm_router.domain.models import ApiKey
-from llm_router.services.cache.redis_lock import RedisLockManager
+from llm_router.services.cache.core.redis_lock import RedisLockManager
 from llm_router.services.cache.spend_queue import SpendDelta, SpendDeltaQueue
 
 if TYPE_CHECKING:
@@ -21,7 +19,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-LOCK_KEY = "db_writer"
+LOCK_KEY = "db_spend_writer"
 LOCK_TTL = 30  # 锁超时 30s
 BATCH_SIZE = 100  # 每次最多处理 100 条
 

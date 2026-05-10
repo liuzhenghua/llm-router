@@ -95,6 +95,19 @@ class RedisCache:
             logger.warning(f"Redis delete error: {exc}")
             return False
 
+    async def delete_by_prefix(self, prefix: str) -> bool:
+        """删除指定前缀的缓存"""
+        if not self._available or not self._client:
+            return False
+        try:
+            keys = [key async for key in self._client.scan_iter(match=f"{self._key(prefix)}*")]
+            if keys:
+                await self._client.delete(*keys)
+            return True
+        except Exception as exc:
+            logger.warning(f"Redis delete_by_prefix error: {exc}")
+            return False
+
     # ==================== ZSET 操作（用于增量队列）====================
 
     async def zadd(self, key: str, mapping: dict[str, float]) -> bool:

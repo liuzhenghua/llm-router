@@ -5,6 +5,9 @@ import pytest
 from llm_router.core.security import Encryptor
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.schemas import CachedProvider, CachedRoute
+from llm_router.services.cache.degraded_cache import DegradedRouteCache
+from llm_router.services.cache.provider_cache import ProviderCache
+from llm_router.services.cache.route_cache import RouteCache
 from llm_router.services.router import resolve_provider_candidates
 
 
@@ -15,11 +18,12 @@ class _FakeDualCache:
         self._memory = _NullMemory()
         self._redis = None
 
-    async def get_routes_by_logical_model(self, logical_model_id: int) -> list[dict] | None:
-        return self._routes_by_model.get(logical_model_id)
-
-    async def get_provider(self, provider_id: int) -> dict | None:
-        return self._providers_by_id.get(provider_id)
+    async def get(self, key: str, **kwargs):
+        if key.startswith("route:logical:"):
+            return self._routes_by_model.get(int(key.rsplit(":", 1)[1]))
+        if key.startswith("provider:id:"):
+            return self._providers_by_id.get(int(key.rsplit(":", 1)[1]))
+        return None
 
 
 class _UnusedSession:
@@ -78,10 +82,10 @@ async def test_same_name_logical_models_keep_distinct_routes_for_same_provider(m
         ],
     }
 
-    monkeypatch.setattr(
-        "llm_router.services.router.get_dual_cache",
-        lambda: _FakeDualCache(routes_by_model, {provider_id: provider_data}),
-    )
+    dual_cache = _FakeDualCache(routes_by_model, {provider_id: provider_data})
+    monkeypatch.setattr("llm_router.services.cache.degraded_cache.degraded_route_cache", DegradedRouteCache(dual_cache))
+    monkeypatch.setattr("llm_router.services.cache.route_cache.route_cache", RouteCache(dual_cache))
+    monkeypatch.setattr("llm_router.services.cache.provider_cache.provider_cache", ProviderCache(dual_cache))
     monkeypatch.setattr("llm_router.services.router.encryptor", encryptor)
 
     groups = await resolve_provider_candidates(_UnusedSession(), [1, 2], ProviderProtocol.OPENAI)

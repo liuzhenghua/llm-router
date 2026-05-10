@@ -323,7 +323,8 @@ function createModelSelector(selector, initialSelected) {
   selector._els = els;
 
   function displayLabel(model) {
-    return model.description ? `${model.name} <span class="text-slate-400">(${model.description})</span>` : model.name;
+    const publicBadge = model.is_public ? ` <span class="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">${t('logical.visibility_public')}</span>` : '';
+    return (model.description ? `${model.name} <span class="text-slate-400">(${model.description})</span>` : model.name) + publicBadge;
   }
 
   function displayLabelPlain(model) {

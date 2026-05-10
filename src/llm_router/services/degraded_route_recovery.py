@@ -17,8 +17,7 @@ from sqlalchemy.orm import joinedload
 from llm_router.core.config import get_settings
 from llm_router.core.security import Encryptor
 from llm_router.domain.models import LogicalModelRoute, ProviderModel
-from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType, RouteDegradedStatus
-from llm_router.services.cache.dual_cache import get_dual_cache
+from llm_router.services.cache.degraded_cache import DegradedType, RouteDegradedStatus, get_degraded_route_cache
 from llm_router.services.http_client import get_http_client
 
 
@@ -51,9 +50,7 @@ class DegradedRouteRecovery:
     """
 
     def __init__(self):
-        dual_cache = get_dual_cache()
-        self._degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
-        self._dual_cache = dual_cache
+        self._degraded_cache = get_degraded_route_cache()
         settings = get_settings()
         self._encryptor = Encryptor(settings.app_encryption_key)
 
@@ -64,12 +61,8 @@ class DegradedRouteRecovery:
         Returns:
             恢复成功的路由数量
         """
-        if not self._degraded_cache or not self._dual_cache:
-            logger.warning("DegradedRouteRecovery: cache not available")
-            return 0
-
         # 获取所有降级路由 ID
-        degraded_route_ids = await self._dual_cache.get_all_degraded_route_ids()
+        degraded_route_ids = await self._degraded_cache.get_all_degraded_route_ids()
         if not degraded_route_ids:
             return 0
 
@@ -102,9 +95,6 @@ class DegradedRouteRecovery:
         Returns:
             True 如果恢复成功，False 否则
         """
-        if not self._degraded_cache:
-            return False
-
         status = await self._degraded_cache.get_status(route_id)
         if status is None:
             return False

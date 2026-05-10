@@ -24,7 +24,11 @@ from llm_router.domain.models import (
     RequestLog,
     UsageRecord,
 )
-from llm_router.services.cache.dual_cache import get_dual_cache
+from llm_router.services.cache.api_key_cache import get_api_key_cache
+from llm_router.services.cache.degraded_cache import get_degraded_route_cache
+from llm_router.services.cache.provider_cache import get_provider_cache
+from llm_router.services.cache.public_logical_model_cache import get_public_logical_model_cache
+from llm_router.services.cache.route_cache import get_route_cache
 from llm_router.services.model_visibility import list_visible_logical_models
 
 _admin_user_service = AdminUserService()
@@ -78,27 +82,6 @@ def _parse_logging_flag(value: str) -> bool | None:
     elif value == "false":
         return False
     return None
-
-
-async def _invalidate_apikey_cache(api_key: ApiKey) -> None:
-    """失效 ApiKey 的缓存"""
-    dual_cache = get_dual_cache()
-    if dual_cache:
-        await dual_cache.invalidate_apikey(api_key.key_hash, api_key.id)
-
-
-async def _invalidate_provider_cache(provider_id: int) -> None:
-    """失效 Provider 的缓存"""
-    dual_cache = get_dual_cache()
-    if dual_cache:
-        await dual_cache.invalidate_provider(provider_id)
-
-
-async def _invalidate_route_cache(logical_model_id: int) -> None:
-    """失效路由缓存"""
-    dual_cache = get_dual_cache()
-    if dual_cache:
-        await dual_cache.invalidate_routes(logical_model_id)
 
 
 async def require_admin(request: Request) -> None:
@@ -304,7 +287,10 @@ async def api_keys_page(request: Request, _: None = Depends(require_admin)):
         for key in api_keys_result
     ]
     logical_models_result = (await session.execute(select(LogicalModel).order_by(LogicalModel.name.asc()))).scalars().all()
-    logical_models = [{"id": m.id, "name": m.name, "description": m.description or ""} for m in logical_models_result]
+    logical_models = [
+        {"id": m.id, "name": m.name, "description": m.description or "", "is_public": m.is_public}
+        for m in logical_models_result
+    ]
     return _render_admin(
         request,
         "api_keys.html",
@@ -324,6 +310,7 @@ async def logical_models_page(request: Request, _: None = Depends(require_admin)
             "name": model.name,
             "description": model.description,
             "is_active": model.is_active,
+            "is_public": model.is_public,
         }
         for model in logical_models_result
     ]
@@ -475,7 +462,7 @@ async def update_api_key(
         api_key.timezone = timezone.strip()
     api_key.default_channel = default_channel.strip() or None
     await session.commit()
-    await _invalidate_apikey_cache(api_key)
+    await get_api_key_cache().invalidate(api_key.key_hash)
     return JSONResponse({"ok": True, "id": api_key_id})
 
 
@@ -506,7 +493,7 @@ async def topup_api_key(
         )
     )
     await session.commit()
-    await _invalidate_apikey_cache(api_key)
+    await get_api_key_cache().invalidate(api_key.key_hash)
     return _redirect_back(request, "/admin/api-keys")
 
 
@@ -517,7 +504,7 @@ async def delete_api_key(request: Request, api_key_id: int, _: None = Depends(re
     if api_key is not None:
         api_key.status = "disabled"
         await session.commit()
-        await _invalidate_apikey_cache(api_key)
+        await get_api_key_cache().invalidate(api_key.key_hash)
     return _redirect_back(request, "/admin/api-keys")
 
 
@@ -528,7 +515,7 @@ async def enable_api_key(request: Request, api_key_id: int, _: None = Depends(re
     if api_key is not None:
         api_key.status = "active"
         await session.commit()
-        await _invalidate_apikey_cache(api_key)
+        await get_api_key_cache().invalidate(api_key.key_hash)
     return JSONResponse({"ok": True, "id": api_key_id})
 
 
@@ -540,7 +527,7 @@ async def destroy_api_key(request: Request, api_key_id: int, _: None = Depends(r
     if api_key is None:
         return JSONResponse({"ok": False, "error": "API Key 不存在"}, status_code=404)
     # 先失效缓存，确保该 Key 立即失效
-    await _invalidate_apikey_cache(api_key)
+    await get_api_key_cache().invalidate(api_key.key_hash)
     # 软删除：打上时间戳，同时将 status 置为 deleted 防止缓存中残留的条目鉴权通过
     api_key.deleted_at = dt_datetime.utcnow()
     api_key.status = "deleted"
@@ -553,11 +540,13 @@ async def create_logical_model(
     request: Request,
     name: str = Form(...),
     description: str = Form(default=""),
+    is_public: bool = Form(default=False),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
-    session.add(LogicalModel(name=name, description=description or None))
+    session.add(LogicalModel(name=name, description=description or None, is_public=is_public))
     await session.commit()
+    await get_public_logical_model_cache().invalidate()
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -582,7 +571,9 @@ async def delete_logical_model(request: Request, logical_model_id: int, _: None 
     logical_model.deleted_at = dt_datetime.utcnow()
     logical_model.is_active = False
     await session.commit()
-    await _invalidate_route_cache(logical_model_id)
+    await get_route_cache().invalidate(logical_model_id)
+    await get_public_logical_model_cache().invalidate()
+    await get_api_key_cache().invalidate_all()
     return JSONResponse({"ok": True})
 
 
@@ -593,6 +584,7 @@ async def update_logical_model(
     name: str = Form(...),
     description: str = Form(default=""),
     is_active: bool = Form(default=False),
+    is_public: bool = Form(default=False),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
@@ -602,7 +594,11 @@ async def update_logical_model(
     logical_model.name = name
     logical_model.description = description or None
     logical_model.is_active = is_active
+    logical_model.is_public = is_public
     await session.commit()
+    await get_route_cache().invalidate(logical_model_id)
+    await get_public_logical_model_cache().invalidate()
+    await get_api_key_cache().invalidate_all()
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -690,7 +686,7 @@ async def update_provider_model(
     provider_model.timeout_seconds = timeout_seconds
     provider_model.is_active = is_active
     await session.commit()
-    await _invalidate_provider_cache(provider_model_id)
+    await get_provider_cache().invalidate(provider_model_id)
     return _redirect_back(request, "/admin/providers")
 
 
@@ -704,7 +700,7 @@ async def delete_provider_model(request: Request, provider_model_id: int, _: Non
     provider_model.deleted_at = dt_datetime.utcnow()
     provider_model.is_active = False
     await session.commit()
-    await _invalidate_provider_cache(provider_model_id)
+    await get_provider_cache().invalidate(provider_model_id)
     return JSONResponse({"ok": True})
 
 
@@ -729,7 +725,7 @@ async def create_route(
         )
     )
     await session.commit()
-    await _invalidate_route_cache(logical_model_id)
+    await get_route_cache().invalidate(logical_model_id)
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -758,9 +754,9 @@ async def update_route(
     route.status = status_text
     await session.commit()
     # 失效新旧路由缓存
-    await _invalidate_route_cache(old_logical_model_id)
+    await get_route_cache().invalidate(old_logical_model_id)
     if logical_model_id != old_logical_model_id:
-        await _invalidate_route_cache(logical_model_id)
+        await get_route_cache().invalidate(logical_model_id)
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -772,7 +768,7 @@ async def delete_route(request: Request, route_id: int, _: None = Depends(requir
         logical_model_id = route.logical_model_id
         await session.delete(route)
         await session.commit()
-        await _invalidate_route_cache(logical_model_id)
+        await get_route_cache().invalidate(logical_model_id)
     return _redirect_back(request, "/admin/logical-models")
 
 
@@ -783,17 +779,7 @@ async def recover_route(request: Request, route_id: int, _: None = Depends(requi
 
     清除路由的降级状态，使其重新参与路由调度
     """
-    from llm_router.services.cache.degraded_cache import DegradedRouteCache
-
-    dual_cache = get_dual_cache()
-    if not dual_cache:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Cache not available"},
-        )
-
-    degraded_cache = DegradedRouteCache(dual_cache)
-    recovered = await degraded_cache.recover(route_id)
+    recovered = await get_degraded_route_cache().recover(route_id)
 
     if recovered:
         return JSONResponse(
@@ -816,17 +802,7 @@ async def get_route_degraded_status(
     """
     获取路由的降级状态
     """
-    from llm_router.services.cache.degraded_cache import DegradedRouteCache
-
-    dual_cache = get_dual_cache()
-    if not dual_cache:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Cache not available"},
-        )
-
-    degraded_cache = DegradedRouteCache(dual_cache)
-    status = await degraded_cache.get_status(route_id)
+    status = await get_degraded_route_cache().get_status(route_id)
 
     if status is None:
         return JSONResponse(

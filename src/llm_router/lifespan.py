@@ -9,11 +9,16 @@ from fastapi import FastAPI
 
 from llm_router.core.config import get_settings
 from llm_router.core.database import SessionLocal, init_db
-from llm_router.services.cache.db_writer import DbSpendWriter, set_db_writer
-from llm_router.services.cache.dual_cache import DualCache, set_dual_cache
-from llm_router.services.cache.in_memory_cache import InMemoryCache
-from llm_router.services.cache.redis_cache import RedisCache
-from llm_router.services.cache.redis_lock import RedisLockManager, set_lock_manager
+from llm_router.services.cache.api_key_cache import ApiKeyCache, set_api_key_cache
+from llm_router.services.cache.db_spend_writer import DbSpendWriter, set_db_writer
+from llm_router.services.cache.degraded_cache import DegradedRouteCache, set_degraded_route_cache
+from llm_router.services.cache.core.dual_cache import DualCache, set_dual_cache
+from llm_router.services.cache.core.in_memory_cache import InMemoryCache
+from llm_router.services.cache.core.redis_cache import RedisCache
+from llm_router.services.cache.core.redis_lock import RedisLockManager, set_lock_manager
+from llm_router.services.cache.provider_cache import ProviderCache, set_provider_cache
+from llm_router.services.cache.public_logical_model_cache import PublicLogicalModelCache, set_public_logical_model_cache
+from llm_router.services.cache.route_cache import RouteCache, set_route_cache
 from llm_router.services.cache.spend_queue import SpendDeltaQueue, set_spend_queue
 from llm_router.services.degraded_route_recovery import run_recovery_task
 from llm_router.services.http_client import close_http_client, init_http_client
@@ -67,6 +72,11 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         redis_ttl=settings.default_redis_ttl,
     )
     set_dual_cache(_dual_cache)
+    set_api_key_cache(ApiKeyCache(_dual_cache))
+    set_provider_cache(ProviderCache(_dual_cache))
+    set_route_cache(RouteCache(_dual_cache))
+    set_public_logical_model_cache(PublicLogicalModelCache(_dual_cache))
+    set_degraded_route_cache(DegradedRouteCache(_dual_cache))
 
     _spend_queue = SpendDeltaQueue(
         redis_enabled=settings.redis_enabled,

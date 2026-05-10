@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import ApiKey
 from llm_router.domain.schemas import RequestContext, RoutableProvider, RoutableProviderGroup, RoutedProvider
-from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType
-from llm_router.services.cache.dual_cache import get_dual_cache
+from llm_router.services.cache.degraded_cache import DegradedRouteCache, DegradedType, get_degraded_route_cache
 from llm_router.services.non_stream_handlers import (
     AnthropicNonStreamHandler,
     OpenAIEmbeddingNonStreamHandler,
@@ -114,9 +113,7 @@ async def handle_proxy_request(
     # The session remains usable — it will lazily acquire a new connection if needed.
     await session.close()
 
-    # 初始化降级缓存
-    dual_cache = get_dual_cache()
-    degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
+    degraded_cache = get_degraded_route_cache()
 
     last_error: HTTPException | None = None
 
@@ -156,8 +153,7 @@ async def handle_proxy_request(
                         provider=current_provider,
                         request_path=request_path,
                     )
-                    if degraded_cache:
-                        await degraded_cache.recover(current_route_id)
+                    await degraded_cache.recover(current_route_id)
                     return result
                 else:
                     if context.protocol == ProviderProtocol.OPENAI:
@@ -177,8 +173,7 @@ async def handle_proxy_request(
                         provider=current_provider,
                         request_path=request_path,
                     )
-                    if degraded_cache:
-                        await degraded_cache.recover(current_route_id)
+                    await degraded_cache.recover(current_route_id)
                     return result
             except HTTPException as exc:
                 last_error = exc
@@ -187,26 +182,24 @@ async def handle_proxy_request(
                 # 401/402/403：上游 provider 自身问题，立即标记 degraded
                 degraded_type = _degraded_type_for_status(exc.status_code)
                 if degraded_type is not None:
-                    if degraded_cache:
-                        await degraded_cache.mark_degraded(
-                            route_id=current_route_id,
-                            degraded_type=degraded_type,
-                            fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
-                        )
+                    await degraded_cache.mark_degraded(
+                        route_id=current_route_id,
+                        degraded_type=degraded_type,
+                        fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
+                    )
 
                 # 429：速率限制，与 5xx 一样通过连续失败计数降级
                 elif exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
-                    if degraded_cache:
-                        new_count = await degraded_cache.increment_fail_count(current_route_id)
-                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
-                            await degraded_cache.mark_degraded(
-                                route_id=current_route_id,
-                                degraded_type=DegradedType.QUOTA_EXHAUSTED,
-                                fail_count=new_count,
-                            )
-                            logger.warning(
-                                f"Route {current_route_id} marked as quota_exhausted after {new_count} 429 errors"
-                            )
+                    new_count = await degraded_cache.increment_fail_count(current_route_id)
+                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                        await degraded_cache.mark_degraded(
+                            route_id=current_route_id,
+                            degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                            fail_count=new_count,
+                        )
+                        logger.warning(
+                            f"Route {current_route_id} marked as quota_exhausted after {new_count} 429 errors"
+                        )
 
                 # 4xx 其他错误：直接返回，不重试不降级
                 elif 400 <= exc.status_code < 500:
@@ -214,18 +207,17 @@ async def handle_proxy_request(
 
                 # 5xx：连通性错误，记录失败次数
                 else:
-                    if degraded_cache:
-                        new_count = await degraded_cache.increment_fail_count(current_route_id)
-                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
-                            # 失败次数超限，标记为 degraded (unavailable)
-                            await degraded_cache.mark_degraded(
-                                route_id=current_route_id,
-                                degraded_type=DegradedType.UNAVAILABLE,
-                                fail_count=new_count,
-                            )
-                            logger.warning(
-                                f"Route {current_route_id} marked as unavailable after {new_count} failures"
-                            )
+                    new_count = await degraded_cache.increment_fail_count(current_route_id)
+                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                        # 失败次数超限，标记为 degraded (unavailable)
+                        await degraded_cache.mark_degraded(
+                            route_id=current_route_id,
+                            degraded_type=DegradedType.UNAVAILABLE,
+                            fail_count=new_count,
+                        )
+                        logger.warning(
+                            f"Route {current_route_id} marked as unavailable after {new_count} failures"
+                        )
 
                 # 重试：重新在组内选择其他 provider（当前 route 已被标记为 degraded，不会被选中）
                 if attempt < MAX_RETRY_PER_GROUP - 1:
@@ -290,8 +282,7 @@ async def handle_embedding_request(
     # before blocking on the upstream embedding call.
     await session.close()
 
-    dual_cache = get_dual_cache()
-    degraded_cache = DegradedRouteCache(dual_cache) if dual_cache else None
+    degraded_cache = get_degraded_route_cache()
 
     last_error: HTTPException | None = None
 
@@ -321,8 +312,7 @@ async def handle_embedding_request(
                     provider=current_provider,
                     request_path="/embeddings",
                 )
-                if degraded_cache:
-                    await degraded_cache.recover(current_route_id)
+                await degraded_cache.recover(current_route_id)
                 return result
             except HTTPException as exc:
                 last_error = exc
@@ -331,26 +321,24 @@ async def handle_embedding_request(
                 # 401/402/403：上游 provider 自身问题，立即标记 degraded
                 degraded_type = _degraded_type_for_status(exc.status_code)
                 if degraded_type is not None:
-                    if degraded_cache:
-                        await degraded_cache.mark_degraded(
-                            route_id=current_route_id,
-                            degraded_type=degraded_type,
-                            fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
-                        )
+                    await degraded_cache.mark_degraded(
+                        route_id=current_route_id,
+                        degraded_type=degraded_type,
+                        fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
+                    )
 
                 # 429：速率限制，与 5xx 一样通过连续失败计数降级
                 elif exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
-                    if degraded_cache:
-                        new_count = await degraded_cache.increment_fail_count(current_route_id)
-                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
-                            await degraded_cache.mark_degraded(
-                                route_id=current_route_id,
-                                degraded_type=DegradedType.QUOTA_EXHAUSTED,
-                                fail_count=new_count,
-                            )
-                            logger.warning(
-                                f"Route {current_route_id} marked as quota_exhausted after {new_count} 429 errors"
-                            )
+                    new_count = await degraded_cache.increment_fail_count(current_route_id)
+                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                        await degraded_cache.mark_degraded(
+                            route_id=current_route_id,
+                            degraded_type=DegradedType.QUOTA_EXHAUSTED,
+                            fail_count=new_count,
+                        )
+                        logger.warning(
+                            f"Route {current_route_id} marked as quota_exhausted after {new_count} 429 errors"
+                        )
 
                 # 4xx 其他错误：直接返回，不重试不降级
                 elif 400 <= exc.status_code < 500:
@@ -358,17 +346,16 @@ async def handle_embedding_request(
 
                 # 5xx：连通性错误，记录失败次数
                 else:
-                    if degraded_cache:
-                        new_count = await degraded_cache.increment_fail_count(current_route_id)
-                        if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
-                            await degraded_cache.mark_degraded(
-                                route_id=current_route_id,
-                                degraded_type=DegradedType.UNAVAILABLE,
-                                fail_count=new_count,
-                            )
-                            logger.warning(
-                                f"Route {current_route_id} marked as unavailable after {new_count} failures"
-                            )
+                    new_count = await degraded_cache.increment_fail_count(current_route_id)
+                    if new_count >= DegradedRouteCache.FAIL_COUNT_THRESHOLD:
+                        await degraded_cache.mark_degraded(
+                            route_id=current_route_id,
+                            degraded_type=DegradedType.UNAVAILABLE,
+                            fail_count=new_count,
+                        )
+                        logger.warning(
+                            f"Route {current_route_id} marked as unavailable after {new_count} failures"
+                        )
 
                 # 重试：重新在组内选择其他 provider（当前 route 已被标记为 degraded，不会被选中）
                 if attempt < MAX_RETRY_PER_GROUP - 1:

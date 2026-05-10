@@ -63,6 +63,13 @@ class InMemoryCache:
         async with self._lock:
             self._cache.pop(key, None)
 
+    async def delete_by_prefix(self, prefix: str) -> None:
+        """删除指定前缀的缓存"""
+        async with self._lock:
+            keys = [key for key in self._cache if key.startswith(prefix)]
+            for key in keys:
+                self._cache.pop(key, None)
+
     async def clear(self) -> None:
         """清空所有缓存"""
         async with self._lock:

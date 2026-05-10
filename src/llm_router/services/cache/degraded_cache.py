@@ -12,7 +12,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from llm_router.services.cache.dual_cache import DualCache
+    from llm_router.services.cache.core.dual_cache import DualCache
 
 
 logger = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ class DegradedRouteCache:
     """
 
     KEY_ROUTE_DEGRADED = "route:degraded:{route_id}"
+    KEY_DEGRADED_ROUTES = "route:degraded:set"
     DEFAULT_TTL = 3600  # Redis TTL: 1小时
     IN_MEMORY_TTL = 60  # 内存 TTL: 60秒，确保跨 pod 恢复后其他节点能在短时间内感知
 
@@ -63,19 +64,11 @@ class DegradedRouteCache:
         """
         cache_key = self._get_key(route_id)
 
-        # 优先读取 Redis（多 pod 环境下以 Redis 为权威数据源）
-        if self._cache._redis and self._cache._redis.is_available:
-            raw = await self._cache._redis.get(cache_key)
-            if raw:
-                from llm_router.services.cache.serializer import CacheSerializer
-                serializer = CacheSerializer()
-                cached = serializer.deserialize(raw)
-                # 回填内存（短 TTL）
-                await self._cache._memory.set(cache_key, cached, self.IN_MEMORY_TTL)
-                return self._from_dict(route_id, cached)
-
-        # 回读内存
-        data = await self._cache._memory.get(cache_key)
+        data = await self._cache.get(
+            cache_key,
+            prefer_redis=True,
+            backfill_memory_ttl=self.IN_MEMORY_TTL,
+        )
         if data is not None:
             return self._from_dict(route_id, data)
 
@@ -103,18 +96,14 @@ class DegradedRouteCache:
 
         cache_key = self._get_key(route_id)
 
-        # 写内存（短 TTL，确保跨 pod 恢复后其他节点能在 IN_MEMORY_TTL 秒内感知）
-        await self._cache._memory.set(cache_key, data, self.IN_MEMORY_TTL)
+        await self._cache.set(
+            cache_key,
+            data,
+            memory_ttl=self.IN_MEMORY_TTL,
+            redis_ttl=self.DEFAULT_TTL,
+        )
 
-        # 写 Redis（长 TTL，作为权威状态，跨 pod 共享）
-        if self._cache._redis and self._cache._redis.is_available:
-            from llm_router.services.cache.serializer import CacheSerializer
-            serializer = CacheSerializer()
-            raw = serializer.serialize(data)
-            await self._cache._redis.set(cache_key, raw, self.DEFAULT_TTL)
-
-        # 添加到降级路由集合（内存 + Redis）
-        await self._cache.add_degraded_route(route_id, ttl=self.DEFAULT_TTL)
+        await self._add_degraded_route(route_id)
 
         logger.info(f"Route {route_id} marked as degraded: type={degraded_type.value}, fail_count={fail_count}")
 
@@ -131,15 +120,9 @@ class DegradedRouteCache:
 
         cache_key = self._get_key(route_id)
 
-        # 删除内存
-        await self._cache._memory.delete(cache_key)
+        await self._cache.remove(cache_key)
 
-        # 删除 Redis
-        if self._cache._redis and self._cache._redis.is_available:
-            await self._cache._redis.delete(cache_key)
-
-        # 从降级路由集合中移除（内存 + Redis）
-        await self._cache.remove_degraded_route(route_id)
+        await self._remove_degraded_route(route_id)
 
         logger.info(f"Route {route_id} recovered from degraded state")
         return True
@@ -160,12 +143,7 @@ class DegradedRouteCache:
                 "last_fail_time": time.time(),
             }
             cache_key = self._get_key(route_id)
-            await self._cache._memory.set(cache_key, data, self.DEFAULT_TTL)
-            if self._cache._redis and self._cache._redis.is_available:
-                from llm_router.services.cache.serializer import CacheSerializer
-                serializer = CacheSerializer()
-                raw = serializer.serialize(data)
-                await self._cache._redis.set(cache_key, raw, self.DEFAULT_TTL)
+            await self._cache.set(cache_key, data, memory_ttl=self.DEFAULT_TTL, redis_ttl=self.DEFAULT_TTL)
             return 1
 
         new_count = status.fail_count + 1
@@ -176,13 +154,7 @@ class DegradedRouteCache:
         }
 
         cache_key = self._get_key(route_id)
-        await self._cache._memory.set(cache_key, data, self.DEFAULT_TTL)
-
-        if self._cache._redis and self._cache._redis.is_available:
-            from llm_router.services.cache.serializer import CacheSerializer
-            serializer = CacheSerializer()
-            raw = serializer.serialize(data)
-            await self._cache._redis.set(cache_key, raw, self.DEFAULT_TTL)
+        await self._cache.set(cache_key, data, memory_ttl=self.DEFAULT_TTL, redis_ttl=self.DEFAULT_TTL)
 
         return new_count
 
@@ -199,13 +171,7 @@ class DegradedRouteCache:
         }
 
         cache_key = self._get_key(route_id)
-        await self._cache._memory.set(cache_key, data, self.IN_MEMORY_TTL)
-
-        if self._cache._redis and self._cache._redis.is_available:
-            from llm_router.services.cache.serializer import CacheSerializer
-            serializer = CacheSerializer()
-            raw = serializer.serialize(data)
-            await self._cache._redis.set(cache_key, raw, self.DEFAULT_TTL)
+        await self._cache.set(cache_key, data, memory_ttl=self.IN_MEMORY_TTL, redis_ttl=self.DEFAULT_TTL)
 
     def _from_dict(self, route_id: int, data: dict) -> RouteDegradedStatus:
         return RouteDegradedStatus(
@@ -214,3 +180,43 @@ class DegradedRouteCache:
             fail_count=data["fail_count"],
             last_fail_time=data["last_fail_time"],
         )
+
+    async def get_all_degraded_route_ids(self) -> list[int]:
+        ids = await self._cache.get(self.KEY_DEGRADED_ROUTES) or []
+        return sorted({int(route_id) for route_id in ids})
+
+    async def _add_degraded_route(self, route_id: int) -> None:
+        ids = set(await self.get_all_degraded_route_ids())
+        ids.add(route_id)
+        await self._cache.set(
+            self.KEY_DEGRADED_ROUTES,
+            sorted(ids),
+            memory_ttl=self.DEFAULT_TTL,
+            redis_ttl=self.DEFAULT_TTL,
+        )
+
+    async def _remove_degraded_route(self, route_id: int) -> None:
+        ids = set(await self.get_all_degraded_route_ids())
+        ids.discard(route_id)
+        if ids:
+            await self._cache.set(
+                self.KEY_DEGRADED_ROUTES,
+                sorted(ids),
+                memory_ttl=self.DEFAULT_TTL,
+                redis_ttl=self.DEFAULT_TTL,
+            )
+        else:
+            await self._cache.remove(self.KEY_DEGRADED_ROUTES)
+
+
+degraded_route_cache: DegradedRouteCache | None = None
+
+
+def get_degraded_route_cache() -> DegradedRouteCache:
+    assert degraded_route_cache is not None, "DegradedRouteCache is not initialized"
+    return degraded_route_cache
+
+
+def set_degraded_route_cache(cache: DegradedRouteCache) -> None:
+    global degraded_route_cache
+    degraded_route_cache = cache

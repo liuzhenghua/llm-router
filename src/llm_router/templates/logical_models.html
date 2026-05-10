@@ -38,6 +38,7 @@
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_model_name">模型名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.description">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_active" value="true"><span data-i18n="logical.lbl_enable">启用</span></label>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_public" value="true"><span data-i18n="logical.lbl_public">公共模型</span></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white" data-i18n="common.save">保存</button>
     </form>
   </div>
@@ -50,6 +51,7 @@
     <form method="post" action="/admin/logical-models" class="grid gap-4">
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="logical.lbl_model_name">模型名称</span><input name="name" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="common.description">描述</span><input name="description" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_public" value="true"><span data-i18n="logical.lbl_public">公共模型</span></label>
       <button type="submit" class="rounded-xl bg-sky-600 px-4 py-2 text-sm text-white" data-i18n="logical.modal_create_title">创建</button>
     </form>
   </div>
@@ -136,6 +138,7 @@ function renderLogicalModelsTable() {
       <tr>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.name')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.description')}</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('logical.col_visibility')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.status')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.actions')}</th>
       </tr>
@@ -150,6 +153,7 @@ function renderLogicalModelsTable() {
     tr.innerHTML = `
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
       <td class="px-2 py-2 text-xs">${item.description || t('logical.no_desc')}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_public ? '<span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">' + t('logical.visibility_public') + '</span>' : '<span class="inline-flex items-center rounded-full bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">' + t('logical.visibility_private') + '</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='openRoutesModalForModel(${item.id})' class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">${t('logical.btn_routes')}</button>
