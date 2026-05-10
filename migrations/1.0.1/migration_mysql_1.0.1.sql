@@ -11,4 +11,4 @@
 -- Apply (MySQL):
 --   mysql -u llm_router -p llm_router < migrations/1.0.1/migration_mysql_1.0.1.sql
 
-ALTER TABLE lr_logical_models ADD COLUMN IF NOT EXISTS is_public TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE lr_logical_models ADD COLUMN is_public TINYINT(1) NOT NULL DEFAULT 0;
