@@ -62,6 +62,7 @@ class RequestFinalizationData:
     end_user: str | None = None
     channel: str | None = None
     api_key_timezone: str = "UTC"
+    provider_model_protocol: str | None = None
 
 
 def _per_million_cost(tokens: int, unit_price: Decimal) -> Decimal:
@@ -82,6 +83,7 @@ async def _create_request_log_task(
         logical_model_id=data.logical_model_id,
         provider_model_id=data.provider_model_id,
         protocol=data.protocol,
+        provider_model_protocol=data.provider_model_protocol or data.protocol,
         call_type=data.call_type,
         upstream_request_id=data.upstream_request_id,
         status_code=data.status_code,

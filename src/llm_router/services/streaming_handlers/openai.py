@@ -186,6 +186,7 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             logical_model_id=kwargs["logical_model_id"],
             provider_model_id=kwargs["provider_model_id"],
             protocol=kwargs["protocol"].value,
+            provider_model_protocol=kwargs["provider"].upstream_protocol.value,
             call_type=kwargs["call_type"],
             status_code=kwargs["status_code"],
             success=kwargs["success"],

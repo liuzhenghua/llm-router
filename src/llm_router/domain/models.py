@@ -177,6 +177,7 @@ class RequestLog(Base):
     logical_model_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     provider_model_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
     protocol: Mapped[str] = mapped_column(String(32))
+    provider_model_protocol: Mapped[str | None] = mapped_column(String(32), nullable=True)
     call_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     upstream_request_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     status_code: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 
+from llm_router.domain.enums import ProviderProtocol
 from llm_router.services.non_stream_handlers.cross_protocol import (
     AnthropicOverOpenAINonStreamHandler,
     OpenAIOverAnthropicNonStreamHandler,
@@ -66,11 +67,12 @@ class _FakeStreamingClient:
         return _FakeStreamContext(self._response)
 
 
-def _make_provider() -> SimpleNamespace:
+def _make_provider(upstream_protocol: ProviderProtocol = ProviderProtocol.OPENAI) -> SimpleNamespace:
     return SimpleNamespace(
         id=7,
         endpoint="https://example.com/v1",
         api_key="secret",
+        upstream_protocol=upstream_protocol,
         upstream_model_name="gpt-4o",
         timeout_seconds=30,
         input_token_price=Decimal("1"),
@@ -96,7 +98,14 @@ def _make_context(payload: dict, *, logical_model_name: str = "test-model", head
     )
 
 
-async def _assert_failure_is_logged(monkeypatch: pytest.MonkeyPatch, module_path: str, handler, payload: dict, request_path: str):
+async def _assert_failure_is_logged(
+    monkeypatch: pytest.MonkeyPatch,
+    module_path: str,
+    handler,
+    payload: dict,
+    request_path: str,
+    upstream_protocol: ProviderProtocol = ProviderProtocol.OPENAI,
+):
     captured = []
     response = _FakeResponse(429, "rate limited")
 
@@ -108,7 +117,7 @@ async def _assert_failure_is_logged(monkeypatch: pytest.MonkeyPatch, module_path
             None,
             api_key=None,
             context=_make_context(payload),
-            provider=_make_provider(),
+            provider=_make_provider(upstream_protocol),
             request_path=request_path,
         )
 
@@ -117,6 +126,7 @@ async def _assert_failure_is_logged(monkeypatch: pytest.MonkeyPatch, module_path
     assert captured[0].status_code == 429
     assert captured[0].success is False
     assert captured[0].error_message == "rate limited"
+    assert captured[0].provider_model_protocol == upstream_protocol.value
 
 
 async def _assert_streaming_cross_protocol_failure_logs_original_payload(
@@ -124,6 +134,7 @@ async def _assert_streaming_cross_protocol_failure_logs_original_payload(
     handler,
     payload: dict,
     request_path: str,
+    upstream_protocol: ProviderProtocol = ProviderProtocol.OPENAI,
 ):
     captured = []
     response = _FakeStreamResponse(429, "rate limited")
@@ -142,7 +153,7 @@ async def _assert_streaming_cross_protocol_failure_logs_original_payload(
             None,
             api_key=None,
             context=_make_context(payload),
-            provider=_make_provider(),
+            provider=_make_provider(upstream_protocol),
             request_path=request_path,
         )
 
@@ -150,6 +161,7 @@ async def _assert_streaming_cross_protocol_failure_logs_original_payload(
     assert len(captured) == 1
     assert captured[0].status_code == 429
     assert captured[0].success is False
+    assert captured[0].provider_model_protocol == upstream_protocol.value
     assert json.loads(captured[0].request_body) == payload
 
 
@@ -194,6 +206,7 @@ async def test_openai_over_anthropic_logs_upstream_http_failure(monkeypatch: pyt
         OpenAIOverAnthropicNonStreamHandler(),
         {"model": "ignored", "messages": [{"role": "user", "content": "hi"}]},
         "/chat/completions",
+        ProviderProtocol.ANTHROPIC,
     )
 
 
@@ -214,4 +227,5 @@ async def test_openai_over_anthropic_streaming_logs_original_payload(monkeypatch
         OpenAIOverAnthropicStreamingHandler(),
         {"model": "client-model", "messages": [{"role": "user", "content": "hi"}]},
         "/chat/completions",
+        ProviderProtocol.ANTHROPIC,
     )

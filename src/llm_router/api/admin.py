@@ -1005,7 +1005,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "api_key_name": log.api_key.name if log.api_key else None,
         "provider_model_name": log.provider_model.name if log.provider_model else None,
         "provider_model_description": log.provider_model.description if log.provider_model else None,
-        "provider_model_protocol": log.protocol,
+        "provider_model_protocol": log.provider_model_protocol or log.protocol,
         "logical_model_name": logical_model_name,
         "end_user": log.end_user,
         "channel": log.channel,
