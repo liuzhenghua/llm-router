@@ -151,7 +151,7 @@ class AnthropicOverOpenAINonStreamHandler(BaseNonStreamHandler):
                 full_endpoint,
                 json=payload,
                 headers=headers,
-                timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+                timeout=httpx.Timeout(read=provider.timeout_seconds, connect=60, write=60, pool=30),
             )
 
             if response.status_code >= 400:
@@ -309,7 +309,7 @@ class OpenAIOverAnthropicNonStreamHandler(BaseNonStreamHandler):
                 full_endpoint,
                 json=payload,
                 headers=headers,
-                timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+                timeout=httpx.Timeout(read=provider.timeout_seconds, connect=60, write=60, pool=30),
             )
 
             if response.status_code >= 400:

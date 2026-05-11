@@ -457,7 +457,7 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
 
         stream_cm = get_http_client().stream(
             "POST", full_endpoint, json=payload, headers=headers,
-            timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+            timeout=httpx.Timeout(read=provider.timeout_seconds, connect=60, write=60, pool=30),
         )
         try:
             self._upstream_response = await stream_cm.__aenter__()
@@ -816,7 +816,7 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
 
         stream_cm = get_http_client().stream(
             "POST", full_endpoint, json=payload, headers=headers,
-            timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
+            timeout=httpx.Timeout(read=provider.timeout_seconds, connect=60, write=60, pool=30),
         )
         try:
             self._upstream_response = await stream_cm.__aenter__()
