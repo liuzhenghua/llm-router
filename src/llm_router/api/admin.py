@@ -84,6 +84,18 @@ def _parse_logging_flag(value: str) -> bool | None:
     return None
 
 
+def _playground_http_exception_response(exc: HTTPException) -> JSONResponse:
+    """Render gateway HTTP errors as the response body shown in Playground."""
+    detail = exc.detail
+    if isinstance(detail, str):
+        try:
+            detail = json.loads(detail)
+        except json.JSONDecodeError:
+            detail = {"error": detail}
+
+    return JSONResponse(content=detail, status_code=exc.status_code, headers=exc.headers)
+
+
 def _parse_payload_overrides(value: str, field_name: str) -> dict:
     stripped = value.strip()
     if not stripped:
@@ -1381,7 +1393,6 @@ async def playground_execute(
     payload: str = Form(default="{}"),
     _: None = Depends(require_admin),
 ):
-    import json
     from llm_router.domain.enums import ProviderProtocol
     from llm_router.services.gateway import handle_embedding_request, handle_proxy_request
     from llm_router.core.security import Encryptor
@@ -1454,6 +1465,8 @@ async def playground_execute(
                 headers={"Content-Type": "application/json"},
             )
             return response
+        except HTTPException as e:
+            return _playground_http_exception_response(e)
         except Exception as e:
             return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
     elif api_type == "openai_chat":
@@ -1476,5 +1489,7 @@ async def playground_execute(
             request_path=request_path,
         )
         return response
+    except HTTPException as e:
+        return _playground_http_exception_response(e)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
