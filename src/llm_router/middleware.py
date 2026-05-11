@@ -11,6 +11,10 @@ from llm_router.core.database import SessionLocal
 logger = logging.getLogger(__name__)
 
 
+def _should_skip_request_logging(path: str) -> bool:
+    return path == "/healthz" or path == "/static" or path.startswith("/static/")
+
+
 async def db_session_middleware(request: Request, call_next):
     """Attach a DB session to each request and close it in a background task."""
     session = SessionLocal()
@@ -38,8 +42,8 @@ async def db_session_middleware(request: Request, call_next):
 
 
 async def request_log_middleware(request: Request, call_next):
-    """Log request start and end (with status + latency). Skips /healthz."""
-    if request.url.path == "/healthz":
+    """Log request start and end (with status + latency)."""
+    if _should_skip_request_logging(request.url.path):
         return await call_next(request)
 
     start = time.perf_counter()

@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
+from llm_router import __version__
 from llm_router.api import admin, anthropic, openai
 from llm_router.api.health import router as health_router
 from llm_router.core.config import get_settings
@@ -47,6 +48,15 @@ def _format_datetime(value: str | None) -> str:
         return value
 
 
+def _get_static_asset_version() -> str:
+    version_file = BASE_PATH.parent.parent / "VERSION"
+    try:
+        version = version_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        return __version__
+    return version or __version__
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 
@@ -66,6 +76,7 @@ def create_app() -> FastAPI:
     )
     env.filters["format_decimal"] = _format_decimal
     env.filters["format_datetime"] = _format_datetime
+    env.globals["static_asset_version"] = _get_static_asset_version()
     app.state.templates = Jinja2Templates(env=env)
 
     # Routers
