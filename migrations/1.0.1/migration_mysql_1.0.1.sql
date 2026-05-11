@@ -1,5 +1,5 @@
 -- Migration: 1.0.1
--- Description: Add public model visibility, upstream protocol logs, and provider payload overrides
+-- Description: Add public model visibility, upstream protocol logs, provider payload overrides, and image stripping
 --
 -- !! IMPORTANT: If you configured a custom TABLE_PREFIX (default: "lr_"),
 -- !! replace every occurrence of "lr_" in this file with your prefix
@@ -18,3 +18,5 @@ ALTER TABLE lr_request_logs ADD COLUMN provider_model_protocol VARCHAR(32);
 ALTER TABLE lr_provider_models ADD COLUMN openai_payload_overrides LONGTEXT;
 
 ALTER TABLE lr_provider_models ADD COLUMN anthropic_payload_overrides LONGTEXT;
+
+ALTER TABLE lr_provider_models ADD COLUMN strip_image_content TINYINT(1) NOT NULL DEFAULT 0;

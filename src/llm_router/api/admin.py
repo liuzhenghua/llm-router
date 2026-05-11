@@ -416,6 +416,7 @@ async def providers_page(request: Request, _: None = Depends(require_admin)):
             "cache_write_token_price": _format_decimal(pm.cache_write_token_price),
             "timeout_seconds": pm.timeout_seconds,
             "supports_prompt_cache": pm.supports_prompt_cache,
+            "strip_image_content": pm.strip_image_content,
             "is_active": pm.is_active,
         }
         for pm in provider_models_result
@@ -672,6 +673,7 @@ async def create_provider_model(
     input_token_price: Decimal = Form(default=Decimal("0")),
     output_token_price: Decimal = Form(default=Decimal("0")),
     supports_prompt_cache: bool = Form(default=False),
+    strip_image_content: bool = Form(default=False),
     cache_read_token_price: Decimal = Form(default=Decimal("0")),
     cache_write_token_price: Decimal = Form(default=Decimal("0")),
     timeout_seconds: int = Form(default=600),
@@ -697,6 +699,7 @@ async def create_provider_model(
             input_token_price=input_token_price,
             output_token_price=output_token_price,
             supports_prompt_cache=supports_prompt_cache,
+            strip_image_content=strip_image_content,
             cache_read_token_price=cache_read_token_price,
             cache_write_token_price=cache_write_token_price,
             timeout_seconds=timeout_seconds,
@@ -721,6 +724,7 @@ async def update_provider_model(
     input_token_price: Decimal = Form(default=Decimal("0")),
     output_token_price: Decimal = Form(default=Decimal("0")),
     supports_prompt_cache: bool = Form(default=False),
+    strip_image_content: bool = Form(default=False),
     cache_read_token_price: Decimal = Form(default=Decimal("0")),
     cache_write_token_price: Decimal = Form(default=Decimal("0")),
     timeout_seconds: int = Form(default=120),
@@ -749,6 +753,7 @@ async def update_provider_model(
     provider_model.input_token_price = input_token_price
     provider_model.output_token_price = output_token_price
     provider_model.supports_prompt_cache = supports_prompt_cache
+    provider_model.strip_image_content = strip_image_content
     provider_model.cache_read_token_price = cache_read_token_price
     provider_model.cache_write_token_price = cache_write_token_price
     provider_model.timeout_seconds = timeout_seconds

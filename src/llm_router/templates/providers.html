@@ -53,11 +53,17 @@
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_new_api_key">新 API Key</span><input name="api_key_secret" placeholder="留空表示不更新" data-i18n-placeholder="providers.lbl_no_update" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_input_price">输入单价 / 1M</span><input name="input_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_output_price">输出单价 / 1M</span><input name="output_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" id="edit-supports-prompt-cache-{{ item.id }}" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300"><span data-i18n="providers.lbl_prompt_cache">支持 Prompt Cache</span></label>
-      <div id="cache-inputs-{{ item.id }}" class="hidden md:col-span-2">
-        <div class="ml-6 grid gap-4 md:grid-cols-2">
-          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_read_price">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_write_price">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-700" data-i18n="providers.lbl_request_options">请求选项</span>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" id="edit-supports-prompt-cache-{{ item.id }}" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300"><span data-i18n="providers.lbl_prompt_cache">支持 Prompt Cache</span></label>
+          <label class="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" name="strip_image_content" value="true" class="h-4 w-4 rounded border-slate-300"><span data-i18n="providers.lbl_strip_image_content">请求上游前自动移除图片内容</span></label>
+        </div>
+        <div id="cache-inputs-{{ item.id }}" class="mt-3 hidden grid gap-4 border-t border-slate-200 pt-3 md:grid-cols-2">
+          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_read_price">Cache Read / 1M</span><input name="cache_read_token_price" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"></label>
+          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_write_price">Cache Write / 1M</span><input name="cache_write_token_price" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"></label>
         </div>
       </div>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_timeout">超时秒数</span><input name="timeout_seconds" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
@@ -92,11 +98,17 @@
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_new_api_key">API Key</span><input name="api_key_secret" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" required></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_input_price">输入单价 / 1M</span><input name="input_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_output_price">输出单价 / 1M</span><input name="output_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" id="supports_prompt_cache" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300"><span data-i18n="providers.lbl_prompt_cache">支持 Prompt Cache</span></label>
-      <div id="cache-inputs" class="hidden md:col-span-2">
-        <div class="ml-6 grid gap-4 md:grid-cols-2">
-          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_read_price">Cache Read / 1M</span><input name="cache_read_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_write_price">Cache Write / 1M</span><input name="cache_write_token_price" value="0" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <div class="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+        <div class="mb-3 flex items-center justify-between">
+          <span class="text-xs font-medium text-slate-700" data-i18n="providers.lbl_request_options">请求选项</span>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <label class="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" id="supports_prompt_cache" name="supports_prompt_cache" value="true" onchange="toggleCacheFields(this)" class="h-4 w-4 rounded border-slate-300"><span data-i18n="providers.lbl_prompt_cache">支持 Prompt Cache</span></label>
+          <label class="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" name="strip_image_content" value="true" class="h-4 w-4 rounded border-slate-300"><span data-i18n="providers.lbl_strip_image_content">请求上游前自动移除图片内容</span></label>
+        </div>
+        <div id="cache-inputs" class="mt-3 hidden grid gap-4 border-t border-slate-200 pt-3 md:grid-cols-2">
+          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_read_price">Cache Read / 1M</span><input name="cache_read_token_price" value="0" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"></label>
+          <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_write_price">Cache Write / 1M</span><input name="cache_write_token_price" value="0" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"></label>
         </div>
       </div>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="providers.btn_create">创建 Provider</button>
@@ -262,6 +274,7 @@ function renderTable() {
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.description')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">OpenAI Endpoint</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Anthropic Endpoint</th>
+        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('providers.lbl_strip_image_short')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.status')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.actions')}</th>
       </tr>
@@ -278,6 +291,7 @@ function renderTable() {
       <td class="px-2 py-2 text-xs">${item.description || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs">${item.openai_endpoint || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs">${item.anthropic_endpoint || '<span class="text-slate-300">—</span>'}</td>
+      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.strip_image_content ? '<span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">on</span>' : '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); updatePayloadOverrideState(document.getElementById("edit-provider-form-${item.id}")); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>

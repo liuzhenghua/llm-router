@@ -3,7 +3,7 @@ from decimal import Decimal
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.schemas import RoutedProvider
 from llm_router.services.non_stream_handlers.openai import OpenAINonStreamHandler
-from llm_router.services.payload_overrides import _deep_merge_payload
+from llm_router.services.payload_overrides import _deep_merge_payload, strip_image_content_from_payload
 
 
 def _provider(**overrides) -> RoutedProvider:
@@ -84,4 +84,90 @@ def test_openai_handler_applies_protocol_payload_overrides_after_model_patch():
     assert result["model"] == "upstream-model"
     assert result["thinking"] == {"type": "disabled"}
     assert result["chat_template_kwargs"] == {"foo": "bar", "thinking": False}
+    assert result["max_tokens"] == 1024
+
+
+def test_strip_image_content_removes_openai_image_parts_and_keeps_text():
+    payload = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "describe this"},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                    {"type": "input_image", "image_url": "https://example.com/a.png"},
+                ],
+            }
+        ]
+    }
+
+    result = strip_image_content_from_payload(payload)
+
+    assert result["messages"] == [
+        {"role": "user", "content": [{"type": "text", "text": "describe this"}]}
+    ]
+    assert len(payload["messages"][0]["content"]) == 3
+
+
+def test_strip_image_content_drops_image_only_message():
+    payload = {
+        "messages": [
+            {"role": "system", "content": "You are concise."},
+            {"role": "user", "content": [{"type": "image_url", "image_url": {"url": "https://example.com/a.png"}}]},
+            {"role": "user", "content": "hello"},
+        ]
+    }
+
+    result = strip_image_content_from_payload(payload)
+
+    assert result["messages"] == [
+        {"role": "system", "content": "You are concise."},
+        {"role": "user", "content": "hello"},
+    ]
+
+
+def test_strip_image_content_removes_anthropic_image_blocks():
+    payload = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "abc"}},
+                    {"type": "text", "text": "what is this?"},
+                ],
+            }
+        ]
+    }
+
+    result = strip_image_content_from_payload(payload)
+
+    assert result["messages"] == [
+        {"role": "user", "content": [{"type": "text", "text": "what is this?"}]}
+    ]
+
+
+def test_provider_strip_image_content_runs_before_payload_overrides():
+    provider = _provider(
+        strip_image_content=True,
+        openai_payload_overrides={"max_tokens": 1024},
+    )
+
+    result = OpenAINonStreamHandler().prepare_payload(
+        {
+            "model": "logical-model",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "hello"},
+                        {"type": "image_url", "image_url": {"url": "https://example.com/a.png"}},
+                    ],
+                }
+            ],
+        },
+        provider,
+    )
+
+    assert result["model"] == "upstream-model"
+    assert result["messages"][0]["content"] == [{"type": "text", "text": "hello"}]
     assert result["max_tokens"] == 1024

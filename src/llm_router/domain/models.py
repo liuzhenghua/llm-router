@@ -125,6 +125,7 @@ class ProviderModel(Base, TimestampMixin):
     input_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     output_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     supports_prompt_cache: Mapped[bool] = mapped_column(Boolean, default=False)
+    strip_image_content: Mapped[bool] = mapped_column(Boolean, default=False)
     cache_read_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     cache_write_token_price: Mapped[Decimal] = mapped_column(Numeric(18, 8), default=Decimal("0"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

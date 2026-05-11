@@ -59,6 +59,7 @@ def _cached_provider_from_model(provider: ProviderModel) -> CachedProvider:
         cache_read_token_price=provider.cache_read_token_price,
         cache_write_token_price=provider.cache_write_token_price,
         supports_prompt_cache=provider.supports_prompt_cache,
+        strip_image_content=provider.strip_image_content,
         timeout_seconds=provider.timeout_seconds,
         is_active=provider.is_active,
         openai_payload_overrides=_loads_json_object(provider.openai_payload_overrides),
@@ -465,6 +466,7 @@ async def resolve_provider_candidates(
             cache_read_token_price=provider.cache_read_token_price,
             cache_write_token_price=provider.cache_write_token_price,
             supports_prompt_cache=provider.supports_prompt_cache,
+            strip_image_content=provider.strip_image_content,
             openai_payload_overrides=provider.openai_payload_overrides,
             anthropic_payload_overrides=provider.anthropic_payload_overrides,
         )

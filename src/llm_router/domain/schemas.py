@@ -31,6 +31,7 @@ class RoutedProvider:
     cache_read_token_price: Decimal
     cache_write_token_price: Decimal
     supports_prompt_cache: bool
+    strip_image_content: bool = False
     openai_payload_overrides: dict[str, Any] = field(default_factory=dict)
     anthropic_payload_overrides: dict[str, Any] = field(default_factory=dict)
 
@@ -175,6 +176,7 @@ class CachedProvider:
     supports_prompt_cache: bool
     timeout_seconds: int
     is_active: bool
+    strip_image_content: bool = False
     openai_payload_overrides: dict[str, Any] = field(default_factory=dict)
     anthropic_payload_overrides: dict[str, Any] = field(default_factory=dict)
 
@@ -192,6 +194,7 @@ class CachedProvider:
             "cache_read_token_price": str(self.cache_read_token_price),
             "cache_write_token_price": str(self.cache_write_token_price),
             "supports_prompt_cache": self.supports_prompt_cache,
+            "strip_image_content": self.strip_image_content,
             "timeout_seconds": self.timeout_seconds,
             "is_active": self.is_active,
             "openai_payload_overrides": self.openai_payload_overrides,
@@ -213,6 +216,7 @@ class CachedProvider:
             cache_read_token_price=Decimal(d["cache_read_token_price"]),
             cache_write_token_price=Decimal(d["cache_write_token_price"]),
             supports_prompt_cache=d.get("supports_prompt_cache", False),
+            strip_image_content=d.get("strip_image_content", False),
             timeout_seconds=d.get("timeout_seconds", 60),
             is_active=d["is_active"],
             openai_payload_overrides=d.get("openai_payload_overrides") or {},
