@@ -223,7 +223,37 @@ class OpenAIStreamingHandler(BaseStreamingHandler):
             "POST", full_endpoint, json=payload, headers=headers,
             timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
         )
-        self._upstream_response = await stream_cm.__aenter__()
+        try:
+            self._upstream_response = await stream_cm.__aenter__()
+        except Exception as exc:
+            latency_ms = int((time.perf_counter() - self._started) * 1000)
+            schedule_post_request_tasks(
+                self._create_finalization_data(
+                    request_id=context.request_id,
+                    upstream_request_id=None,
+                    api_key_id=context.api_key_id,
+                    logical_model_id=context.logical_model_id,
+                    provider_model_id=provider.id,
+                    protocol=ProviderProtocol.OPENAI,
+                    call_type="acompletion",
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    success=False,
+                    latency_ms=latency_ms,
+                    request_payload=payload,
+                    response_body=None,
+                    error_message=str(exc),
+                    request_logging_enabled=context.request_logging_enabled,
+                    response_logging_enabled=context.response_logging_enabled,
+                    usage=None,
+                    provider=provider,
+                    started_at=self._started_at,
+                    ended_at=utcnow(),
+                    end_user=context.end_user,
+                    channel=context.channel,
+                    api_key_timezone=context.api_key_timezone,
+                )
+            )
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
         if self._upstream_response.status_code >= 400:
             detail = (await self._upstream_response.aread()).decode("utf-8")

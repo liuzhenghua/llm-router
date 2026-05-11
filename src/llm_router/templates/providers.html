@@ -67,9 +67,6 @@
         </div>
       </div>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_timeout">超时秒数</span><input name="timeout_seconds" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <div class="flex gap-3">
-        <label class="flex flex-1 items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600"><input type="checkbox" name="is_active" value="true"><span data-i18n="providers.lbl_enable">启用</span></label>
-      </div>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="common.save">保存</button>
     </form>
   </div>
@@ -111,6 +108,7 @@
           <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_cache_write_price">Cache Write / 1M</span><input name="cache_write_token_price" value="0" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"></label>
         </div>
       </div>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="providers.lbl_timeout">超时秒数</span><input name="timeout_seconds" value="600" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white md:col-span-2" data-i18n="providers.btn_create">创建 Provider</button>
     </form>
   </div>
@@ -274,7 +272,6 @@ function renderTable() {
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.description')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">OpenAI Endpoint</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">Anthropic Endpoint</th>
-        <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('providers.lbl_strip_image_short')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.status')}</th>
         <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('common.actions')}</th>
       </tr>
@@ -286,16 +283,20 @@ function renderTable() {
   paginatedProviders.forEach(item => {
     const tr = document.createElement('tr');
     tr.className = 'bg-white border-b';
+    const toggleButtonClass = item.is_active
+      ? 'rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700'
+      : 'rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700';
+    const toggleButtonText = item.is_active ? t('providers.btn_disable') : t('providers.btn_enable');
     tr.innerHTML = `
       <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${item.name}</td>
       <td class="px-2 py-2 text-xs">${item.description || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs">${item.openai_endpoint || '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs">${item.anthropic_endpoint || '<span class="text-slate-300">—</span>'}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.strip_image_content ? '<span class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">on</span>' : '<span class="text-slate-300">—</span>'}</td>
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.is_active ? '<span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">active</span>' : '<span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">disabled</span>'}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='fillForm("edit-provider-form-${item.id}", ${JSON.stringify(item)}); toggleCacheFieldsById("edit-supports-prompt-cache-${item.id}", "cache-inputs-${item.id}", ${item.supports_prompt_cache}); updatePayloadOverrideState(document.getElementById("edit-provider-form-${item.id}")); openModal("edit-provider-modal-${item.id}")' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
         <button type="button" onclick="copyProvider(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">${t('providers.btn_copy')}</button>
+        <button type="button" onclick="toggleProviderActive(${item.id}, this)" class="${toggleButtonClass}">${toggleButtonText}</button>
         <button type="button" onclick="deleteProvider(${item.id}, '${item.name.replace(/'/g, '\\\'')}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">${t('common.delete')}</button>
       </div></td>
     `;
@@ -327,6 +328,29 @@ function renderTable() {
   paginDiv.appendChild(nextButton);
 
   paginationContainer.appendChild(paginDiv);
+}
+
+function toggleProviderActive(id, button) {
+  const item = allProviders.find(p => p.id === id);
+  if (!item || !button) return;
+  button.disabled = true;
+  button.classList.add('opacity-60', 'cursor-not-allowed');
+  fetch('/admin/provider-models/' + id + '/toggle-active', { method: 'POST' })
+    .then(res => res.json().then(data => ({ ok: res.ok, data })))
+    .then(({ ok, data }) => {
+      if (!ok || !data.ok) {
+        showToast(data.error || t('providers.toast_toggle_failed'), 'error');
+        return;
+      }
+      item.is_active = !!data.is_active;
+      renderTable();
+      showToast(item.is_active ? t('providers.toast_enabled') : t('providers.toast_disabled'));
+    })
+    .catch(() => showToast(t('common.network_error'), 'error'))
+    .finally(() => {
+      button.disabled = false;
+      button.classList.remove('opacity-60', 'cursor-not-allowed');
+    });
 }
 
 function deleteProvider(id, name) {

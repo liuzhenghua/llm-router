@@ -2,6 +2,7 @@ import json
 from decimal import Decimal
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from fastapi import HTTPException
 
@@ -18,6 +19,8 @@ from llm_router.services.streaming_handlers.cross_protocol import (
     AnthropicOverOpenAIStreamingHandler,
     OpenAIOverAnthropicStreamingHandler,
 )
+from llm_router.services.streaming_handlers.openai import OpenAIStreamingHandler
+from llm_router.services.streaming_handlers.anthropic import AnthropicStreamingHandler
 
 
 class _FakeResponse:
@@ -65,6 +68,19 @@ class _FakeStreamingClient:
 
     def stream(self, *args, **kwargs):
         return _FakeStreamContext(self._response)
+
+
+class _FakeStreamOpenFailureContext:
+    async def __aenter__(self):
+        raise httpx.RemoteProtocolError("Server disconnected without sending a response.")
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return None
+
+
+class _FakeStreamOpenFailureClient:
+    def stream(self, *args, **kwargs):
+        return _FakeStreamOpenFailureContext()
 
 
 def _make_provider(upstream_protocol: ProviderProtocol = ProviderProtocol.OPENAI) -> SimpleNamespace:
@@ -165,6 +181,41 @@ async def _assert_streaming_cross_protocol_failure_logs_original_payload(
     assert json.loads(captured[0].request_body) == payload
 
 
+async def _assert_stream_open_failure_is_logged(
+    monkeypatch: pytest.MonkeyPatch,
+    module_path: str,
+    handler,
+    payload: dict,
+    request_path: str,
+    protocol: ProviderProtocol,
+    upstream_protocol: ProviderProtocol,
+    logs_original_payload: bool = False,
+):
+    captured = []
+
+    monkeypatch.setattr(f"{module_path}.get_http_client", lambda: _FakeStreamOpenFailureClient())
+    monkeypatch.setattr(f"{module_path}.schedule_post_request_tasks", captured.append)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await handler.proxy(
+            None,
+            api_key=None,
+            context=_make_context(payload),
+            provider=_make_provider(upstream_protocol),
+            request_path=request_path,
+        )
+
+    assert exc_info.value.status_code == 502
+    assert len(captured) == 1
+    assert captured[0].status_code == 502
+    assert captured[0].success is False
+    assert "Server disconnected without sending a response" in captured[0].error_message
+    assert captured[0].protocol == protocol.value
+    assert captured[0].provider_model_protocol == upstream_protocol.value
+    if logs_original_payload:
+        assert json.loads(captured[0].request_body) == payload
+
+
 @pytest.mark.asyncio
 async def test_openai_non_stream_logs_upstream_http_failure(monkeypatch: pytest.MonkeyPatch):
     await _assert_failure_is_logged(
@@ -228,4 +279,60 @@ async def test_openai_over_anthropic_streaming_logs_original_payload(monkeypatch
         {"model": "client-model", "messages": [{"role": "user", "content": "hi"}]},
         "/chat/completions",
         ProviderProtocol.ANTHROPIC,
+    )
+
+
+@pytest.mark.asyncio
+async def test_openai_streaming_logs_stream_open_failure(monkeypatch: pytest.MonkeyPatch):
+    await _assert_stream_open_failure_is_logged(
+        monkeypatch,
+        "llm_router.services.streaming_handlers.openai",
+        OpenAIStreamingHandler(),
+        {"model": "client-model", "messages": [{"role": "user", "content": "hi"}]},
+        "/chat/completions",
+        ProviderProtocol.OPENAI,
+        ProviderProtocol.OPENAI,
+    )
+
+
+@pytest.mark.asyncio
+async def test_anthropic_streaming_logs_stream_open_failure(monkeypatch: pytest.MonkeyPatch):
+    await _assert_stream_open_failure_is_logged(
+        monkeypatch,
+        "llm_router.services.streaming_handlers.anthropic",
+        AnthropicStreamingHandler(),
+        {"model": "client-model", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]},
+        "/messages",
+        ProviderProtocol.ANTHROPIC,
+        ProviderProtocol.ANTHROPIC,
+    )
+
+
+@pytest.mark.asyncio
+async def test_anthropic_over_openai_streaming_logs_stream_open_failure(monkeypatch: pytest.MonkeyPatch):
+    payload = {"model": "client-model", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]}
+    await _assert_stream_open_failure_is_logged(
+        monkeypatch,
+        "llm_router.services.streaming_handlers.cross_protocol",
+        AnthropicOverOpenAIStreamingHandler(),
+        payload,
+        "/messages",
+        ProviderProtocol.ANTHROPIC,
+        ProviderProtocol.OPENAI,
+        logs_original_payload=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_openai_over_anthropic_streaming_logs_stream_open_failure(monkeypatch: pytest.MonkeyPatch):
+    payload = {"model": "client-model", "messages": [{"role": "user", "content": "hi"}]}
+    await _assert_stream_open_failure_is_logged(
+        monkeypatch,
+        "llm_router.services.streaming_handlers.cross_protocol",
+        OpenAIOverAnthropicStreamingHandler(),
+        payload,
+        "/chat/completions",
+        ProviderProtocol.OPENAI,
+        ProviderProtocol.ANTHROPIC,
+        logs_original_payload=True,
     )

@@ -101,6 +101,43 @@ def _build_finalization_data(**kwargs) -> RequestFinalizationData:
     )
 
 
+def _schedule_stream_open_failure_log(
+    *,
+    context: Any,
+    provider: Any,
+    protocol: ProviderProtocol,
+    request_payload: dict,
+    started: float,
+    started_at: Any,
+    error_message: str,
+) -> None:
+    latency_ms = int((time.perf_counter() - started) * 1000)
+    schedule_post_request_tasks(_build_finalization_data(
+        request_id=context.request_id,
+        upstream_request_id=None,
+        api_key_id=context.api_key_id,
+        logical_model_id=context.logical_model_id,
+        provider_model_id=provider.id,
+        protocol=protocol,
+        call_type="acompletion",
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        success=False,
+        latency_ms=latency_ms,
+        request_payload=request_payload,
+        response_body=None,
+        error_message=error_message,
+        request_logging_enabled=context.request_logging_enabled,
+        response_logging_enabled=context.response_logging_enabled,
+        usage=None,
+        provider=provider,
+        started_at=started_at,
+        ended_at=utcnow(),
+        end_user=context.end_user,
+        channel=context.channel,
+        api_key_timezone=context.api_key_timezone,
+    ))
+
+
 # ===========================================================================
 #  AnthropicOverOpenAIStreamingHandler
 #  Client: Anthropic streaming  →  Upstream: OpenAI streaming
@@ -422,7 +459,19 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
             "POST", full_endpoint, json=payload, headers=headers,
             timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
         )
-        self._upstream_response = await stream_cm.__aenter__()
+        try:
+            self._upstream_response = await stream_cm.__aenter__()
+        except Exception as exc:
+            _schedule_stream_open_failure_log(
+                context=context,
+                provider=provider,
+                protocol=ProviderProtocol.ANTHROPIC,
+                request_payload=context.payload,
+                started=self._started,
+                started_at=self._started_at,
+                error_message=str(exc),
+            )
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
         if self._upstream_response.status_code >= 400:
             detail = (await self._upstream_response.aread()).decode("utf-8")
@@ -769,7 +818,19 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
             "POST", full_endpoint, json=payload, headers=headers,
             timeout=httpx.Timeout(read=provider.timeout_seconds, connect=15, write=60, pool=30),
         )
-        self._upstream_response = await stream_cm.__aenter__()
+        try:
+            self._upstream_response = await stream_cm.__aenter__()
+        except Exception as exc:
+            _schedule_stream_open_failure_log(
+                context=context,
+                provider=provider,
+                protocol=ProviderProtocol.OPENAI,
+                request_payload=context.payload,
+                started=self._started,
+                started_at=self._started_at,
+                error_message=str(exc),
+            )
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
         if self._upstream_response.status_code >= 400:
             detail = (await self._upstream_response.aread()).decode("utf-8")

@@ -215,6 +215,12 @@ async def handle_proxy_request(
                         degraded_type=degraded_type,
                         fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                     )
+                    logger.warning(
+                        "Route %s marked as %s after upstream returned HTTP %s",
+                        current_route_id,
+                        degraded_type.value,
+                        exc.status_code,
+                    )
 
                 # 429：速率限制，与 5xx 一样通过连续失败计数降级
                 elif exc.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
@@ -261,7 +267,7 @@ async def handle_proxy_request(
                 logger.exception(
                     "Unexpected gateway error while proxying request via route %s/provider %s",
                     current_route_id,
-                    current_provider.id,
+                    current_provider.name,
                 )
                 return _protocol_error_response(
                     context.protocol,
@@ -364,6 +370,12 @@ async def handle_embedding_request(
                         route_id=current_route_id,
                         degraded_type=degraded_type,
                         fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
+                    )
+                    logger.warning(
+                        "Route %s marked as %s after upstream returned HTTP %s",
+                        current_route_id,
+                        degraded_type.value,
+                        exc.status_code,
                     )
 
                 # 429：速率限制，与 5xx 一样通过连续失败计数降级

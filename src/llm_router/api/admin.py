@@ -728,7 +728,6 @@ async def update_provider_model(
     cache_read_token_price: Decimal = Form(default=Decimal("0")),
     cache_write_token_price: Decimal = Form(default=Decimal("0")),
     timeout_seconds: int = Form(default=120),
-    is_active: bool = Form(default=False),
     _: None = Depends(require_admin),
 ):
     oe = openai_endpoint.strip()
@@ -757,11 +756,23 @@ async def update_provider_model(
     provider_model.cache_read_token_price = cache_read_token_price
     provider_model.cache_write_token_price = cache_write_token_price
     provider_model.timeout_seconds = timeout_seconds
-    provider_model.is_active = is_active
     await session.commit()
     await get_provider_cache().invalidate(provider_model_id)
     await _invalidate_provider_route_caches(session, provider_model_id)
     return _redirect_back(request, "/admin/providers")
+
+
+@protected_router.post("/provider-models/{provider_model_id}/toggle-active")
+async def toggle_provider_model_active(request: Request, provider_model_id: int, _: None = Depends(require_admin)):
+    session = request.state.db
+    provider_model = await session.get(ProviderModel, provider_model_id)
+    if provider_model is None or provider_model.deleted_at is not None:
+        return JSONResponse({"ok": False, "error": "Provider 不存在"}, status_code=404)
+    provider_model.is_active = not provider_model.is_active
+    await session.commit()
+    await get_provider_cache().invalidate(provider_model_id)
+    await _invalidate_provider_route_caches(session, provider_model_id)
+    return JSONResponse({"ok": True, "is_active": provider_model.is_active})
 
 
 @protected_router.post("/provider-models/{provider_model_id}/delete")
