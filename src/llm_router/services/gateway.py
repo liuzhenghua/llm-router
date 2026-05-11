@@ -213,7 +213,6 @@ async def handle_proxy_request(
                     await degraded_cache.mark_degraded(
                         route_id=current_route_id,
                         degraded_type=degraded_type,
-                        fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                     )
                     logger.warning(
                         "Route %s marked as %s after upstream returned HTTP %s",
@@ -369,7 +368,6 @@ async def handle_embedding_request(
                     await degraded_cache.mark_degraded(
                         route_id=current_route_id,
                         degraded_type=degraded_type,
-                        fail_count=DegradedRouteCache.FAIL_COUNT_THRESHOLD,
                     )
                     logger.warning(
                         "Route %s marked as %s after upstream returned HTTP %s",

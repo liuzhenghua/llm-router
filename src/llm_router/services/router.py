@@ -424,7 +424,7 @@ async def resolve_provider_candidates(
 
         # 检查 degraded 状态
         degraded_status = await degraded_cache.get_status(route.route_id)
-        if degraded_status is not None:
+        if degraded_status is not None and degraded_status.is_degraded:
             # 路由已降级，跳过
             continue
 

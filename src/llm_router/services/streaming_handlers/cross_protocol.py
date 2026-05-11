@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.models import utcnow
 from llm_router.domain.schemas import UsageSnapshot
-from llm_router.services.http_client import get_http_client
+from llm_router.services.http_client import get_http_client, upstream_error_detail
 from llm_router.services.payload_overrides import apply_provider_payload_overrides
 from llm_router.services.post_request import RequestFinalizationData, schedule_post_request_tasks
 from llm_router.services.protocol_converter import (
@@ -469,9 +469,9 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
                 request_payload=context.payload,
                 started=self._started,
                 started_at=self._started_at,
-                error_message=str(exc),
+                error_message=upstream_error_detail(exc),
             )
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=upstream_error_detail(exc)) from exc
 
         if self._upstream_response.status_code >= 400:
             detail = (await self._upstream_response.aread()).decode("utf-8")
@@ -529,8 +529,8 @@ class AnthropicOverOpenAIStreamingHandler(BaseStreamingHandler):
                 raise
             except Exception as exc:
                 stream_failed = True
-                error_message = str(exc)
-                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+                error_message = upstream_error_detail(exc)
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=upstream_error_detail(exc)) from exc
             finally:
                 latency_ms = int((time.perf_counter() - self._started) * 1000)
                 response_body = self.get_accumulated_response() if not stream_failed else None
@@ -828,9 +828,9 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
                 request_payload=context.payload,
                 started=self._started,
                 started_at=self._started_at,
-                error_message=str(exc),
+                error_message=upstream_error_detail(exc),
             )
-            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=upstream_error_detail(exc)) from exc
 
         if self._upstream_response.status_code >= 400:
             detail = (await self._upstream_response.aread()).decode("utf-8")
@@ -886,8 +886,8 @@ class OpenAIOverAnthropicStreamingHandler(BaseStreamingHandler):
                 raise
             except Exception as exc:
                 stream_failed = True
-                error_message = str(exc)
-                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
+                error_message = upstream_error_detail(exc)
+                raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=upstream_error_detail(exc)) from exc
             finally:
                 latency_ms = int((time.perf_counter() - self._started) * 1000)
                 response_body = self.get_accumulated_response() if not stream_failed else None

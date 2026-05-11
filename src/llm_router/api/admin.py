@@ -890,7 +890,7 @@ async def get_route_degraded_status(
     """
     status = await get_degraded_route_cache().get_status(route_id)
 
-    if status is None:
+    if status is None or not status.is_degraded:
         return JSONResponse(
             status_code=200,
             content={"degraded": False},

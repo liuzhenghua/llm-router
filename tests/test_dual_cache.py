@@ -57,6 +57,45 @@ async def test_add_degraded_route_uses_explicit_ttl_instead_of_memory_default():
 
 
 @pytest.mark.asyncio
+async def test_increment_fail_count_does_not_expose_route_as_degraded_before_threshold():
+    memory = InMemoryCache(default_ttl=10)
+    cache = DualCache(
+        settings=object(),
+        in_memory_cache=memory,
+        redis_cache=None,
+        in_memory_ttl=10,
+        redis_ttl=10,
+    )
+
+    degraded_cache = DegradedRouteCache(cache)
+
+    assert await degraded_cache.increment_fail_count(123) == 1
+    status = await degraded_cache.get_status(123)
+    assert status is not None
+    assert status.is_degraded is False
+    assert status.fail_count == 1
+    assert await degraded_cache.get_all_degraded_route_ids() == []
+
+
+@pytest.mark.asyncio
+async def test_recover_clears_pending_fail_count_for_non_degraded_route():
+    memory = InMemoryCache(default_ttl=10)
+    cache = DualCache(
+        settings=object(),
+        in_memory_cache=memory,
+        redis_cache=None,
+        in_memory_ttl=10,
+        redis_ttl=10,
+    )
+
+    degraded_cache = DegradedRouteCache(cache)
+
+    assert await degraded_cache.increment_fail_count(123) == 1
+    assert await degraded_cache.recover(123) is False
+    assert await degraded_cache.increment_fail_count(123) == 1
+
+
+@pytest.mark.asyncio
 async def test_generic_get_set_remove_uses_memory_layer():
     memory = InMemoryCache(default_ttl=10)
     cache = DualCache(

@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.schemas import RequestContext, RoutableProvider, RoutableProviderGroup, RoutedProvider
@@ -151,3 +151,66 @@ async def test_handle_proxy_request_unexpected_exception_does_not_degrade_route(
     assert response.body == (
         b'{"error":{"message":"Internal server error","type":"server_error","code":"server_error"}}'
     )
+
+
+@pytest.mark.asyncio
+async def test_handle_proxy_request_immediate_degrade_keeps_actual_fail_count(monkeypatch: pytest.MonkeyPatch):
+    provider = _make_routable_provider(1)
+    marked = {}
+
+    async def fake_resolve_request_context(*args, **kwargs):
+        return object(), RequestContext(
+            request_id="",
+            protocol=ProviderProtocol.OPENAI,
+            logical_model_name="gpt-4o",
+            payload={"model": "gpt-4o"},
+            stream=False,
+            request_logging_enabled=False,
+            response_logging_enabled=False,
+            api_key_id=1,
+            api_key_name="test-key",
+            api_key_timezone="UTC",
+            logical_model_id=1,
+            logical_model_ids=[1],
+        )
+
+    async def fake_resolve_provider_candidates(*args, **kwargs):
+        return [RoutableProviderGroup(priority=0, is_fallback=False, providers=[provider])]
+
+    class FakeSession:
+        async def close(self):
+            return None
+
+    class FakeHandler:
+        async def proxy(self, *args, **kwargs):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="unauthorized")
+
+    class FakeDegradedCache:
+        async def recover(self, route_id: int):
+            raise AssertionError("recover should not be called")
+
+        async def increment_fail_count(self, route_id: int):
+            raise AssertionError("401 should degrade immediately without incrementing fail count")
+
+        async def mark_degraded(self, **kwargs):
+            marked.update(kwargs)
+
+    monkeypatch.setattr(gateway_module, "resolve_request_context", fake_resolve_request_context)
+    monkeypatch.setattr(gateway_module, "resolve_provider_candidates", fake_resolve_provider_candidates)
+    monkeypatch.setattr(gateway_module, "get_degraded_route_cache", lambda: FakeDegradedCache())
+    monkeypatch.setattr(gateway_module, "OpenAINonStreamHandler", FakeHandler)
+
+    with pytest.raises(HTTPException):
+        await gateway_module.handle_proxy_request(
+            FakeSession(),
+            protocol=ProviderProtocol.OPENAI,
+            payload={"model": "gpt-4o"},
+            raw_api_key="secret",
+            headers={},
+            request_path="/chat/completions",
+        )
+
+    assert marked == {
+        "route_id": 1,
+        "degraded_type": DegradedType.AUTH_FAILED,
+    }

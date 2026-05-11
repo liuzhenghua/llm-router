@@ -37,6 +37,11 @@ def get_http_client() -> httpx.AsyncClient:
     return _http_client
 
 
+def upstream_error_detail(exc: Exception) -> str:
+    """Return a non-empty upstream error message for HTTPException details/logs."""
+    return str(exc) or exc.__class__.__name__
+
+
 async def close_http_client() -> None:
     """Close the global HTTP client. Call once at shutdown."""
     global _http_client

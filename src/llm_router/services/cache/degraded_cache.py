@@ -32,6 +32,7 @@ class RouteDegradedStatus:
     degraded_type: DegradedType
     fail_count: int
     last_fail_time: float  # Unix timestamp
+    is_degraded: bool = False
 
 
 class DegradedRouteCache:
@@ -60,7 +61,7 @@ class DegradedRouteCache:
         获取路由降级状态
 
         Returns:
-            RouteDegradedStatus 或 None（未降级）
+            RouteDegradedStatus 或 None（没有失败记录）
         """
         cache_key = self._get_key(route_id)
 
@@ -78,7 +79,7 @@ class DegradedRouteCache:
         self,
         route_id: int,
         degraded_type: DegradedType,
-        fail_count: int = FAIL_COUNT_THRESHOLD,
+        fail_count: int = 1,
     ) -> None:
         """
         标记路由为降级状态
@@ -92,6 +93,7 @@ class DegradedRouteCache:
             "degraded_type": degraded_type.value,
             "fail_count": fail_count,
             "last_fail_time": time.time(),
+            "is_degraded": True,
         }
 
         cache_key = self._get_key(route_id)
@@ -124,8 +126,9 @@ class DegradedRouteCache:
 
         await self._remove_degraded_route(route_id)
 
-        logger.info(f"Route {route_id} recovered from degraded state")
-        return True
+        if status.is_degraded:
+            logger.info(f"Route {route_id} recovered from degraded state")
+        return status.is_degraded
 
     async def increment_fail_count(self, route_id: int) -> int:
         """
@@ -141,6 +144,7 @@ class DegradedRouteCache:
                 "degraded_type": DegradedType.UNAVAILABLE.value,
                 "fail_count": 1,
                 "last_fail_time": time.time(),
+                "is_degraded": False,
             }
             cache_key = self._get_key(route_id)
             await self._cache.set(cache_key, data, memory_ttl=self.DEFAULT_TTL, redis_ttl=self.DEFAULT_TTL)
@@ -151,6 +155,7 @@ class DegradedRouteCache:
             "degraded_type": status.degraded_type.value,
             "fail_count": new_count,
             "last_fail_time": time.time(),
+            "is_degraded": status.is_degraded,
         }
 
         cache_key = self._get_key(route_id)
@@ -158,27 +163,13 @@ class DegradedRouteCache:
 
         return new_count
 
-    async def reset_fail_count(self, route_id: int) -> None:
-        """重置失败计数（不恢复降级状态，仅重置计数）"""
-        status = await self.get_status(route_id)
-        if status is None:
-            return
-
-        data = {
-            "degraded_type": status.degraded_type.value,
-            "fail_count": 0,
-            "last_fail_time": time.time(),
-        }
-
-        cache_key = self._get_key(route_id)
-        await self._cache.set(cache_key, data, memory_ttl=self.IN_MEMORY_TTL, redis_ttl=self.DEFAULT_TTL)
-
     def _from_dict(self, route_id: int, data: dict) -> RouteDegradedStatus:
         return RouteDegradedStatus(
             route_id=route_id,
             degraded_type=DegradedType(data["degraded_type"]),
             fail_count=data["fail_count"],
             last_fail_time=data["last_fail_time"],
+            is_degraded=data["is_degraded"],
         )
 
     async def get_all_degraded_route_ids(self) -> list[int]:
