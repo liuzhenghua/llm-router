@@ -17,7 +17,7 @@
       {% if log.latency_ms %}
       <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ log.latency_ms }} ms</span>
       {% endif %}
-      <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">{{ log.created_at }}</span>
+      <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500" data-utc="{{ log.created_at.isoformat() if log.created_at else '' }}">-</span>
     </div>
   </div>
   <a href="/admin/requests" class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="detail.back">返回列表</a>
@@ -155,7 +155,19 @@
 </div>
 
 <script>
+// 将 UTC ISO 字符串转换为本地时区显示（yyyy-MM-dd HH:mm:ss）
+function formatLocalDateTime(utcStr) {
+  if (!utcStr) return '-';
+  const date = new Date(utcStr.endsWith('Z') ? utcStr : utcStr + 'Z');
+  const pad = n => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-utc]').forEach(el => {
+    el.textContent = formatLocalDateTime(el.dataset.utc);
+  });
+
   // ── Tab switcher ──────────────────────────────────────────────
   const ACTIVE_BTN   = ['text-white', 'border-b-2', 'border-white'];
   const INACTIVE_BTN = ['text-slate-300'];
