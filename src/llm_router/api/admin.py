@@ -1067,7 +1067,7 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
         "created_at": log.created_at,
         "request_body": _format_body(log.body.request_body) if log.body else None,
         "response_body": _format_body(log.body.response_body) if log.body else None,
-        "error_message": log.error_message,
+        "error_message": _format_body(log.error_message),
         "call_type": log.call_type,
         "api_key_id": log.api_key_id,
         "logical_model_id": log.logical_model_id,
