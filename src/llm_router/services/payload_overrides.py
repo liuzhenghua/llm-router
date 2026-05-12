@@ -5,7 +5,8 @@ from typing import Any
 
 from llm_router.domain.enums import ProviderProtocol
 
-IMAGE_REMOVED_TOOL_RESULT_TEXT = "[Image content removed: the selected upstream model does not support image input.]"
+USER_IMAGE_OMITTED_TEXT = "[User image omitted because the current model does not support image input.]"
+TOOL_IMAGE_OMITTED_TEXT = "[Tool returned an image that was omitted because the current model does not support image input.]"
 
 
 def apply_provider_payload_overrides(payload: dict[str, Any], provider: Any) -> dict[str, Any]:
@@ -30,12 +31,8 @@ def strip_image_content_from_payload(payload: dict[str, Any]) -> dict[str, Any]:
             filtered_messages.append(message)
             continue
 
-        filtered_message = deepcopy(message)
-        image_removed = False
-        if "content" in filtered_message:
-            original_content = filtered_message["content"]
-            filtered_message["content"] = _strip_image_content(original_content)
-            image_removed = filtered_message["content"] != original_content
+        filtered_message = _strip_image_content(message)
+        image_removed = filtered_message != message
 
         content = filtered_message.get("content")
         has_content = not (content is None or content == "" or content == [])
@@ -62,8 +59,12 @@ def _strip_image_content(value: Any) -> Any:
         return stripped_items
     if isinstance(value, dict):
         stripped = {key: _strip_image_content(item) for key, item in value.items()}
-        if _is_empty_tool_result_after_image_removal(value, stripped):
-            stripped["content"] = [{"type": "text", "text": IMAGE_REMOVED_TOOL_RESULT_TEXT}]
+        if _is_anthropic_tool_result_with_direct_image(value):
+            stripped["content"] = _content_with_omission_text(stripped.get("content"), TOOL_IMAGE_OMITTED_TEXT)
+        elif _is_openai_tool_result_with_direct_image(value):
+            stripped["content"] = _openai_tool_content_with_omission_text(stripped.get("content"))
+        elif _is_user_message_with_direct_image(value):
+            stripped["content"] = _content_with_omission_text(stripped.get("content"), USER_IMAGE_OMITTED_TEXT)
         return stripped
     return value
 
@@ -73,14 +74,44 @@ def _is_image_content_block(block: dict[str, Any]) -> bool:
     return block_type in {"image", "image_url", "input_image"}
 
 
-def _is_empty_tool_result_after_image_removal(original: dict[str, Any], stripped: dict[str, Any]) -> bool:
+def _is_anthropic_tool_result_with_direct_image(value: dict[str, Any]) -> bool:
     return (
-        original.get("type") == "tool_result"
-        and isinstance(original.get("content"), list)
-        and original["content"] != []
-        and stripped.get("content") == []
-        and any(isinstance(item, dict) and _is_image_content_block(item) for item in original["content"])
+        value.get("type") == "tool_result"
+        and isinstance(value.get("content"), list)
+        and _has_direct_image_content(value["content"])
     )
+
+
+def _is_openai_tool_result_with_direct_image(value: dict[str, Any]) -> bool:
+    return (
+        value.get("role") == "tool"
+        and bool(value.get("tool_call_id"))
+        and isinstance(value.get("content"), list)
+        and _has_direct_image_content(value["content"])
+    )
+
+
+def _is_user_message_with_direct_image(value: dict[str, Any]) -> bool:
+    return (
+        value.get("role") == "user"
+        and isinstance(value.get("content"), list)
+        and _has_direct_image_content(value["content"])
+    )
+
+
+def _has_direct_image_content(content: list[Any]) -> bool:
+    return any(isinstance(item, dict) and _is_image_content_block(item) for item in content)
+
+
+def _content_with_omission_text(content: Any, text: str) -> list[Any]:
+    items = content if isinstance(content, list) else []
+    return [*items, {"type": "text", "text": text}]
+
+
+def _openai_tool_content_with_omission_text(content: Any) -> Any:
+    if isinstance(content, list) and content:
+        return _content_with_omission_text(content, TOOL_IMAGE_OMITTED_TEXT)
+    return TOOL_IMAGE_OMITTED_TEXT
 
 
 def _deep_merge_payload(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:

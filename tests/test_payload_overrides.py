@@ -4,7 +4,8 @@ from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.schemas import RoutedProvider
 from llm_router.services.non_stream_handlers.openai import OpenAINonStreamHandler
 from llm_router.services.payload_overrides import (
-    IMAGE_REMOVED_TOOL_RESULT_TEXT,
+    TOOL_IMAGE_OMITTED_TEXT,
+    USER_IMAGE_OMITTED_TEXT,
     _deep_merge_payload,
     strip_image_content_from_payload,
 )
@@ -108,12 +109,18 @@ def test_strip_image_content_removes_openai_image_parts_and_keeps_text():
     result = strip_image_content_from_payload(payload)
 
     assert result["messages"] == [
-        {"role": "user", "content": [{"type": "text", "text": "describe this"}]}
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "describe this"},
+                {"type": "text", "text": USER_IMAGE_OMITTED_TEXT},
+            ],
+        }
     ]
     assert len(payload["messages"][0]["content"]) == 3
 
 
-def test_strip_image_content_drops_image_only_message():
+def test_strip_image_content_replaces_image_only_user_message_with_text_placeholder():
     payload = {
         "messages": [
             {"role": "system", "content": "You are concise."},
@@ -126,6 +133,7 @@ def test_strip_image_content_drops_image_only_message():
 
     assert result["messages"] == [
         {"role": "system", "content": "You are concise."},
+        {"role": "user", "content": [{"type": "text", "text": USER_IMAGE_OMITTED_TEXT}]},
         {"role": "user", "content": "hello"},
     ]
 
@@ -146,7 +154,13 @@ def test_strip_image_content_removes_anthropic_image_blocks():
     result = strip_image_content_from_payload(payload)
 
     assert result["messages"] == [
-        {"role": "user", "content": [{"type": "text", "text": "what is this?"}]}
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "what is this?"},
+                {"type": "text", "text": USER_IMAGE_OMITTED_TEXT},
+            ],
+        }
     ]
 
 
@@ -191,7 +205,40 @@ def test_strip_image_content_replaces_image_only_tool_result_with_text_placehold
 
     tool_result = result["messages"][1]["content"][0]
     assert tool_result["tool_use_id"] == "call_2030334446564e4d9d53841e"
-    assert tool_result["content"] == [{"type": "text", "text": IMAGE_REMOVED_TOOL_RESULT_TEXT}]
+    assert tool_result["content"] == [{"type": "text", "text": TOOL_IMAGE_OMITTED_TEXT}]
+
+
+def test_strip_image_content_replaces_openai_image_only_tool_result_with_text_placeholder():
+    payload = {
+        "messages": [
+            {
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "id": "call_2030334446564e4d9d53841e",
+                        "type": "function",
+                        "function": {"name": "Read", "arguments": "{\"file_path\":\"D:\\\\tmp\\\\temp.png\"}"},
+                    }
+                ],
+            },
+            {
+                "role": "tool",
+                "tool_call_id": "call_2030334446564e4d9d53841e",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "data:image/png;base64,iVBORw0KGgoAAAAN"},
+                    }
+                ],
+            },
+        ]
+    }
+
+    result = strip_image_content_from_payload(payload)
+
+    tool_message = result["messages"][1]
+    assert tool_message["tool_call_id"] == "call_2030334446564e4d9d53841e"
+    assert tool_message["content"] == TOOL_IMAGE_OMITTED_TEXT
 
 
 def test_strip_image_content_keeps_text_in_mixed_tool_result():
@@ -215,7 +262,10 @@ def test_strip_image_content_keeps_text_in_mixed_tool_result():
 
     result = strip_image_content_from_payload(payload)
 
-    assert result["messages"][0]["content"][0]["content"] == [{"type": "text", "text": "OCR result"}]
+    assert result["messages"][0]["content"][0]["content"] == [
+        {"type": "text", "text": "OCR result"},
+        {"type": "text", "text": TOOL_IMAGE_OMITTED_TEXT},
+    ]
 
 
 def test_provider_strip_image_content_runs_before_payload_overrides():
@@ -241,5 +291,8 @@ def test_provider_strip_image_content_runs_before_payload_overrides():
     )
 
     assert result["model"] == "upstream-model"
-    assert result["messages"][0]["content"] == [{"type": "text", "text": "hello"}]
+    assert result["messages"][0]["content"] == [
+        {"type": "text", "text": "hello"},
+        {"type": "text", "text": USER_IMAGE_OMITTED_TEXT},
+    ]
     assert result["max_tokens"] == 1024
