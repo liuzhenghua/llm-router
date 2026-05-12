@@ -3,7 +3,11 @@ from decimal import Decimal
 from llm_router.domain.enums import ProviderProtocol
 from llm_router.domain.schemas import RoutedProvider
 from llm_router.services.non_stream_handlers.openai import OpenAINonStreamHandler
-from llm_router.services.payload_overrides import _deep_merge_payload, strip_image_content_from_payload
+from llm_router.services.payload_overrides import (
+    IMAGE_REMOVED_TOOL_RESULT_TEXT,
+    _deep_merge_payload,
+    strip_image_content_from_payload,
+)
 
 
 def _provider(**overrides) -> RoutedProvider:
@@ -144,6 +148,74 @@ def test_strip_image_content_removes_anthropic_image_blocks():
     assert result["messages"] == [
         {"role": "user", "content": [{"type": "text", "text": "what is this?"}]}
     ]
+
+
+def test_strip_image_content_replaces_image_only_tool_result_with_text_placeholder():
+    payload = {
+        "messages": [
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": "让我先看一下截图来理解UI设计。"},
+                    {
+                        "type": "tool_use",
+                        "id": "call_2030334446564e4d9d53841e",
+                        "name": "Read",
+                        "input": {"file_path": "D:\\tmp\\temp.png"},
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "tool_use_id": "call_2030334446564e4d9d53841e",
+                        "type": "tool_result",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "data": "iVBORw0KGgoAAAAN",
+                                    "media_type": "image/png",
+                                },
+                            }
+                        ],
+                    }
+                ],
+            },
+        ]
+    }
+
+    result = strip_image_content_from_payload(payload)
+
+    tool_result = result["messages"][1]["content"][0]
+    assert tool_result["tool_use_id"] == "call_2030334446564e4d9d53841e"
+    assert tool_result["content"] == [{"type": "text", "text": IMAGE_REMOVED_TOOL_RESULT_TEXT}]
+
+
+def test_strip_image_content_keeps_text_in_mixed_tool_result():
+    payload = {
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "tool_use_id": "call_1",
+                        "type": "tool_result",
+                        "content": [
+                            {"type": "image", "source": {"type": "base64", "data": "abc", "media_type": "image/png"}},
+                            {"type": "text", "text": "OCR result"},
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    result = strip_image_content_from_payload(payload)
+
+    assert result["messages"][0]["content"][0]["content"] == [{"type": "text", "text": "OCR result"}]
 
 
 def test_provider_strip_image_content_runs_before_payload_overrides():
