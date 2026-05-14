@@ -1228,10 +1228,14 @@ async def statistics_page(
     elif group_by == "end_user":
         group_col = RequestLog.end_user
 
+    user_error_statuses = (400, 401, 403, 404)
     select_cols = [
         RequestLog.local_date,
         func.count(RequestLog.id).label("request_count"),
         func.sum(sa_case((RequestLog.success == True, 1), else_=0)).label("success_count"),
+        func.sum(sa_case((RequestLog.status_code.in_(user_error_statuses), 1), else_=0)).label(
+            "user_error_count"
+        ),
         func.coalesce(func.sum(UsageRecord.prompt_tokens), 0).label("prompt_tokens"),
         func.coalesce(func.sum(UsageRecord.completion_tokens), 0).label("completion_tokens"),
         func.coalesce(func.sum(UsageRecord.reasoning_tokens), 0).label("reasoning_tokens"),
@@ -1293,6 +1297,7 @@ async def statistics_page(
             a = agg[key]
             a["request_count"] += int(row.request_count)
             a["success_count"] += int(row.success_count)
+            a["user_error_count"] += int(row.user_error_count)
             a["prompt_tokens"] += int(row.prompt_tokens)
             a["completion_tokens"] += int(row.completion_tokens)
             a["reasoning_tokens"] += int(row.reasoning_tokens)
@@ -1303,6 +1308,7 @@ async def statistics_page(
                 "dim_value": dim_value,
                 "request_count": int(row.request_count),
                 "success_count": int(row.success_count),
+                "user_error_count": int(row.user_error_count),
                 "prompt_tokens": int(row.prompt_tokens),
                 "completion_tokens": int(row.completion_tokens),
                 "reasoning_tokens": int(row.reasoning_tokens),
@@ -1311,13 +1317,24 @@ async def statistics_page(
 
     rows = sorted(agg.values(), key=lambda x: x["bucket"], reverse=True)
     for r in rows:
-        r["failed_count"] = r["request_count"] - r["success_count"]
-        r["success_rate"] = f"{r['success_count'] / r['request_count'] * 100:.1f}" if r["request_count"] > 0 else "0"
+        r["valid_request_count"] = r["request_count"] - r["user_error_count"]
+        r["router_error_count"] = max(0, r["valid_request_count"] - r["success_count"])
+        r["failed_count"] = r["user_error_count"] + r["router_error_count"]
+        r["user_success_rate"] = (
+            f"{r['success_count'] / r['request_count'] * 100:.1f}" if r["request_count"] > 0 else "0"
+        )
+        r["service_success_rate"] = (
+            f"{r['success_count'] / r['valid_request_count'] * 100:.1f}" if r["valid_request_count"] > 0 else "0"
+        )
+        r["success_rate"] = r["service_success_rate"]
         r["cost_total"] = str(r["cost_total"].quantize(Decimal("0.000001")))
         r["total_tokens"] = r["prompt_tokens"] + r["completion_tokens"]
 
     total_requests = sum(r["request_count"] for r in rows)
+    total_valid_requests = sum(r["valid_request_count"] for r in rows)
     total_success = sum(r["success_count"] for r in rows)
+    total_user_errors = sum(r["user_error_count"] for r in rows)
+    total_router_errors = sum(r["router_error_count"] for r in rows)
     total_cost = sum((Decimal(r["cost_total"]) for r in rows), Decimal("0"))
     total_tokens = sum(r["total_tokens"] for r in rows)
 
@@ -1338,8 +1355,14 @@ async def statistics_page(
             "api_keys_list": [{"id": k.id, "name": k.name} for k in api_keys_result],
             "summary": {
                 "total_requests": total_requests,
+                "total_valid_requests": total_valid_requests,
                 "total_success": total_success,
-                "success_rate": f"{total_success / total_requests * 100:.1f}" if total_requests > 0 else "0",
+                "total_user_errors": total_user_errors,
+                "total_router_errors": total_router_errors,
+                "user_success_rate": f"{total_success / total_requests * 100:.1f}" if total_requests > 0 else "0",
+                "service_success_rate": (
+                    f"{total_success / total_valid_requests * 100:.1f}" if total_valid_requests > 0 else "0"
+                ),
                 "total_cost": str(total_cost.quantize(Decimal("0.000001"))),
                 "total_tokens": total_tokens,
             },

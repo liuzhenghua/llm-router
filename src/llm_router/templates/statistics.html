@@ -81,15 +81,38 @@
 </div>
 
 <!-- Summary cards -->
-<div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+<div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="text-xs text-slate-500" data-i18n="statistics.card_total">总请求数</p>
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_total">总请求</p>
     <p class="mt-1 text-2xl font-semibold text-slate-900" id="card-total-requests">{{ summary.total_requests }}</p>
   </div>
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="text-xs text-slate-500" data-i18n="statistics.card_success">成功率</p>
-    <p class="mt-1 text-2xl font-semibold text-emerald-600" id="card-success-rate">{{ summary.success_rate }}%</p>
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_valid">有效请求</p>
+    <p class="mt-1 text-2xl font-semibold text-slate-900" id="card-valid-requests">{{ summary.total_valid_requests }}</p>
+    <p class="text-xs text-slate-400 mt-0.5">{{ summary.total_requests }} - {{ summary.total_user_errors }}</p>
+  </div>
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_success">成功</p>
+    <p class="mt-1 text-2xl font-semibold text-emerald-600" id="card-success-count">{{ summary.total_success }}</p>
+  </div>
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_user_errors">用户错误</p>
+    <p class="mt-1 text-2xl font-semibold text-amber-600" id="card-user-errors">{{ summary.total_user_errors }}</p>
+    <p class="text-xs text-slate-400 mt-0.5">400 / 401 / 403 / 404</p>
+  </div>
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_router_errors">Router 错误</p>
+    <p class="mt-1 text-2xl font-semibold text-rose-600" id="card-router-errors">{{ summary.total_router_errors }}</p>
+  </div>
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_user_success_rate">用户成功率</p>
+    <p class="mt-1 text-2xl font-semibold text-slate-900" id="card-user-success-rate">{{ summary.user_success_rate }}%</p>
     <p class="text-xs text-slate-400 mt-0.5">{{ summary.total_success }} / {{ summary.total_requests }}</p>
+  </div>
+  <div class="rounded-2xl bg-white p-4 shadow-sm">
+    <p class="text-xs text-slate-500" data-i18n="statistics.card_service_success_rate">服务成功率</p>
+    <p class="mt-1 text-2xl font-semibold text-emerald-600" id="card-service-success-rate">{{ summary.service_success_rate }}%</p>
+    <p class="text-xs text-slate-400 mt-0.5">{{ summary.total_success }} / {{ summary.total_valid_requests }}</p>
   </div>
   <div class="rounded-2xl bg-white p-4 shadow-sm">
     <p class="text-xs text-slate-500" data-i18n="statistics.card_tokens">总 Tokens</p>
@@ -128,7 +151,16 @@ function createStatsTable() {
     const term = document.getElementById('table-search').value.toLowerCase();
     const filtered = allRows.filter(r => {
       if (!term) return true;
-      const haystack = [r.bucket, r.dim_value, String(r.request_count), r.cost_total].filter(Boolean).join(' ').toLowerCase();
+      const haystack = [
+        r.bucket,
+        r.dim_value,
+        String(r.request_count),
+        String(r.valid_request_count),
+        String(r.success_count),
+        String(r.user_error_count),
+        String(r.router_error_count),
+        r.cost_total
+      ].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(term);
     });
 
@@ -157,9 +189,12 @@ function createStatsTable() {
           <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_date')}</th>
           ${dimHeader}
           <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_requests')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_valid_requests')}</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_success')}</th>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_failed')}</th>
-          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_success_rate')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_user_errors')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_router_errors')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_user_success_rate')}</th>
+          <th scope="col" class="px-2 py-3 whitespace-nowrap">${t('statistics.col_service_success_rate')}</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">Prompt Tokens</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">Completion Tokens</th>
           <th scope="col" class="px-2 py-3 whitespace-nowrap">Total Tokens</th>
@@ -172,16 +207,24 @@ function createStatsTable() {
             <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${escHtml(r.bucket)}</td>
             ${dimCell(r)}
             <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${r.request_count}</td>
+            <td class="px-2 py-2 text-xs font-medium text-slate-900 whitespace-nowrap">${r.valid_request_count}</td>
             <td class="px-2 py-2 text-xs whitespace-nowrap">
               <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">${r.success_count}</span>
             </td>
             <td class="px-2 py-2 text-xs whitespace-nowrap">
-              ${r.failed_count > 0
-                ? `<span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">${r.failed_count}</span>`
+              ${r.user_error_count > 0
+                ? `<span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">${r.user_error_count}</span>`
                 : `<span class="text-slate-400">0</span>`
               }
             </td>
-            <td class="px-2 py-2 text-xs whitespace-nowrap">${r.success_rate}%</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">
+              ${r.router_error_count > 0
+                ? `<span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">${r.router_error_count}</span>`
+                : `<span class="text-slate-400">0</span>`
+              }
+            </td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">${r.user_success_rate}%</td>
+            <td class="px-2 py-2 text-xs whitespace-nowrap">${r.service_success_rate}%</td>
             <td class="px-2 py-2 text-xs whitespace-nowrap">${r.prompt_tokens.toLocaleString()}</td>
             <td class="px-2 py-2 text-xs whitespace-nowrap">${r.completion_tokens.toLocaleString()}</td>
             <td class="px-2 py-2 text-xs whitespace-nowrap">${r.total_tokens.toLocaleString()}</td>
