@@ -20,7 +20,7 @@
       <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500" data-utc="{{ log.created_at.isoformat() if log.created_at else '' }}">-</span>
     </div>
   </div>
-  <a href="/admin/requests" class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="detail.back">返回列表</a>
+  <button type="button" id="back-to-list" class="shrink-0 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="detail.back">返回列表</button>
 </div>
 
 <!-- ── Body: left info panel + right code tabs ── -->
@@ -188,10 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.code-tabs').forEach(container => {
     const group = container.dataset.group;
     const buttons = container.querySelectorAll('.tab-btn');
+    const defaultTab = container.dataset.defaultTab || 'res-body-panel';
     buttons.forEach((btn, i) => {
       btn.addEventListener('click', () => activateTab(group, btn.dataset.tab));
-      if (i === 0) activateTab(group, btn.dataset.tab);
+      if (btn.dataset.tab === defaultTab || (i === 0 && !container.querySelector('.tab-btn[data-tab="' + defaultTab + '"]'))) {
+        activateTab(group, btn.dataset.tab);
+      }
     });
+  });
+
+  document.getElementById('back-to-list').addEventListener('click', () => {
+    window.history.back();
   });
 
   // ── Copy button ───────────────────────────────────────────────

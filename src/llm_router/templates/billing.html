@@ -26,49 +26,46 @@
 
 <div class="space-y-6">
 
-  <!-- 账本 -->
   <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.ledger_title">账本流水</p>
-    <div class="mb-3 flex flex-wrap gap-2 items-end">
-      <div class="min-w-[160px] flex-1">
-        <input type="text" id="ledgers-search" placeholder="搜索备注..." data-i18n-placeholder="billing.search_remark" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-      </div>
-      <div class="shrink-0">
-        <select id="ledgers-change-type" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-          <option value="" data-i18n="billing.all_types">全部类型</option>
-          <option value="topup" data-i18n="billing.topup_label">充値 (topup)</option>
-          <option value="charge" data-i18n="billing.charge_label">扣费 (charge)</option>
-          <option value="adjust" data-i18n="billing.adjust_label">调整 (adjust)</option>
-          <option value="refund" data-i18n="billing.refund_label">退款 (refund)</option>
-        </select>
-      </div>
-      <div class="flex gap-2 shrink-0">
-        <button id="ledgers-search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
-        <button id="ledgers-reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</button>
-      </div>
+    <div class="mb-4 inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
+      <button type="button" class="billing-tab rounded-lg px-3 py-1.5 text-xs font-medium" data-tab="daily" data-i18n="billing.tab_daily">费用日报</button>
+      <button type="button" class="billing-tab rounded-lg px-3 py-1.5 text-xs font-medium" data-tab="ledger" data-i18n="billing.tab_ledger">账单流水</button>
     </div>
-    <div id="ledgers-table-container" class="overflow-x-auto"></div>
-    <div id="ledgers-pagination-container" class="mt-3 flex items-center justify-between"></div>
-  </div>
 
-  <!-- 费用记录 -->
-  <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.usage_title">请求费用记录</p>
-    <div class="mb-3">
-      <input type="text" id="usage-search" placeholder="搜索 Request ID..." data-i18n-placeholder="billing.search_request" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-    </div>
-    <div id="usage-table-container" class="overflow-x-auto"></div>
-    <div id="usage-pagination-container" class="mt-3 flex items-center justify-between"></div>
-  </div>
+    <!-- 日报 -->
+    <section id="daily-panel" class="billing-panel">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.daily_title">每日费用日报</p>
+      <div class="mb-3">
+        <input type="text" id="summaries-search" placeholder="搜索日期或 API Key..." data-i18n-placeholder="billing.search_daily" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      </div>
+      <div id="summaries-table-container" class="overflow-x-auto"></div>
+      <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between"></div>
+    </section>
 
-  <!-- 日报 -->
-  <div class="rounded-2xl bg-white p-4 shadow-sm">
-    <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.daily_title">每日费用日报</p>
-    <div class="mb-3">
-      <input type="text" id="summaries-search" placeholder="搜索日期或 API Key..." data-i18n-placeholder="billing.search_daily" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-    </div>
-    <div id="summaries-table-container" class="overflow-x-auto"></div>
-    <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between"></div>
+    <!-- 账本 -->
+    <section id="ledger-panel" class="billing-panel hidden">
+      <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.ledger_title">账本流水</p>
+      <div class="mb-3 flex flex-wrap gap-2 items-end">
+        <div class="min-w-[160px] flex-1">
+          <input type="text" id="ledgers-search" placeholder="搜索备注..." data-i18n-placeholder="billing.search_remark" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+        </div>
+        <div class="shrink-0">
+          <select id="ledgers-change-type" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+            <option value="" data-i18n="billing.all_types">全部类型</option>
+            <option value="topup" data-i18n="billing.topup_label">充值 (topup)</option>
+            <option value="charge" data-i18n="billing.charge_label">扣费 (charge)</option>
+            <option value="adjust" data-i18n="billing.adjust_label">调整 (adjust)</option>
+            <option value="refund" data-i18n="billing.refund_label">退款 (refund)</option>
+          </select>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button id="ledgers-search-btn" class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
+          <button id="ledgers-reset-btn" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</button>
+        </div>
+      </div>
+      <div id="ledgers-table-container" class="overflow-x-auto"></div>
+      <div id="ledgers-pagination-container" class="mt-3 flex items-center justify-between"></div>
+    </section>
   </div>
 
 </div>
@@ -147,6 +144,22 @@ function createPaginatedTable(config) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const setActiveTab = (tabName) => {
+    document.querySelectorAll('.billing-tab').forEach((tab) => {
+      const isActive = tab.dataset.tab === tabName;
+      tab.className = 'billing-tab rounded-lg px-3 py-1.5 text-xs font-medium ' + (
+        isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-900'
+      );
+    });
+    document.querySelectorAll('.billing-panel').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.id !== `${tabName}-panel`);
+    });
+  };
+
+  document.querySelectorAll('.billing-tab').forEach((tab) => {
+    tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
+  });
+
   const ledgersTable = createPaginatedTable({
     data: {{ ledgers|tojson }},
     searchId: 'ledgers-search',
@@ -187,22 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('ledgers-change-type').addEventListener('change', () => { ledgersTable.resetPage(); ledgersTable.render(); });
 
-  const usageTable = createPaginatedTable({
-    data: {{ usage_records|tojson }},
-    searchId: 'usage-search',
-    tableContainerId: 'usage-table-container',
-    paginationContainerId: 'usage-pagination-container',
-    noDataText: () => t('billing.no_usage'),
-    headers: ['Request Log ID', 'Cost', 'Tokens (P/C/R)', 'Request ID'],
-    filterFn: (item, term) => String(item.request_log_id).includes(term) || (item.request_log && item.request_log.request_id.toLowerCase().includes(term)),
-    rowFn: item => `
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.request_log_id}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.cost_total}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
-      <td class="px-2 py-2 text-xs">${item.request_log ? item.request_log.request_id : '-'}</td>
-    `
-  });
-
   const summariesTable = createPaginatedTable({
     data: {{ summaries|tojson }},
     searchId: 'summaries-search',
@@ -219,8 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
     `
   });
+  setActiveTab('daily');
   window.i18n && window.i18n.onLangChange(ledgersTable.render);
-  window.i18n && window.i18n.onLangChange(usageTable.render);
   window.i18n && window.i18n.onLangChange(summariesTable.render);
 });
 </script>

@@ -1122,17 +1122,10 @@ async def billing_page(
     api_keys = [{"id": key.id, "name": key.name} for key in api_keys_result]
     
     ledger_stmt = select(BalanceLedger).order_by(desc(BalanceLedger.id)).limit(100)
-    usage_stmt = (
-        select(UsageRecord)
-        .options(selectinload(UsageRecord.request_log))
-        .order_by(desc(UsageRecord.request_log_id))
-        .limit(100)
-    )
     summary_stmt = select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(100)
     if api_key_id is not None:
         ledger_stmt = ledger_stmt.where(BalanceLedger.api_key_id == api_key_id)
         summary_stmt = summary_stmt.where(DailyUsageSummary.api_key_id == api_key_id)
-        usage_stmt = usage_stmt.join(RequestLog, UsageRecord.request_log_id == RequestLog.id).where(RequestLog.api_key_id == api_key_id)
 
     api_key_map = {key.id: key.name for key in api_keys_result}
 
@@ -1148,19 +1141,6 @@ async def billing_page(
             "remark": item.remark,
         }
         for item in ledgers_result
-    ]
-
-    usage_records_result = (await session.execute(usage_stmt)).scalars().all()
-    usage_records = [
-        {
-            "request_log_id": item.request_log_id,
-            "cost_total": format(item.cost_total, 'f'),
-            "prompt_tokens": item.prompt_tokens,
-            "completion_tokens": item.completion_tokens,
-            "reasoning_tokens": item.reasoning_tokens,
-            "request_log": {"request_id": item.request_log.request_id} if item.request_log else None,
-        }
-        for item in usage_records_result
     ]
 
     summaries_result = (await session.execute(summary_stmt)).scalars().all()
@@ -1184,7 +1164,6 @@ async def billing_page(
         {
             "api_keys": api_keys,
             "ledgers": ledgers,
-            "usage_records": usage_records,
             "summaries": summaries,
             "selected_api_key_id": api_key_id,
         },
