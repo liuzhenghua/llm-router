@@ -970,15 +970,27 @@ async def request_logs_page(
     if end_user:
         stmt = stmt.where(RequestLog.end_user.contains(end_user))
         count_stmt = count_stmt.where(RequestLog.end_user.contains(end_user))
+    user_error_statuses = (400, 401, 403, 404)
     if status == "success":
         stmt = stmt.where(RequestLog.success == True)  # noqa: E712
         count_stmt = count_stmt.where(RequestLog.success == True)  # noqa: E712
-    elif status == "failed":
+    elif status in ("failed", "error"):
         stmt = stmt.where(RequestLog.success == False)  # noqa: E712
         count_stmt = count_stmt.where(RequestLog.success == False)  # noqa: E712
-    elif status == "error":
-        stmt = stmt.where(RequestLog.status_code >= 500)
-        count_stmt = count_stmt.where(RequestLog.status_code >= 500)
+    elif status == "user_error":
+        stmt = stmt.where(RequestLog.status_code.in_(user_error_statuses))
+        count_stmt = count_stmt.where(RequestLog.status_code.in_(user_error_statuses))
+    elif status == "router_error":
+        router_error_status_cond = or_(
+            RequestLog.status_code.is_(None),
+            RequestLog.status_code.not_in(user_error_statuses),
+        )
+        router_error_cond = (
+            (RequestLog.success == False)  # noqa: E712
+            & router_error_status_cond
+        )
+        stmt = stmt.where(router_error_cond)
+        count_stmt = count_stmt.where(router_error_cond)
     total = (await session.execute(count_stmt)).scalar() or 0
     total_pages = max(1, (total + per_page - 1) // per_page)
     if page > total_pages:
@@ -993,32 +1005,41 @@ async def request_logs_page(
         "prev_num": page - 1 if page > 1 else None,
         "next_num": page + 1 if page < total_pages else None,
     }
-    logs = [
-        {
-            "id": log.id,
-            "request_id": log.request_id,
-            "upstream_request_id": log.upstream_request_id,
-            "started_at": log.started_at.isoformat() if log.started_at else None,
-            "protocol": log.protocol,
-            "status_code": log.status_code,
-            "success": log.success,
-            "latency_ms": log.latency_ms,
-            "call_type": log.call_type,
-            "api_key_id": log.api_key_id,
-            "provider_model_id": log.provider_model_id,
-            "api_key_name": log.api_key.name if log.api_key else None,
-            "provider_model_name": log.provider_model.name if log.provider_model else None,
-            "end_user": log.end_user or "",
-            "channel": log.channel or "",
-            "usage_record": {
-                "prompt_tokens": log.usage_record.prompt_tokens,
-                "completion_tokens": log.usage_record.completion_tokens,
-                "reasoning_tokens": log.usage_record.reasoning_tokens,
-                "cost_total": log.usage_record.cost_total,
-            } if log.usage_record else None,
-        }
-        for log in logs_result
-    ]
+    logs = []
+    for log in logs_result:
+        if log.success:
+            status_type = "success"
+        elif log.status_code in user_error_statuses:
+            status_type = "user_error"
+        else:
+            status_type = "router_error"
+
+        logs.append(
+            {
+                "id": log.id,
+                "request_id": log.request_id,
+                "upstream_request_id": log.upstream_request_id,
+                "started_at": log.started_at.isoformat() if log.started_at else None,
+                "protocol": log.protocol,
+                "status_code": log.status_code,
+                "success": log.success,
+                "status_type": status_type,
+                "latency_ms": log.latency_ms,
+                "call_type": log.call_type,
+                "api_key_id": log.api_key_id,
+                "provider_model_id": log.provider_model_id,
+                "api_key_name": log.api_key.name if log.api_key else None,
+                "provider_model_name": log.provider_model.name if log.provider_model else None,
+                "end_user": log.end_user or "",
+                "channel": log.channel or "",
+                "usage_record": {
+                    "prompt_tokens": log.usage_record.prompt_tokens,
+                    "completion_tokens": log.usage_record.completion_tokens,
+                    "reasoning_tokens": log.usage_record.reasoning_tokens,
+                    "cost_total": log.usage_record.cost_total,
+                } if log.usage_record else None,
+            }
+        )
     api_keys_list = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.name.asc()))).scalars().all()
     provider_models_list = (await session.execute(select(ProviderModel).where(ProviderModel.deleted_at.is_(None)).order_by(ProviderModel.name.asc()))).scalars().all()
     return _render_admin(

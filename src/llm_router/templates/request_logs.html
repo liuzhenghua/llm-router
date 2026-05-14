@@ -44,8 +44,9 @@
     <select id="search-status" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
       <option value="" data-i18n="requests.opt_all">全部</option>
       <option value="success" {% if filters.status == 'success' %}selected{% endif %} data-i18n="requests.opt_success">成功</option>
-      <option value="failed" {% if filters.status == 'failed' %}selected{% endif %} data-i18n="requests.opt_failed">失败 (≥400)</option>
-      <option value="error" {% if filters.status == 'error' %}selected{% endif %} data-i18n="requests.opt_error">失败 (≥500)</option>
+      <option value="error" {% if filters.status in ['failed', 'error'] %}selected{% endif %} data-i18n="requests.opt_error">错误</option>
+      <option value="user_error" {% if filters.status == 'user_error' %}selected{% endif %} data-i18n="requests.opt_user_error">用户错误</option>
+      <option value="router_error" {% if filters.status == 'router_error' %}selected{% endif %} data-i18n="requests.opt_router_error">Router 错误</option>
     </select>
   </div>
   <div class="min-w-[300px] flex-1">
@@ -98,12 +99,14 @@
           <div class="max-w-[280px] truncate text-xs" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id | default('-') }}</div>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
-          {% if log.success %}
-          <span class="text-emerald-600">Success</span>
+          {% if log.status_type == "success" %}
+          <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700" data-i18n="requests.status_success">成功</span>
+          {% elif log.status_type == "user_error" %}
+          <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700" data-i18n="requests.status_user_error">用户错误</span>
           {% else %}
-          <span class="text-rose-600">Failed</span>
+          <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700" data-i18n="requests.status_router_error">Router 错误</span>
           {% endif %}
-          <span class="text-slate-400">({{ log.status_code }})</span>
+          <span class="text-slate-400 text-xs">({{ log.status_code }})</span>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">{{ log.latency_ms | default('-') }}ms</td>
         <td class="px-2 py-2 whitespace-nowrap">
