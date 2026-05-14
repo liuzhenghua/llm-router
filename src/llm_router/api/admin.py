@@ -524,10 +524,12 @@ async def update_api_key(
 
 
 @protected_router.post("/api-keys/{api_key_id}/topup")
-async def topup_api_key(
+@protected_router.post("/api-keys/{api_key_id}/balance-change")
+async def change_api_key_balance(
     request: Request,
     api_key_id: int,
     amount: Decimal = Form(...),
+    change_type: str = Form(default=ChangeType.TOPUP.value),
     remark: str = Form(default=""),
     _: None = Depends(require_admin),
 ):
@@ -535,18 +537,32 @@ async def topup_api_key(
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
         return _redirect("/admin/api-keys")
+
+    allowed_types = {
+        ChangeType.TOPUP.value,
+        ChangeType.DEDUCT.value,
+    }
+    if change_type not in allowed_types:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid balance change type")
+    if amount <= 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Amount must be positive")
+
+    ledger_amount = amount
+    if change_type == ChangeType.DEDUCT.value:
+        ledger_amount = -abs(amount)
+
     balance_before = Decimal(api_key.balance)
-    api_key.balance = balance_before + amount
+    api_key.balance = balance_before + ledger_amount
     session.add(
         BalanceLedger(
             api_key_id=api_key.id,
-            change_type=ChangeType.TOPUP.value,
-            amount=amount,
+            change_type=change_type,
+            amount=ledger_amount,
             balance_before=balance_before,
             balance_after=api_key.balance,
             reference_type="admin",
             reference_id=request.session.get("admin_user", "admin"),
-            remark=remark or "Manual topup",
+            remark=remark or f"Manual {change_type}",
         )
     )
     await session.commit()

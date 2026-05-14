@@ -21,5 +21,4 @@ class RecordStatus(StrEnum):
 class ChangeType(StrEnum):
     TOPUP = "topup"
     CHARGE = "charge"
-    ADJUST = "adjust"
-    REFUND = "refund"
+    DEDUCT = "deduct"

@@ -114,6 +114,8 @@
             <td class="px-2 py-2 text-xs whitespace-nowrap">
               {% if item.change_type == 'topup' %}
               <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">topup</span>
+              {% elif item.change_type == 'deduct' %}
+              <span class="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">deduct</span>
               {% elif item.change_type == 'charge' %}
               <span class="inline-flex items-center rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">charge</span>
               {% else %}

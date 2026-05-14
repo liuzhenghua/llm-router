@@ -102,18 +102,25 @@
   </div>
 </dialog>
 
-<!-- Shared Topup Modal -->
+<!-- Shared Balance Change Modal -->
 <dialog id="topup-api-key-modal" class="w-full max-w-xl rounded-2xl p-0 backdrop:bg-slate-950/50">
   <div class="rounded-2xl bg-white p-6">
     <div class="mb-4 flex items-center justify-between border-b border-slate-100 pb-4">
-      <h3 class="text-lg font-semibold text-slate-800" data-i18n="api_keys.modal_topup_title">充值</h3>
+      <h3 class="text-lg font-semibold text-slate-800" data-i18n="api_keys.modal_balance_title">余额变更</h3>
       <button type="button" onclick="closeModal('topup-api-key-modal')" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" /></svg></button>
     </div>
     <form id="topup-api-key-form" class="grid gap-4">
       <input type="hidden" name="id" id="topup-id">
-      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_topup_amount">充值金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
+      <label>
+        <span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_change_type">变更类型</span>
+        <select name="change_type" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm">
+          <option value="topup" data-i18n="api_keys.change_topup">充值</option>
+          <option value="deduct" data-i18n="api_keys.change_deduct">减少余额</option>
+        </select>
+      </label>
+      <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_change_amount">变更金额</span><input name="amount" type="number" step="0.01" min="0.01" value="10" required class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
       <label><span class="mb-1 block text-xs text-slate-600" data-i18n="api_keys.lbl_remark">备注</span><input name="remark" data-i18n-placeholder="api_keys.placeholder_example_remark" placeholder="例如 手动充值" class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"></label>
-      <button type="submit" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-700" data-i18n="api_keys.btn_confirm_topup">确认充值</button>
+      <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm text-white hover:bg-slate-800" data-i18n="api_keys.btn_confirm_balance_change">确认变更</button>
     </form>
   </div>
 </dialog>
@@ -235,7 +242,7 @@ function renderTable() {
       <td class="px-2 py-2 text-xs whitespace-nowrap">${item.qps_limit}</td>
       <td class="px-2 py-2 whitespace-nowrap"><div class="flex gap-2">
         <button type="button" onclick='openEditModal(${JSON.stringify(item)})' class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs">${t('common.edit')}</button>
-        <button type="button" onclick='openTopupModal(${JSON.stringify(item)})' class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">${t('api_keys.btn_topup')}</button>
+        <button type="button" onclick='openTopupModal(${JSON.stringify(item)})' class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">${t('api_keys.btn_balance_change')}</button>
         ${item.has_key ? `<button type="button" onclick="revealKey(${item.id})" class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs text-sky-700">${t('api_keys.btn_reveal')}</button>` : ''}
         ${item.status === 'active' ? `<button type="button" onclick="disableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700">${t('common.disable')}</button>` : `<button type="button" onclick="enableApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-700">${t('common.enable')}</button>`}
         <button type="button" onclick="destroyApiKey(${item.id}, '${item.name}')" class="rounded-lg border border-rose-300 bg-rose-100 px-3 py-1.5 text-xs text-rose-800">${t('common.delete')}</button>
@@ -510,10 +517,13 @@ document.getElementById('edit-api-key-form').addEventListener('submit', function
 
 // ---- Topup Modal ----
 function openTopupModal(item) {
+  const form = document.getElementById('topup-api-key-form');
   document.getElementById('topup-id').value = item.id;
-  document.getElementById('topup-api-key-modal').querySelector('h3').textContent = t('api_keys.modal_topup_title') + ' — ' + item.name;
-  document.getElementById('topup-api-key-form').querySelector('[name="amount"]').value = '10';
-  document.getElementById('topup-api-key-form').querySelector('[name="remark"]').value = '';
+  document.getElementById('topup-api-key-modal').querySelector('h3').textContent = t('api_keys.modal_balance_title') + ' — ' + item.name;
+  form.querySelector('[name="change_type"]').value = 'topup';
+  form.querySelector('[name="amount"]').value = '10';
+  form.querySelector('[name="amount"]').min = '0.01';
+  form.querySelector('[name="remark"]').value = '';
   openModal('topup-api-key-modal');
 }
 
@@ -522,12 +532,12 @@ document.getElementById('topup-api-key-form').addEventListener('submit', functio
   var form = this;
   var id = document.getElementById('topup-id').value;
   var data = new FormData(form);
-  fetch('/admin/api-keys/' + id + '/topup', { method: 'POST', body: data })
+  fetch('/admin/api-keys/' + id + '/balance-change', { method: 'POST', body: data })
     .then(res => {
       if (res.ok || res.redirected) {
         window.location.reload();
       } else {
-        showToast(t('api_keys.toast_topup_fail'), 'error');
+        showToast(t('api_keys.toast_balance_change_fail'), 'error');
       }
     })
     .catch(() => showToast(t('common.network_error'), 'error'));
