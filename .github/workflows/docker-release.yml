@@ -17,6 +17,10 @@ on:
         required: true
         default: true
         type: boolean
+      changelog:
+        description: "Optional Markdown changelog. If empty, commit messages since the latest tag are used."
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -121,6 +125,44 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build release notes
+        id: release_notes
+        shell: bash
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PUSH_LATEST: ${{ inputs.push_latest }}
+          INPUT_CHANGELOG: ${{ inputs.changelog }}
+        run: |
+          set -euo pipefail
+
+          notes_file="$(mktemp)"
+
+          {
+            echo "Docker image:"
+            echo ""
+            echo "- \`$IMAGE:$VERSION\`"
+            if [[ "$PUSH_LATEST" == "true" ]]; then
+              echo "- \`$IMAGE:latest\`"
+            fi
+            echo ""
+            echo "## Changelog"
+            echo ""
+          } > "$notes_file"
+
+          if [[ -n "$INPUT_CHANGELOG" ]]; then
+            printf '%s\n' "$INPUT_CHANGELOG" >> "$notes_file"
+          else
+            previous_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+            if [[ -n "$previous_tag" ]]; then
+              git log "$previous_tag"..HEAD --pretty=format:'- %s (%h)' >> "$notes_file"
+            else
+              git log -20 --pretty=format:'- %s (%h)' >> "$notes_file"
+            fi
+          fi
+
+          echo "path=$notes_file" >> "$GITHUB_OUTPUT"
+
       - name: Create Git tag
         shell: bash
         env:
@@ -137,23 +179,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.version }}
-          IMAGE: ${{ steps.image.outputs.image }}
-          PUSH_LATEST: ${{ inputs.push_latest }}
+          NOTES_FILE: ${{ steps.release_notes.outputs.path }}
         shell: bash
         run: |
           set -euo pipefail
 
-          notes_file="$(mktemp)"
-          {
-            echo "Docker image:"
-            echo ""
-            echo "- \`$IMAGE:$VERSION\`"
-            if [[ "$PUSH_LATEST" == "true" ]]; then
-              echo "- \`$IMAGE:latest\`"
-            fi
-          } > "$notes_file"
-
           gh release create "$RELEASE_TAG" \
             --title "$RELEASE_TAG" \
-            --notes-file "$notes_file"
+            --notes-file "$NOTES_FILE"
