@@ -1,0 +1,159 @@
+name: Docker Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      dockerhub_namespace:
+        description: "Docker Hub namespace. Defaults to DOCKERHUB_USERNAME secret."
+        required: false
+        type: string
+      image_name:
+        description: "Docker image name."
+        required: true
+        default: "llm-router"
+        type: string
+      push_latest:
+        description: "Also push the latest tag."
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, push image, and publish release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="$(tr -d '[:space:]' < VERSION)"
+          if [[ -z "$version" ]]; then
+            echo "VERSION file is empty." >&2
+            exit 1
+          fi
+
+          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,2}([.-][0-9A-Za-z]+)?$ ]]; then
+            echo "VERSION must look like 1.0.1, 1.0.1-rc.1, or similar. Got: $version" >&2
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve Docker image
+        id: image
+        shell: bash
+        env:
+          INPUT_NAMESPACE: ${{ inputs.dockerhub_namespace }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          IMAGE_NAME: ${{ inputs.image_name }}
+        run: |
+          set -euo pipefail
+
+          namespace="${INPUT_NAMESPACE:-$DOCKERHUB_USERNAME}"
+          if [[ -z "$namespace" ]]; then
+            echo "Set the DOCKERHUB_USERNAME secret or provide dockerhub_namespace when running the workflow." >&2
+            exit 1
+          fi
+
+          image="docker.io/$namespace/$IMAGE_NAME"
+          echo "image=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Check release tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag $RELEASE_TAG already exists. Bump VERSION before creating another release." >&2
+            exit 1
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker tags
+        id: docker_tags
+        shell: bash
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PUSH_LATEST: ${{ inputs.push_latest }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "tags<<EOF"
+            echo "$IMAGE:$VERSION"
+            if [[ "$PUSH_LATEST" == "true" ]]; then
+              echo "$IMAGE:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.docker_tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create Git tag
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" -m "Release $RELEASE_TAG"
+          git push origin "$RELEASE_TAG"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          IMAGE: ${{ steps.image.outputs.image }}
+          PUSH_LATEST: ${{ inputs.push_latest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          notes_file="$(mktemp)"
+          {
+            echo "Docker image:"
+            echo ""
+            echo "- \`$IMAGE:$VERSION\`"
+            if [[ "$PUSH_LATEST" == "true" ]]; then
+              echo "- \`$IMAGE:latest\`"
+            fi
+          } > "$notes_file"
+
+          gh release create "$RELEASE_TAG" \
+            --title "$RELEASE_TAG" \
+            --notes-file "$notes_file"
