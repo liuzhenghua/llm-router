@@ -12,16 +12,16 @@
     <div class="flex flex-wrap items-end gap-3">
 
       <!-- Date range (mirrors request_logs.html time-range block) -->
-      <div class="min-w-[300px] flex-1">
+      <div class="min-w-[320px] flex-1 lg:min-w-[640px]">
         <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.lbl_date_range">日期范围</label>
         <div class="flex flex-col gap-1.5">
-          <div class="flex items-center gap-1">
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="today" data-i18n="statistics.preset_today">今天</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="7d" data-i18n="statistics.preset_7d">近7天</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="30d" data-i18n="statistics.preset_30d">近30天</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="month" data-i18n="statistics.preset_month">本月</button>
-            <button type="button" class="time-preset rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="year" data-i18n="statistics.preset_year">今年</button>
-            <button type="button" id="clear-date-range" class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100" data-i18n="statistics.clear">清除</button>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="time-preset whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="today" data-i18n="statistics.preset_today">今天</button>
+            <button type="button" class="time-preset whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="7d" data-i18n="statistics.preset_7d">近7天</button>
+            <button type="button" class="time-preset whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="30d" data-i18n="statistics.preset_30d">近30天</button>
+            <button type="button" class="time-preset whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="month" data-i18n="statistics.preset_month">本月</button>
+            <button type="button" class="time-preset whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600" data-preset="year" data-i18n="statistics.preset_year">今年</button>
+            <button type="button" id="clear-date-range" class="whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-400 hover:bg-slate-100" data-i18n="statistics.clear">清除</button>
           </div>
           <div class="flex items-center gap-1.5">
             <input type="date" name="date_from" id="date-from" value="{{ filters.date_from }}" class="flex-1 min-w-0 rounded-xl border border-slate-200 px-2 py-1.5 text-xs">

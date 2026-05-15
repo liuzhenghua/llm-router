@@ -4,6 +4,8 @@
 
 **Drop-in compatible** with the OpenAI and Anthropic API. Point your existing SDK at `http://your-host/v1` and it just works.
 
+[中文文档](README.zh-CN.md)
+
 | | Local mode | Server mode |
 |---|---|---|
 | Storage | SQLite (file, zero setup) | MySQL (shared across instances) |
@@ -19,11 +21,15 @@
 
 ![dashboard](/docs/screenshots/dashboard.png)
 
+### Statistics — observe traffic, cost, latency, channels, users, and error classes
+
+![statistics](/docs/screenshots/statistics.png)
+
 ### Logical Models & Routes — map a model name to one or more backend providers with priority fallback
 
 ![routes](/docs/screenshots/routes.png)
 
-### Request Detail — per-request token breakdown, cost split, latency, and optional full content log
+### Request Detail — token breakdown, cost split, latency, error class, and optional full content log
 
 ![request detail](/docs/screenshots/request_details.png)
 
@@ -34,14 +40,21 @@
 - **Protocol compatibility** — serves OpenAI `POST /v1/chat/completions`, `POST /v1/embeddings`, `GET /v1/models` and Anthropic `POST /anthropic/v1/messages`, `GET /anthropic/v1/models`
 - **Logical model routing** — expose a stable model name (e.g. `gpt-4o`) and route it to any number of real backend providers
 - **Priority fallback** — if the top-priority provider fails, the gateway automatically tries the next one
+- **Production stability** — cache-first validation, graceful Redis degradation, request compatibility fixes, and hardened protocol conversion paths help keep the gateway stable in real production traffic
 - **Per-key quota control** — balance, daily spend cap, QPS limit, and allowed-model list per API key
 - **Per-key timezone** — each API key carries an IANA timezone (`Asia/Shanghai`, `UTC`, …) used for billing-date calculation and daily budget reset
 - **Accurate billing** — per-request cost breakdown: input, output, cache-read, cache-write, and reasoning tokens, priced at creation time so history is never affected by price changes
+- **Statistics dashboard** — observe runtime health, request volume, latency, token usage, cost, channels, users, models, providers, and error categories from the admin panel
 - **Prompt cache awareness** — handles `cache_read_tokens` and `cache_write_tokens` so cached tokens are never double-billed
 - **Reasoning token tracking** — captures `reasoning_tokens` from supported models and includes them in usage records and daily summaries
-- **Channel tagging** — tag requests with a channel via the `x-channel` request header; falls back to the API key's `default_channel` for downstream analytics
+- **Request attribution headers** — tag requests with `x-end-user` and `x-channel` headers for request-log filtering, cost attribution, and multi-dimensional statistics; `x-channel` falls back to the API key's `default_channel`
+- **Error categorization** — separates client-side errors from router/upstream errors, making production health monitoring and troubleshooting much clearer
+- **Fast issue diagnosis** — request logs can be filtered by user, channel, model, provider, status, and error class; request details keep the context needed to locate failures quickly
+- **Model-source payload overrides** — configure payload overrides per provider model, useful for disabling thinking/reasoning modes or adapting upstream-specific request fields
+- **Image-stripping fallback support** — optionally remove image content before forwarding to an upstream model source, so a non-multimodal source can safely serve as a fallback route for a multimodal source
 - **Streaming support** — transparent SSE pass-through for both OpenAI and Anthropic streaming
 - **Audit logging** — optional per-key request/response content capture; metadata always recorded
+- **Multi-language admin UI** — switch the admin interface between supported languages for operators in different teams
 - **Flexible deployment** — defaults to SQLite + in-memory cache with zero external dependencies; set `MYSQL_URL` and/or `REDIS_URL` to scale to multi-instance, production deployments — same codebase, no code changes required
 - **Built-in admin panel** — manage keys, providers, routes, and view logs and billing without any extra tooling
 
@@ -178,7 +191,7 @@ Then create an admin account:
 docker compose exec llm-router uv run llm-router init-admin --username admin --password your-password
 ```
 
-> Tables are created automatically on first startup via `Base.metadata.create_all`. No manual migration step needed.
+> Fresh installs create tables automatically on first startup. Existing deployments should apply the versioned SQL files under `migrations/` when upgrading across schema changes.
 
 ---
 
@@ -217,6 +230,14 @@ A mapping from a logical model to one or more provider models, each with a prior
 
 An optional string tag attached to each request for analytics and cost attribution. Set via the `x-channel` HTTP header per request, or configure a `default_channel` on the API key as a fallback.
 
+### End User
+
+An optional end-user identifier attached to each request via the `x-end-user` HTTP header. It is recorded in request logs and statistics, making it easier to filter usage, diagnose user-specific failures, and understand cost distribution.
+
+### Error Class
+
+Request failures are categorized as either client-side errors or router/upstream errors. This keeps user/request compatibility issues separate from gateway or provider health signals, which makes the request log and statistics dashboard more useful in production.
+
 ---
 
 ## API Compatibility
@@ -243,6 +264,10 @@ client = OpenAI(
 
 response = client.chat.completions.create(
     model="gpt-4o",   # your logical model name
+    extra_headers={
+        "x-end-user": "user_123",
+        "x-channel": "web",
+    },
     messages=[{"role": "user", "content": "Hello"}],
 )
 ```
@@ -267,6 +292,23 @@ message = client.messages.create(
 The Anthropic-compatible endpoints accept authentication via either:
 - `Authorization: Bearer <key>` — standard Bearer token
 - `x-api-key: <key>` — native Anthropic SDK style
+
+Optional attribution headers accepted by both OpenAI-compatible and Anthropic-compatible endpoints:
+- `x-end-user` — end-user identifier for log filtering and user-level statistics
+- `x-channel` — traffic channel for analytics and cost attribution
+
+---
+
+## Database Migrations
+
+Fresh installs create tables automatically on first startup. For existing deployments, apply the versioned SQL migration files under `migrations/` when upgrading across schema changes.
+
+Migration files are provided for both MySQL and SQLite:
+
+```bash
+mysql -u llm_router -p llm_router < migrations/<version>/migration_mysql_<version>.sql
+sqlite3 data/llm_router.db < migrations/<version>/migration_sqlite_<version>.sql
+```
 
 ---
 
