@@ -17,10 +17,6 @@ on:
         required: true
         default: true
         type: boolean
-      changelog:
-        description: "Optional Markdown changelog. If empty, commit messages since the latest tag are used."
-        required: false
-        type: string
 
 permissions:
   contents: write
@@ -132,11 +128,11 @@ jobs:
           IMAGE: ${{ steps.image.outputs.image }}
           VERSION: ${{ steps.version.outputs.version }}
           PUSH_LATEST: ${{ inputs.push_latest }}
-          INPUT_CHANGELOG: ${{ inputs.changelog }}
         run: |
           set -euo pipefail
 
           notes_file="$(mktemp)"
+          commit_hash="$(git rev-parse --short HEAD)"
 
           {
             echo "Docker image:"
@@ -148,18 +144,12 @@ jobs:
             echo ""
             echo "## Changelog"
             echo ""
+            echo "<!-- Commit: $commit_hash -->"
+            echo ""
           } > "$notes_file"
 
-          if [[ -n "$INPUT_CHANGELOG" ]]; then
-            printf '%s\n' "$INPUT_CHANGELOG" >> "$notes_file"
-          else
-            previous_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
-            if [[ -n "$previous_tag" ]]; then
-              git log "$previous_tag"..HEAD --pretty=format:'- %s (%h)' >> "$notes_file"
-            else
-              git log -20 --pretty=format:'- %s (%h)' >> "$notes_file"
-            fi
-          fi
+          git log -1 --pretty=format:%B >> "$notes_file"
+          printf '\n' >> "$notes_file"
 
           echo "path=$notes_file" >> "$GITHUB_OUTPUT"
 
