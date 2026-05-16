@@ -1151,21 +1151,56 @@ async def request_log_detail(request: Request, request_log_id: int, _: None = De
 @protected_router.get("/billing")
 async def billing_page(
     request: Request,
-    api_key_id: int | None = Query(default=None),
+    api_key_id: str | None = Query(default=None),
+    ledger_search: str | None = Query(default=None),
+    ledger_change_type: str | None = Query(default=None),
+    ledger_page: int = Query(default=1, ge=1),
+    tab: str | None = Query(default=None),
     _: None = Depends(require_admin),
 ):
     session = request.state.db
+    per_page = settings.admin_page_size
+    api_key_id_value = api_key_id.strip() if api_key_id else ""
+    parsed_api_key_id = int(api_key_id_value) if api_key_id_value.isdigit() else None
+    api_key_id = parsed_api_key_id
     api_keys_result = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.name.asc()))).scalars().all()
-    api_keys = [{"id": key.id, "name": key.name} for key in api_keys_result]
-    
-    ledger_stmt = select(BalanceLedger).order_by(desc(BalanceLedger.id)).limit(100)
+    api_keys = [{"id": key.id, "name": key.name, "display": f"{key.name} (#{key.id})"} for key in api_keys_result]
+
+    ledger_stmt = select(BalanceLedger).order_by(desc(BalanceLedger.id))
+    ledger_count_stmt = select(func.count()).select_from(BalanceLedger)
     summary_stmt = select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(100)
     if api_key_id is not None:
         ledger_stmt = ledger_stmt.where(BalanceLedger.api_key_id == api_key_id)
+        ledger_count_stmt = ledger_count_stmt.where(BalanceLedger.api_key_id == api_key_id)
         summary_stmt = summary_stmt.where(DailyUsageSummary.api_key_id == api_key_id)
+    ledger_search = ledger_search.strip() if ledger_search else ""
+    if ledger_search:
+        ledger_search_cond = or_(
+            BalanceLedger.change_type.contains(ledger_search),
+            BalanceLedger.remark.contains(ledger_search),
+        )
+        ledger_stmt = ledger_stmt.where(ledger_search_cond)
+        ledger_count_stmt = ledger_count_stmt.where(ledger_search_cond)
+    allowed_change_types = {item.value for item in ChangeType}
+    if ledger_change_type not in allowed_change_types:
+        ledger_change_type = None
+    if ledger_change_type:
+        ledger_stmt = ledger_stmt.where(BalanceLedger.change_type == ledger_change_type)
+        ledger_count_stmt = ledger_count_stmt.where(BalanceLedger.change_type == ledger_change_type)
+    if tab not in {"daily", "ledger"}:
+        tab = None
 
     api_key_map = {key.id: key.name for key in api_keys_result}
+    selected_api_key_display = next(
+        (key["display"] for key in api_keys if key["id"] == api_key_id),
+        "",
+    )
 
+    ledger_total = (await session.execute(ledger_count_stmt)).scalar() or 0
+    ledger_total_pages = max(1, (ledger_total + per_page - 1) // per_page)
+    if ledger_page > ledger_total_pages:
+        ledger_page = ledger_total_pages
+    ledger_stmt = ledger_stmt.limit(per_page).offset((ledger_page - 1) * per_page)
     ledgers_result = (await session.execute(ledger_stmt)).scalars().all()
     ledgers = [
         {
@@ -1179,6 +1214,15 @@ async def billing_page(
         }
         for item in ledgers_result
     ]
+    ledger_pagination = {
+        "page": ledger_page,
+        "pages": ledger_total_pages,
+        "total": ledger_total,
+        "has_prev": ledger_page > 1,
+        "has_next": ledger_page < ledger_total_pages,
+        "prev_num": ledger_page - 1 if ledger_page > 1 else None,
+        "next_num": ledger_page + 1 if ledger_page < ledger_total_pages else None,
+    }
 
     summaries_result = (await session.execute(summary_stmt)).scalars().all()
     summaries = [
@@ -1201,8 +1245,17 @@ async def billing_page(
         {
             "api_keys": api_keys,
             "ledgers": ledgers,
+            "ledger_filters": {
+                "api_key_id": api_key_id or "",
+                "ledger_search": ledger_search,
+                "ledger_change_type": ledger_change_type or "",
+                "tab": tab or "",
+            },
+            "ledger_pagination": ledger_pagination,
             "summaries": summaries,
             "selected_api_key_id": api_key_id,
+            "selected_api_key_display": selected_api_key_display,
+            "initial_tab": tab or "daily",
         },
         nav_active="billing",
         title="Billing",
