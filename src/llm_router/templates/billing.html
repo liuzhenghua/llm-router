@@ -35,11 +35,74 @@
     <!-- 日报 -->
     <section id="daily-panel" class="billing-panel">
       <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500" data-i18n="billing.daily_title">每日费用日报</p>
-      <div class="mb-3">
-        <input type="text" id="summaries-search" placeholder="搜索日期或 API Key..." data-i18n-placeholder="billing.search_daily" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+      <form method="get" action="/admin/billing" class="mb-3 flex flex-wrap gap-2 items-end">
+        <input type="hidden" name="tab" value="daily">
+        <input type="hidden" id="summary-api-key-id" {% if selected_api_key_id %}name="api_key_id" value="{{ selected_api_key_id }}"{% else %}value=""{% endif %}>
+        <div class="min-w-[180px] flex-1">
+          <label class="mb-1 block text-xs text-slate-500" data-i18n="billing.lbl_api_key">API Key</label>
+          <div class="relative">
+            <input type="text" id="summary-api-key-search" value="{{ selected_api_key_display }}" placeholder="搜索 API Key..." autocomplete="off" role="combobox" aria-expanded="false" aria-controls="summary-api-key-listbox" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+            <div id="summary-api-key-listbox" role="listbox" class="absolute z-20 mt-1 hidden max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 text-xs shadow-lg"></div>
+          </div>
+        </div>
+        <div class="min-w-[180px] flex-1">
+          <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.col_date">日期</label>
+          <input type="text" name="summary_search" value="{{ summary_filters.summary_search }}" placeholder="搜索日期或 API Key..." data-i18n-placeholder="billing.search_daily" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <button class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
+          <a href="/admin/billing?tab=daily" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs text-slate-700 font-medium hover:bg-slate-50" data-i18n="common.reset">重置</a>
+        </div>
+      </form>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left text-slate-500">
+          <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+            <tr>
+              <th scope="col" class="px-2 py-3 whitespace-nowrap">API Key</th>
+              <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="statistics.col_date">日期</th>
+              <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="billing.col_requests">请求数</th>
+              <th scope="col" class="px-2 py-3 whitespace-nowrap" data-i18n="billing.col_cost">总费用</th>
+              <th scope="col" class="px-2 py-3 whitespace-nowrap">Tokens (P/C/R)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in summaries %}
+            <tr class="bg-white border-b">
+              <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.api_key_name or item.api_key_id }}</td>
+              <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.summary_date }}</td>
+              <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.request_count }}</td>
+              <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.cost_total }}</td>
+              <td class="px-2 py-2 text-xs whitespace-nowrap">{{ item.prompt_tokens }} / {{ item.completion_tokens }} / {{ item.reasoning_tokens }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-slate-500 p-4" data-i18n="billing.no_daily">没有找到相关日报。</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      <div id="summaries-table-container" class="overflow-x-auto"></div>
-      <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between"></div>
+
+      {% macro build_summary_query_string(page, filters) %}
+/admin/billing?tab=daily&summary_page={{ page }}{% if filters.api_key_id %}&api_key_id={{ filters.api_key_id }}{% endif %}{% if filters.summary_search %}&summary_search={{ filters.summary_search|urlencode }}{% endif %}
+      {% endmacro %}
+      <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          {% if summary_pagination.has_prev %}
+          <a href="{{ build_summary_query_string(summary_pagination.prev_num, summary_filters) }}" class="rounded-lg border px-3 py-1.5 text-xs" data-i18n="common.prev_page">上一页</a>
+          {% else %}
+          <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400" data-i18n="common.prev_page">上一页</button>
+          {% endif %}
+
+          <span class="text-xs text-slate-500">{{ "第 " ~ summary_pagination.page ~ " / " ~ summary_pagination.pages ~ " 页（共 " ~ summary_pagination.total ~ " 条）" }}</span>
+
+          {% if summary_pagination.has_next %}
+          <a href="{{ build_summary_query_string(summary_pagination.next_num, summary_filters) }}" class="rounded-lg border px-3 py-1.5 text-xs" data-i18n="common.next_page">下一页</a>
+          {% else %}
+          <button disabled class="rounded-lg border px-3 py-1.5 text-xs text-slate-400" data-i18n="common.next_page">下一页</button>
+          {% endif %}
+        </div>
+      </div>
     </section>
 
     <!-- 账本 -->
@@ -140,78 +203,6 @@
 </div>
 
 <script>
-function createPaginatedTable(config) {
-  let allData = config.data;
-  let currentPage = 1;
-  const rowsPerPage = config.rowsPerPage || 10;
-
-  function render() {
-    const searchTerm = document.getElementById(config.searchId).value.toLowerCase();
-    const filteredData = allData.filter(item => config.filterFn(item, searchTerm));
-
-    const tableContainer = document.getElementById(config.tableContainerId);
-    const paginationContainer = document.getElementById(config.paginationContainerId);
-    tableContainer.innerHTML = '';
-    paginationContainer.innerHTML = '';
-
-    const noData = typeof config.noDataText === 'function' ? config.noDataText() : config.noDataText;
-    if (filteredData.length === 0) {
-      tableContainer.innerHTML = `<p class="text-center text-slate-500 p-4">${noData}</p>`;
-      return;
-    }
-
-    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
-    const paginatedData = filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
-
-    const table = document.createElement('table');
-    table.className = 'w-full text-sm text-left text-slate-500';
-    const hdrs = typeof config.headers === 'function' ? config.headers() : config.headers;
-    table.innerHTML = `
-      <thead class="text-xs text-slate-700 uppercase bg-slate-50">
-        <tr>
-          ${hdrs.map(h => `<th scope="col" class="px-2 py-3 whitespace-nowrap">${h}</th>`).join('')}
-        </tr>
-      </thead>
-      <tbody>
-        ${paginatedData.map(item => `<tr class="bg-white border-b">${config.rowFn(item)}</tr>`).join('')}
-      </tbody>
-    `;
-    tableContainer.appendChild(table);
-
-    const paginDiv = document.createElement('div');
-    paginDiv.className = 'flex items-center gap-2';
-
-    const prevButton = document.createElement('button');
-    prevButton.textContent = t('common.prev_page');
-    prevButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === 1 ? ' text-slate-400' : '');
-    prevButton.disabled = currentPage === 1;
-    prevButton.onclick = () => { currentPage--; render(); };
-    paginDiv.appendChild(prevButton);
-
-    const pageInfo = document.createElement('span');
-    pageInfo.textContent = t('common.page_info').replace('{cur}', currentPage).replace('{total}', totalPages);
-    pageInfo.className = 'text-xs text-slate-500';
-    paginDiv.appendChild(pageInfo);
-
-    const nextButton = document.createElement('button');
-    nextButton.textContent = t('common.next_page');
-    nextButton.className = 'rounded-lg border px-3 py-1.5 text-xs' + (currentPage === totalPages ? ' text-slate-400' : '');
-    nextButton.disabled = currentPage === totalPages;
-    nextButton.onclick = () => { currentPage++; render(); };
-    paginDiv.appendChild(nextButton);
-
-    paginationContainer.appendChild(paginDiv);
-  }
-
-  document.getElementById(config.searchId).addEventListener('input', () => {
-    currentPage = 1;
-    render();
-  });
-
-  render();
-  return { render, resetPage: () => { currentPage = 1; } };
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   const setActiveTab = (tabName, updateUrl = false) => {
     document.querySelectorAll('.billing-tab').forEach((tab) => {
@@ -235,104 +226,100 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const apiKeyOptions = {{ api_keys|tojson }};
-  const ledgerApiKeySearch = document.getElementById('ledger-api-key-search');
-  const ledgerApiKeyId = document.getElementById('ledger-api-key-id');
-  const ledgerApiKeyListbox = document.getElementById('ledger-api-key-listbox');
+  const setupApiKeyCombobox = ({ inputId, hiddenId, listboxId }) => {
+    const input = document.getElementById(inputId);
+    const hidden = document.getElementById(hiddenId);
+    const listbox = document.getElementById(listboxId);
 
-  const setLedgerApiKey = (item) => {
-    ledgerApiKeySearch.value = item ? item.display : '';
-    ledgerApiKeyId.value = item ? String(item.id) : '';
-    if (item) {
-      ledgerApiKeyId.name = 'api_key_id';
-    } else {
-      ledgerApiKeyId.removeAttribute('name');
-    }
-  };
-  const clearLedgerApiKeySelection = () => {
-    ledgerApiKeyId.value = '';
-    ledgerApiKeyId.removeAttribute('name');
-  };
-  const closeLedgerApiKeyList = () => {
-    ledgerApiKeyListbox.classList.add('hidden');
-    ledgerApiKeySearch.setAttribute('aria-expanded', 'false');
-  };
-  const openLedgerApiKeyList = () => {
-    ledgerApiKeyListbox.classList.remove('hidden');
-    ledgerApiKeySearch.setAttribute('aria-expanded', 'true');
-  };
-  const renderLedgerApiKeyOptions = () => {
-    const term = ledgerApiKeySearch.value.trim().toLowerCase();
-    const matches = apiKeyOptions
-      .filter((item) => item.display.toLowerCase().includes(term))
-      .slice(0, 20);
-
-    ledgerApiKeyListbox.replaceChildren();
-    if (matches.length) {
-      matches.forEach((item) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.role = 'option';
-        button.dataset.id = item.id;
-        button.className = 'block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50';
-        button.textContent = item.display;
-        ledgerApiKeyListbox.appendChild(button);
-      });
-    } else {
-      const empty = document.createElement('div');
-      empty.className = 'px-3 py-2 text-slate-400';
-      empty.textContent = '无匹配 API Key';
-      ledgerApiKeyListbox.appendChild(empty);
-    }
-    openLedgerApiKeyList();
-  };
-
-  ledgerApiKeySearch.addEventListener('focus', renderLedgerApiKeyOptions);
-  ledgerApiKeySearch.addEventListener('input', () => {
-    clearLedgerApiKeySelection();
-    renderLedgerApiKeyOptions();
-  });
-  ledgerApiKeyListbox.addEventListener('click', (event) => {
-    const option = event.target.closest('button[data-id]');
-    if (!option) return;
-    const item = apiKeyOptions.find((candidate) => String(candidate.id) === option.dataset.id);
-    setLedgerApiKey(item);
-    closeLedgerApiKeyList();
-  });
-  document.addEventListener('click', (event) => {
-    if (!ledgerApiKeySearch.contains(event.target) && !ledgerApiKeyListbox.contains(event.target)) {
-      closeLedgerApiKeyList();
-    }
-  });
-  ledgerApiKeySearch.form.addEventListener('submit', () => {
-    if (!ledgerApiKeyId.value) {
-      const exactMatch = apiKeyOptions.find((item) => item.display === ledgerApiKeySearch.value);
-      if (exactMatch) {
-        setLedgerApiKey(exactMatch);
+    const setApiKey = (item) => {
+      input.value = item ? item.display : '';
+      hidden.value = item ? String(item.id) : '';
+      if (item) {
+        hidden.name = 'api_key_id';
+      } else {
+        hidden.removeAttribute('name');
       }
-    }
-    if (!ledgerApiKeyId.value) {
-      ledgerApiKeyId.removeAttribute('name');
-    }
+    };
+    const clearSelection = () => {
+      hidden.value = '';
+      hidden.removeAttribute('name');
+    };
+    const closeList = () => {
+      listbox.classList.add('hidden');
+      input.setAttribute('aria-expanded', 'false');
+    };
+    const openList = () => {
+      listbox.classList.remove('hidden');
+      input.setAttribute('aria-expanded', 'true');
+    };
+    const renderOptions = () => {
+      const term = input.value.trim().toLowerCase();
+      const matches = apiKeyOptions
+        .filter((item) => item.display.toLowerCase().includes(term))
+        .slice(0, 20);
+
+      listbox.replaceChildren();
+      if (matches.length) {
+        matches.forEach((item) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.role = 'option';
+          button.dataset.id = item.id;
+          button.className = 'block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50';
+          button.textContent = item.display;
+          listbox.appendChild(button);
+        });
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'px-3 py-2 text-slate-400';
+        empty.textContent = '无匹配 API Key';
+        listbox.appendChild(empty);
+      }
+      openList();
+    };
+
+    input.addEventListener('focus', renderOptions);
+    input.addEventListener('input', () => {
+      clearSelection();
+      renderOptions();
+    });
+    listbox.addEventListener('click', (event) => {
+      const option = event.target.closest('button[data-id]');
+      if (!option) return;
+      const item = apiKeyOptions.find((candidate) => String(candidate.id) === option.dataset.id);
+      setApiKey(item);
+      closeList();
+    });
+    document.addEventListener('click', (event) => {
+      if (!input.contains(event.target) && !listbox.contains(event.target)) {
+        closeList();
+      }
+    });
+    input.form.addEventListener('submit', () => {
+      if (!hidden.value) {
+        const exactMatch = apiKeyOptions.find((item) => item.display === input.value);
+        if (exactMatch) {
+          setApiKey(exactMatch);
+        }
+      }
+      if (!hidden.value) {
+        hidden.removeAttribute('name');
+      }
+    });
+  };
+
+  setupApiKeyCombobox({
+    inputId: 'summary-api-key-search',
+    hiddenId: 'summary-api-key-id',
+    listboxId: 'summary-api-key-listbox'
+  });
+  setupApiKeyCombobox({
+    inputId: 'ledger-api-key-search',
+    hiddenId: 'ledger-api-key-id',
+    listboxId: 'ledger-api-key-listbox'
   });
 
-  const summariesTable = createPaginatedTable({
-    data: {{ summaries|tojson }},
-    searchId: 'summaries-search',
-    tableContainerId: 'summaries-table-container',
-    paginationContainerId: 'summaries-pagination-container',
-    noDataText: () => t('billing.no_daily'),
-    headers: () => ['API Key', t('statistics.col_date'), t('billing.col_requests'), t('billing.col_cost'), 'Tokens (P/C/R)'],
-    filterFn: (item, term) => (item.api_key_name || String(item.api_key_id)).toLowerCase().includes(term) || item.summary_date.includes(term),
-    rowFn: item => `
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.api_key_name || item.api_key_id}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.summary_date}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.request_count}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.cost_total}</td>
-      <td class="px-2 py-2 text-xs whitespace-nowrap">${item.prompt_tokens} / ${item.completion_tokens} / ${item.reasoning_tokens}</td>
-    `
-  });
   setActiveTab('{{ initial_tab }}');
-  window.i18n && window.i18n.onLangChange(summariesTable.render);
 });
 </script>
 {% endblock %}

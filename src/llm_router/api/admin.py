@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import case as sa_case, desc, func, or_, select
+from sqlalchemy import String, case as sa_case, cast, desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from llm_router.core.admin_users import AdminUserService
@@ -1155,6 +1155,8 @@ async def billing_page(
     ledger_search: str | None = Query(default=None),
     ledger_change_type: str | None = Query(default=None),
     ledger_page: int = Query(default=1, ge=1),
+    summary_search: str | None = Query(default=None),
+    summary_page: int = Query(default=1, ge=1),
     tab: str | None = Query(default=None),
     _: None = Depends(require_admin),
 ):
@@ -1168,11 +1170,13 @@ async def billing_page(
 
     ledger_stmt = select(BalanceLedger).order_by(desc(BalanceLedger.id))
     ledger_count_stmt = select(func.count()).select_from(BalanceLedger)
-    summary_stmt = select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date)).limit(100)
+    summary_stmt = select(DailyUsageSummary).order_by(desc(DailyUsageSummary.summary_date), desc(DailyUsageSummary.id))
+    summary_count_stmt = select(func.count()).select_from(DailyUsageSummary)
     if api_key_id is not None:
         ledger_stmt = ledger_stmt.where(BalanceLedger.api_key_id == api_key_id)
         ledger_count_stmt = ledger_count_stmt.where(BalanceLedger.api_key_id == api_key_id)
         summary_stmt = summary_stmt.where(DailyUsageSummary.api_key_id == api_key_id)
+        summary_count_stmt = summary_count_stmt.where(DailyUsageSummary.api_key_id == api_key_id)
     ledger_search = ledger_search.strip() if ledger_search else ""
     if ledger_search:
         ledger_search_cond = or_(
@@ -1195,6 +1199,20 @@ async def billing_page(
         (key["display"] for key in api_keys if key["id"] == api_key_id),
         "",
     )
+    summary_search = summary_search.strip() if summary_search else ""
+    if summary_search:
+        matching_api_key_ids = [
+            key.id for key in api_keys_result
+            if summary_search.lower() in key.name.lower() or summary_search == str(key.id)
+        ]
+        summary_search_cond = cast(DailyUsageSummary.summary_date, String).contains(summary_search)
+        if matching_api_key_ids:
+            summary_search_cond = or_(
+                summary_search_cond,
+                DailyUsageSummary.api_key_id.in_(matching_api_key_ids),
+            )
+        summary_stmt = summary_stmt.where(summary_search_cond)
+        summary_count_stmt = summary_count_stmt.where(summary_search_cond)
 
     ledger_total = (await session.execute(ledger_count_stmt)).scalar() or 0
     ledger_total_pages = max(1, (ledger_total + per_page - 1) // per_page)
@@ -1224,6 +1242,11 @@ async def billing_page(
         "next_num": ledger_page + 1 if ledger_page < ledger_total_pages else None,
     }
 
+    summary_total = (await session.execute(summary_count_stmt)).scalar() or 0
+    summary_total_pages = max(1, (summary_total + per_page - 1) // per_page)
+    if summary_page > summary_total_pages:
+        summary_page = summary_total_pages
+    summary_stmt = summary_stmt.limit(per_page).offset((summary_page - 1) * per_page)
     summaries_result = (await session.execute(summary_stmt)).scalars().all()
     summaries = [
         {
@@ -1238,6 +1261,15 @@ async def billing_page(
         }
         for item in summaries_result
     ]
+    summary_pagination = {
+        "page": summary_page,
+        "pages": summary_total_pages,
+        "total": summary_total,
+        "has_prev": summary_page > 1,
+        "has_next": summary_page < summary_total_pages,
+        "prev_num": summary_page - 1 if summary_page > 1 else None,
+        "next_num": summary_page + 1 if summary_page < summary_total_pages else None,
+    }
 
     return _render_admin(
         request,
@@ -1253,6 +1285,12 @@ async def billing_page(
             },
             "ledger_pagination": ledger_pagination,
             "summaries": summaries,
+            "summary_filters": {
+                "api_key_id": api_key_id or "",
+                "summary_search": summary_search,
+                "tab": tab or "",
+            },
+            "summary_pagination": summary_pagination,
             "selected_api_key_id": api_key_id,
             "selected_api_key_display": selected_api_key_display,
             "initial_tab": tab or "daily",
