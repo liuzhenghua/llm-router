@@ -55,7 +55,15 @@
         </div>
         <div class="flex flex-col gap-0.5">
           <dt class="text-xs text-slate-400" data-i18n="detail.lbl_upstream_id">上游请求 ID</dt>
-          <dd class="truncate text-xs font-medium text-slate-800">{{ log.upstream_request_id or "-" }}</dd>
+          <dd class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-slate-800">
+            <span class="min-w-0 truncate" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id or "-" }}</span>
+            {% if log.upstream_request_id %}
+            <button type="button" id="copy-upstream-request-id" class="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="复制" data-i18n-title="common.copy" data-copy-value="{{ log.upstream_request_id }}">
+              <svg class="copy-icon h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-4 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+              <svg class="check-icon hidden h-3.5 w-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            </button>
+            {% endif %}
+          </dd>
         </div>
         <div class="flex flex-col gap-0.5">
           <dt class="text-xs text-slate-400" data-i18n="detail.lbl_end_user">终端用户</dt>
@@ -200,6 +208,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('back-to-list').addEventListener('click', () => {
     window.history.back();
   });
+
+  const upstreamCopyBtn = document.getElementById('copy-upstream-request-id');
+  if (upstreamCopyBtn) {
+    upstreamCopyBtn.addEventListener('click', () => {
+      const text = upstreamCopyBtn.dataset.copyValue;
+      function onCopied() {
+        const copyIcon = upstreamCopyBtn.querySelector('.copy-icon');
+        const checkIcon = upstreamCopyBtn.querySelector('.check-icon');
+        copyIcon.classList.add('hidden');
+        checkIcon.classList.remove('hidden');
+        setTimeout(() => {
+          copyIcon.classList.remove('hidden');
+          checkIcon.classList.add('hidden');
+        }, 1800);
+      }
+      copyText(text, onCopied);
+    });
+  }
 
   // ── Copy button ───────────────────────────────────────────────
   document.querySelectorAll('.copy-btn').forEach(btn => {

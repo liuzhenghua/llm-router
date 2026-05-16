@@ -95,8 +95,8 @@
         <td class="px-2 py-2 whitespace-nowrap">
           <div class="max-w-[80px] truncate text-xs" title="{{ log.request_id }}">{{ log.request_id }}</div>
         </td>
-        <td class="px-2 py-2 whitespace-nowrap">
-          <div class="max-w-[280px] truncate text-xs" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id | default('-') }}</div>
+        <td class="px-2 py-2 whitespace-nowrap max-w-0">
+          <div class="truncate text-xs" title="{{ log.upstream_request_id or '-' }}">{{ log.upstream_request_id | default('-') }}</div>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
           {% if log.status_type == "success" %}
@@ -109,14 +109,14 @@
           <span class="text-slate-400 text-xs">({{ log.status_code }})</span>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">{{ log.latency_ms | default('-') }}ms</td>
-        <td class="px-2 py-2 whitespace-nowrap">
-          <div class="max-w-[100px] truncate text-xs" title="{{ log.api_key_name or '-' }}">{{ log.api_key_name | default('-') }}</div>
+        <td class="px-2 py-2 whitespace-nowrap max-w-0">
+          <div class="truncate text-xs" title="{{ log.api_key_name or '-' }}">{{ log.api_key_name | default('-') }}</div>
         </td>
-        <td class="px-2 py-2 whitespace-nowrap text-xs">
-          <div class="max-w-[120px] truncate" title="{{ log.provider_model_name or '-' }}">{{ log.provider_model_name | default('-') }}</div>
+        <td class="px-2 py-2 whitespace-nowrap text-xs max-w-0">
+          <div class="truncate" title="{{ log.provider_model_name or '-' }}">{{ log.provider_model_name | default('-') }}</div>
         </td>
-        <td class="px-2 py-2 whitespace-nowrap text-xs">
-          <div class="max-w-[120px] truncate" title="{{ log.end_user or '-' }}">{{ log.end_user | default('-') }}</div>
+        <td class="px-2 py-2 whitespace-nowrap text-xs max-w-0">
+          <div class="truncate" title="{{ log.end_user or '-' }}">{{ log.end_user | default('-') }}</div>
         </td>
         <td class="px-2 py-2 whitespace-nowrap">
           {% if log.usage_record %}
