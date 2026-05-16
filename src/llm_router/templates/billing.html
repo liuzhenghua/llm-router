@@ -46,8 +46,12 @@
           </div>
         </div>
         <div class="min-w-[180px] flex-1">
-          <label class="mb-1 block text-xs text-slate-500" data-i18n="statistics.col_date">日期</label>
-          <input type="text" name="summary_search" value="{{ summary_filters.summary_search }}" placeholder="搜索日期或 API Key..." data-i18n-placeholder="billing.search_daily" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+          <label class="mb-1 block text-xs text-slate-500">开始日期</label>
+          <input type="date" name="summary_date_from" value="{{ summary_filters.summary_date_from }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
+        </div>
+        <div class="min-w-[180px] flex-1">
+          <label class="mb-1 block text-xs text-slate-500">结束日期</label>
+          <input type="date" name="summary_date_to" value="{{ summary_filters.summary_date_to }}" class="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
         </div>
         <div class="flex gap-2 shrink-0">
           <button class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs text-white font-medium hover:bg-slate-700" data-i18n="common.search">搜索</button>
@@ -84,7 +88,7 @@
       </div>
 
       {% macro build_summary_query_string(page, filters) %}
-/admin/billing?tab=daily&summary_page={{ page }}{% if filters.api_key_id %}&api_key_id={{ filters.api_key_id }}{% endif %}{% if filters.summary_search %}&summary_search={{ filters.summary_search|urlencode }}{% endif %}
+/admin/billing?tab=daily&summary_page={{ page }}{% if filters.api_key_id %}&api_key_id={{ filters.api_key_id }}{% endif %}{% if filters.summary_date_from %}&summary_date_from={{ filters.summary_date_from }}{% endif %}{% if filters.summary_date_to %}&summary_date_to={{ filters.summary_date_to }}{% endif %}
       {% endmacro %}
       <div id="summaries-pagination-container" class="mt-3 flex items-center justify-between">
         <div class="flex items-center gap-2">

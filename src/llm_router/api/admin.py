@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, datetime as dt_datetime
+from datetime import date, datetime, datetime as dt_datetime, timedelta
 from decimal import Decimal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import String, case as sa_case, cast, desc, func, or_, select
+from sqlalchemy import case as sa_case, desc, func, or_, select
 from sqlalchemy.orm import selectinload
 
 from llm_router.core.admin_users import AdminUserService
@@ -1155,7 +1155,8 @@ async def billing_page(
     ledger_search: str | None = Query(default=None),
     ledger_change_type: str | None = Query(default=None),
     ledger_page: int = Query(default=1, ge=1),
-    summary_search: str | None = Query(default=None),
+    summary_date_from: str | None = Query(default=None),
+    summary_date_to: str | None = Query(default=None),
     summary_page: int = Query(default=1, ge=1),
     tab: str | None = Query(default=None),
     _: None = Depends(require_admin),
@@ -1165,6 +1166,23 @@ async def billing_page(
     api_key_id_value = api_key_id.strip() if api_key_id else ""
     parsed_api_key_id = int(api_key_id_value) if api_key_id_value.isdigit() else None
     api_key_id = parsed_api_key_id
+    has_summary_date_from = "summary_date_from" in request.query_params
+    has_summary_date_to = "summary_date_to" in request.query_params
+
+    def parse_summary_date(value: str | None) -> date | None:
+        if not value:
+            return None
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+
+    parsed_summary_date_from = parse_summary_date(summary_date_from)
+    parsed_summary_date_to = parse_summary_date(summary_date_to)
+    if not has_summary_date_from and not has_summary_date_to:
+        today = date.today()
+        parsed_summary_date_from = today - timedelta(days=today.weekday())
+        parsed_summary_date_to = parsed_summary_date_from + timedelta(days=6)
     api_keys_result = (await session.execute(select(ApiKey).where(ApiKey.deleted_at.is_(None)).order_by(ApiKey.name.asc()))).scalars().all()
     api_keys = [{"id": key.id, "name": key.name, "display": f"{key.name} (#{key.id})"} for key in api_keys_result]
 
@@ -1199,20 +1217,14 @@ async def billing_page(
         (key["display"] for key in api_keys if key["id"] == api_key_id),
         "",
     )
-    summary_search = summary_search.strip() if summary_search else ""
-    if summary_search:
-        matching_api_key_ids = [
-            key.id for key in api_keys_result
-            if summary_search.lower() in key.name.lower() or summary_search == str(key.id)
-        ]
-        summary_search_cond = cast(DailyUsageSummary.summary_date, String).contains(summary_search)
-        if matching_api_key_ids:
-            summary_search_cond = or_(
-                summary_search_cond,
-                DailyUsageSummary.api_key_id.in_(matching_api_key_ids),
-            )
-        summary_stmt = summary_stmt.where(summary_search_cond)
-        summary_count_stmt = summary_count_stmt.where(summary_search_cond)
+    if parsed_summary_date_from and parsed_summary_date_to and parsed_summary_date_from > parsed_summary_date_to:
+        parsed_summary_date_from, parsed_summary_date_to = parsed_summary_date_to, parsed_summary_date_from
+    if parsed_summary_date_from:
+        summary_stmt = summary_stmt.where(DailyUsageSummary.summary_date >= parsed_summary_date_from)
+        summary_count_stmt = summary_count_stmt.where(DailyUsageSummary.summary_date >= parsed_summary_date_from)
+    if parsed_summary_date_to:
+        summary_stmt = summary_stmt.where(DailyUsageSummary.summary_date <= parsed_summary_date_to)
+        summary_count_stmt = summary_count_stmt.where(DailyUsageSummary.summary_date <= parsed_summary_date_to)
 
     ledger_total = (await session.execute(ledger_count_stmt)).scalar() or 0
     ledger_total_pages = max(1, (ledger_total + per_page - 1) // per_page)
@@ -1287,7 +1299,8 @@ async def billing_page(
             "summaries": summaries,
             "summary_filters": {
                 "api_key_id": api_key_id or "",
-                "summary_search": summary_search,
+                "summary_date_from": parsed_summary_date_from.isoformat() if parsed_summary_date_from else "",
+                "summary_date_to": parsed_summary_date_to.isoformat() if parsed_summary_date_to else "",
                 "tab": tab or "",
             },
             "summary_pagination": summary_pagination,
