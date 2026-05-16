@@ -5,25 +5,6 @@
   <h1 class="mt-0.5 text-xl font-semibold tracking-tight text-slate-900" data-i18n="billing.title">账单与账本</h1>
 </div>
 
-<!-- ── API Key filter ── -->
-<div class="mb-6 rounded-2xl bg-white p-4 shadow-sm">
-  <form method="get" action="/admin/billing" class="flex flex-wrap items-end gap-3">
-    <div>
-      <label class="mb-1 block text-xs text-slate-500" data-i18n="billing.lbl_api_key">API Key</label>
-      <select name="api_key_id" class="rounded-xl border border-slate-200 px-3 py-1.5 text-xs">
-        <option value="" data-i18n="billing.all_keys">全部 API Key</option>
-        {% for api_key in api_keys %}
-        <option value="{{ api_key.id }}" {% if selected_api_key_id == api_key.id %}selected{% endif %}>{{ api_key.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <button class="rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700" data-i18n="billing.btn_filter">筛选</button>
-    {% if selected_api_key_id %}
-    <a href="/admin/billing" class="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50" data-i18n="billing.btn_reset">重置</a>
-    {% endif %}
-  </form>
-</div>
-
 <div class="space-y-6">
 
   <div class="rounded-2xl bg-white p-4 shadow-sm">
